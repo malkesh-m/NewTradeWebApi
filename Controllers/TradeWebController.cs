@@ -278,6 +278,79 @@ namespace TradeWeb.API.Controllers
         }
         #endregion
 
+        #region OutStanding Api
+        /// <summary>
+        ///  OutStanding data 
+        /// </summary>
+        /// <returns></returns>
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpGet("GetOutStanding", Name = "GetOutStanding")]
+        public IActionResult GetOutStanding()
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var tokenS = GetToken();
+                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
+
+                    var getData = GetOutStandingData(userId);
+                    if (getData != null)
+                    {
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                    }
+                    else
+                    {
+                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
+
+        /// <summary>
+        /// OutStanding details data
+        /// </summary>
+        /// <param name="order"></param>
+        /// <param name="seriesId"></param>
+        /// <param name="seriesId"></param>
+        /// <param name="exchange"></param>
+        /// <param name="segment"></param>
+        /// <returns></returns>
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpGet("GetOutStandingDetailData", Name = "GetOutStandingDetailData")]
+        public IActionResult GetOutStandingDetailData([FromQuery] string order, string seriesId, string exchange, string segment)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var tokenS = GetToken();
+                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
+
+                    var getData = GetOutStandingDetailData(userId, order, seriesId, exchange, segment);
+                    if (getData != null)
+                    {
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                    }
+                    else
+                    {
+                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
+        #endregion
+
         private JwtSecurityToken GetToken()
         {
             var handler = new JwtSecurityTokenHandler();
@@ -430,7 +503,7 @@ namespace TradeWeb.API.Controllers
         #endregion
 
         #region Handler
-        
+
 
         private dynamic Ledger_Summary(string cm_cd, string type, string exchSeg, string Fromdate, string Todate, string CompCode)
         {
@@ -1725,13 +1798,66 @@ namespace TradeWeb.API.Controllers
             }
         }
         #endregion
+
+        #region OutStanding Handler Method
+        // For getting Outstanding data
+        private dynamic GetOutStandingData(string cm_cd)
+        {
+            List<string> loginList = new List<string>();
+            var qury = GetQueryForData(cm_cd);
+            try
+            {
+                var ds = CommonRepository.FillDataset(qury);
+                if (ds != null)
+                {
+                    if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                    {
+                        var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
+                        return json;
+                    }
+                }
+                return loginList.ToList();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        //For getting Outstanding details data
+        private dynamic GetOutStandingDetailData(string cm_cd, string Td_order, string ot_seriesid, string ot_exchange, string ot_Segment)
+        {
+            List<string> loginList = new List<string>();
+            //string qury = "Select cm_cd,cm_pwd,cm_name From Client_master Where cm_cd='" + cm_cd + "'";
+            var qury = GetQueryForDetailsData(cm_cd, Td_order, ot_seriesid, ot_exchange, ot_Segment);
+            try
+            {
+                var ds = CommonRepository.FillDataset(qury);
+                if (ds != null)
+                {
+                    if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                    {
+                        var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
+                        return json;
+                    }
+                }
+                return loginList.ToList();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        #endregion
+
         #endregion
 
         #region Query
         private string GetQueryMainData(string Fromdt, string Todt, string Username, string CompCode)
         {
             string strsql = "select * from ( ";
-            strsql = strsql +  "select 'Trading' as [Type],ld_clientcd as [ClientCode], sum(case sign(datediff(d,'" + Fromdt + "',ld_dt)) when -1 then ld_amount else 0 end) OpeningBalance,sum(case sign(datediff(d,'" + Fromdt + "',ld_dt)) when -1 then 0 else case ld_debitflag when 'D' then ld_amount else 0 end end) Debit, sum(case sign(datediff(d,'" + Fromdt + "',ld_dt)) when -1 then 0 else case ld_debitflag     when 'D' then 0 else ld_amount end end) Credit, sum(ld_amount) Balance ,";
+            strsql = strsql + "select 'Trading' as [Type],ld_clientcd as [ClientCode], sum(case sign(datediff(d,'" + Fromdt + "',ld_dt)) when -1 then ld_amount else 0 end) OpeningBalance,sum(case sign(datediff(d,'" + Fromdt + "',ld_dt)) when -1 then 0 else case ld_debitflag when 'D' then ld_amount else 0 end end) Debit, sum(case sign(datediff(d,'" + Fromdt + "',ld_dt)) when -1 then 0 else case ld_debitflag     when 'D' then 0 else ld_amount end end) Credit, sum(ld_amount) Balance ,";
             strsql = strsql + " case substring(ld_dpid,2,1)  ";
             strsql = strsql + " when 'B' then 'BSE-' when 'N' then 'NSE-' when 'M' then 'MCX-'  when 'F' then 'NCDEX-' else '' end + ";
             strsql = strsql + " case substring(ld_dpid,3,1)  ";
@@ -1966,7 +2092,7 @@ namespace TradeWeb.API.Controllers
         }
 
         #region Transaction details Query
-        
+
         ////// TODO : For ItemWise transaction details
         private string ItemWiseDetailsQuery(string cm_cd, string td_type, string LinkCode, string td_scripnm, string FromDt, string ToDt)
         {
@@ -2287,6 +2413,163 @@ namespace TradeWeb.API.Controllers
 
         #endregion
 
+        #region OutStanding Query
+        ////// For Main grid data query
+        private string GetQueryForData(string Username)
+        {
+            string StrTradesIndex = "";
+            if (Convert.ToInt16(objUtility.fnFireQueryTradeWeb("sysobjects a, sysindexes b", "COUNT(0)", "a.id = b.id and a.name = 'trades' and b.name", "idx_trades_clientcd", true)) == 1)
+            { StrTradesIndex = "index(idx_trades_clientcd),"; }
+
+            string Strsql = string.Empty;
+            DataSet ObjDataSet = new DataSet();
+            if (_configuration["IsTradeWeb"] == "O")//Connect to Live DataBase
+            {
+                string StrCommexConn = "";
+                StrCommexConn = objUtility.GetCommexConnection();
+
+                //DateTime.Today.Date.ToString("yyyyMMdd") //HH
+                string ddd = DateTime.Now.AddMonths(-9).ToString("yyyyMMdd");
+
+                //Query To Fecth Record From TradePlus DataBase
+                Strsql = " Select case td_exchange when 'N' then 1 else 2 end Td_order,";
+                Strsql = Strsql + " case right(sm_prodtype,1) when 'F' then 'Future' else 'Option' end+ case td_segment when 'X' then '(Commodities)' else (case sm_prodtype when 'CF' then ' (Currency)'  else ''end )";
+                Strsql = Strsql + " end  as tdtype,ltrim(rtrim(sm_desc)) sm_desc,sm_sname,";
+                Strsql = Strsql + " sum(td_bqty) ot_bqty, sum(td_sqty) ot_sqty,sum(td_bqty-td_sqty) as net,td_companycode compcode, ";
+                Strsql = Strsql + " convert(decimal(15,2), case sum(td_bqty -td_sqty) when 0 then 0 else abs(sum((td_bqty -td_sqty)*td_rate)/sum(td_bqty-td_sqty)) end) ot_avgrate,";
+                Strsql = Strsql + " convert(decimal(15,2), (isnull((select ms_lastprice from Market_summary with (nolock) where ms_exchange = td_exchange and ms_Segment = td_Segment and ms_seriesid = td_seriesid and ms_dt = (select max(ms_dt) from Market_summary with (nolock) where ms_exchange = td_exchange and ms_Segment = td_Segment and ms_seriesid = td_seriesid and  ms_dt <= '" + ddd + "')),0)";
+                Strsql = Strsql + " + case  when right(sm_prodtype,1) <> 'F' then  sm_strikeprice  else 0 end) ) ot_closeprice,";
+                Strsql = Strsql + " convert(decimal(15,2), (isnull((select ms_lastprice from Market_summary with (nolock) where ms_exchange = td_exchange and ms_Segment = td_Segment and ms_seriesid = td_seriesid ";
+                Strsql = Strsql + " and ms_dt = (select max(ms_dt) from Market_summary with (nolock) where ms_exchange = td_exchange and ms_Segment = td_Segment and ms_seriesid = td_seriesid and  ms_dt <= '" + ddd + "')),0) ";
+                Strsql = Strsql + "  + case when right(sm_prodtype,1) <> 'F' then sm_strikeprice  else 0 end)	";
+                Strsql = Strsql + " *sum(td_bqty-td_sqty) * sm_multiplier ) Closing,";
+                Strsql = Strsql + " case sm_prodtype when 'IF' then 1 when 'EF' then 2 when 'IO' then 3 when 'EO' then 4 else 5 end listorder,";
+                Strsql = Strsql + " '" + ddd + "' ot_dt ,";
+                Strsql = Strsql + " case td_Segment when 'K' then case td_exchange when 'N' then 'NSEFX' when 'M' then 'MCXFX' when 'B' then 'BSEFX' end ";
+                Strsql = Strsql + " when 'F' then Case td_exchange when 'B' then 'BSE' when 'N' then 'NSE' when 'M' then 'MCX' when 'X' then  Case td_exchange when 'B' then 'BSE' when 'N' then 'NSE' when 'M' then 'MCX' end  end end as strExchange,td_seriesid ot_seriesid,td_exchange ot_exchange,td_segment ot_segment ";
+                Strsql = Strsql + " from Trades with (" + StrTradesIndex + "nolock), Series_master with (nolock) ";
+                Strsql = Strsql + " where td_seriesid=sm_seriesid and td_exchange = sm_exchange and td_Segment = sm_Segment and td_clientcd='" + Username + "'";
+                Strsql = Strsql + " and td_dt <= '" + ddd + "' and sm_expirydt >= '" + ddd + "'";
+                Strsql = Strsql + " Group by td_companyCode,td_clientcd ,td_seriesid,td_exchange,td_Segment,sm_sname,sm_prodtype,sm_desc,sm_multiplier,sm_strikeprice";
+
+                string StrComTradesIndex = "";
+                //Query To Fecth Record From Commex DataBase
+                if (objUtility.GetWebParameter("Commex") != null && objUtility.GetWebParameter("Commex") != string.Empty)
+                {
+                    if (Convert.ToInt16(objUtility.fnFireQueryTradeWeb(StrCommexConn + ".sysobjects a, " + StrCommexConn + ".sysindexes b", "COUNT(0)", "a.id = b.id and a.name = 'trades' and b.name", "idx_trades_clientcd", true)) == 1)
+                    { StrComTradesIndex = "index(idx_trades_clientcd),"; }
+
+                    Strsql = Strsql + " Union all";
+                    Strsql = Strsql + " Select 3 Td_order,case right(sm_prodtype,1)when 'F' then 'Future (Commodities)' else 'Option (Commodities)'";
+                    Strsql = Strsql + " end as tdtype,ltrim(rtrim(sm_desc)) sm_desc,sm_sname,sum(td_bqty) ot_bqty,sum(td_sqty) ot_sqty,sum(td_bqty-td_sqty) as net,td_companycode compcode,";
+                    Strsql = Strsql + " convert(decimal(15,2), case sum(td_bqty -td_sqty) when 0 then 0 else abs(sum((td_bqty -td_sqty)*td_rate)/sum(td_bqty-td_sqty)) end) ot_avgrate,";
+                    Strsql = Strsql + " convert(decimal(15,2), (isnull((select ms_lastprice from " + StrCommexConn + ".Market_summary with (nolock) where ms_exchange = td_exchange and ms_seriesid = td_seriesid and ms_dt = (select max(ms_dt) from " + StrCommexConn + ".Market_summary with (nolock) where ms_exchange = td_exchange and ms_seriesid = td_seriesid and  ms_dt <= '" + ddd + "')),0) ";
+                    Strsql = Strsql + "  + case  when right(sm_prodtype,1) <> 'F' then  sm_strikeprice  else 0 end) ) ot_closeprice,";
+                    Strsql = Strsql + " convert(decimal(15,2), (isnull((select ms_lastprice from " + StrCommexConn + ".Market_summary with (nolock) where ms_exchange = td_exchange and ms_seriesid = td_seriesid ";
+                    Strsql = Strsql + " and ms_dt = (select max(ms_dt) from " + StrCommexConn + ".Market_summary with (nolock) where ms_exchange = td_exchange and ms_seriesid = td_seriesid and  ms_dt <= '" + ddd + "')),0) ";
+                    Strsql = Strsql + "  + case  when right(sm_prodtype,1) <> 'F' then sm_strikeprice  else 0 end)	";
+                    Strsql = Strsql + "  *sum(td_bqty-td_sqty) * sm_multiplier ) Closing,";
+                    Strsql = Strsql + " case sm_prodtype when 'CF'then 11 else 12 end listorder, '" + ddd + "' ot_dt ,";
+                    Strsql = Strsql + " case td_exchange when 'M' then 'MCX' when 'N' then 'NCDEX' when 'S' then 'NSEL' when 'F' Then 'NCDEX' end as strExchange,td_seriesid ot_seriesid,td_exchange ot_exchange,'' ot_segment ";
+                    Strsql = Strsql + " from " + StrCommexConn + ".Trades with(" + StrComTradesIndex + "nolock), " + StrCommexConn + ".Series_master with (nolock)";
+                    Strsql = Strsql + " where td_seriesid=sm_seriesid and td_exchange = sm_exchange and td_clientcd='" + Username + "'";
+                    Strsql = Strsql + " and td_dt <= '" + ddd + "' and sm_expirydt > '" + ddd + "'";
+                    Strsql = Strsql + " Group by td_companyCode,td_clientcd ,td_seriesid,td_exchange,sm_sname,sm_prodtype,sm_desc,sm_multiplier,sm_strikeprice";
+                    Strsql = Strsql + " order by listorder,sm_desc";
+                }
+            }
+            else //Connect to TradeWeb DataBase
+            {
+                Strsql = " Select case ot_exchange when 'N' then 1 else 2 end Td_order, case left(sm_sname,1) when 'F' then 'Future' else 'Option' end+case sm_prodtype when 'CF' then ' (Currency)' else '' end  as tdtype,ltrim(rtrim(sm_desc)) sm_desc,sm_sname,";
+                Strsql = Strsql + " ot_bqty,ot_sqty,(ot_bqty-ot_sqty) as net,ot_companycode compcode, cast(ot_avgrate as decimal(15,2)) ot_avgrate,";
+                Strsql = Strsql + " cast(ot_closeprice as decimal(15,2))ot_closeprice,";
+                Strsql = Strsql + " cast(((ot_bqty-ot_sqty)*ot_closeprice*sm_multiplier)as decimal(15,2)) as Closing,";
+                Strsql = Strsql + " case sm_prodtype when 'IF' then 1 when 'EF' then 2 when 'IO' then 3 when 'EO' then 4 else 5 end listorder,";
+                Strsql = Strsql + " convert(char,convert(datetime,ot_dt),103) ot_dt ,";
+                Strsql = Strsql + " Case ot_segment when 'F' then case ot_exchange when 'B' then 'BSE' when 'N' then 'NSE' end ";
+                Strsql = Strsql + " when 'K' then Case ot_exchange when 'B' then 'BSEFX' when 'N' then 'NSEFX' when 'M' then 'MCFFX' end ";
+                Strsql = Strsql + " end  as strExchange, ";
+                Strsql = Strsql + " ot_seriesid,ot_exchange,ot_Segment";
+                Strsql = Strsql + " from Foutstanding with (nolock), Series_master with (nolock) ";
+                Strsql = Strsql + " where ot_seriesid=sm_seriesid and ot_exchange = sm_exchange and ot_Segment = sm_Segment and ot_clientcd='" + Username + "'";
+                Strsql = Strsql + " union all";
+                Strsql = Strsql + " Select 3 Td_order,case left(sm_sname,1)when 'F' then 'Future (Commodities)' else 'Option (Commodities)'";
+                Strsql = Strsql + " end as tdtype,ltrim(rtrim(sm_desc)) sm_desc,sm_sname,ot_bqty,ot_sqty,(ot_bqty-ot_sqty) as net,ot_companycode compcode,";
+                Strsql = Strsql + " cast(ot_avgrate as decimal(15,2))ot_avgrate,cast(ot_closeprice as decimal(15,2))ot_closeprice,";
+                Strsql = Strsql + " cast(((ot_bqty-ot_sqty)*ot_closeprice*sm_multiplier)as decimal(15,2)) as Closing, case sm_prodtype when 'CF'";
+                Strsql = Strsql + " then 11 else 12 end listorder, convert(char,convert(datetime,ot_dt),103) ot_dt ,";
+                Strsql = Strsql + " case ot_exchange when 'M' then 'MCX' when 'N' then 'NCDEX' when 'S' then 'NSEL' end as strExchange,ot_seriesid,ot_exchange,'' ot_Segment";
+                Strsql = Strsql + " from Coutstanding with (nolock),CSeries_master with (nolock)";
+                Strsql = Strsql + " where ot_seriesid=sm_seriesid and ot_exchange = sm_exchange and ot_clientcd='" + Username + "'";
+                Strsql = Strsql + " order by listorder,sm_desc";
+            }
+
+            return Strsql;
+        }
+
+        ////// For Main grids detail data query
+        private string GetQueryForDetailsData(string Username, string Td_order, string ot_seriesid, string ot_exchange, string ot_Segment)
+        {
+            string StrTradesIndex = "";
+
+            string Strsql = string.Empty;
+
+            DataSet ObjDataSet = new DataSet();
+            if (Td_order == "1" || Td_order == "2")
+            {
+                if (Convert.ToInt16(objUtility.fnFireQueryTradeWeb("sysobjects a, sysindexes b", "COUNT(0)", "a.id = b.id and a.name = 'trades' and b.name", "idx_trades_clientcd", true)) == 1)
+                { StrTradesIndex = "index(idx_trades_clientcd),"; }
+
+                Strsql = " select case left(sm_productcd,1) when 'F' then 'Future' else 'Option' end td_Type, ";
+                Strsql = Strsql + " case left(sm_productcd,1) when 'F' then '' else rtrim(sm_callput)+''+ltrim(convert(char,round(sm_strikeprice,0))) ";
+                Strsql = Strsql + " end callput,convert(char,convert(datetime,td_dt),103) td_dt, convert(char,convert(datetime,sm_expirydt),103) as expiry, sum(td_bqty) Bqty, convert(decimal(15,2),sum(td_bqty*td_rate) * sm_multiplier ) BAmt, sum(td_sqty) Sqty, ";
+                Strsql = Strsql + " convert(decimal(15,2),sum(td_sqty*td_rate) * sm_multiplier ) SAmt, sum(td_bqty-td_sqty) NQty, ";
+                Strsql = Strsql + "  convert(decimal(15,2), (sum((td_bqty-td_sqty)*td_rate)) * sm_multiplier )  NAmt ";
+                Strsql = Strsql + " from trades with (" + StrTradesIndex + "nolock), series_master with (nolock) where td_clientcd='" + Username + "' ";
+                Strsql = Strsql + " and td_exchange=sm_exchange and td_Segment=sm_Segment and td_seriesid=sm_seriesid ";
+                Strsql = Strsql + " and td_seriesid='" + ot_seriesid + "' and td_exchange='" + ot_exchange + "' ";
+                if (ot_Segment != "")
+                {
+                    Strsql = Strsql + " and td_Segment='" + ot_Segment + "' ";
+                }
+                Strsql = Strsql + " and td_trxflag <> 'O' ";
+                Strsql = Strsql + " group by td_dt, sm_expirydt, sm_productcd, sm_callput, sm_strikeprice,sm_multiplier";
+            }
+            if (Td_order == "3")
+            {
+                string StrComTradesIndex = "";
+                Strsql = " select case left(sm_productcd,1) when 'F' then 'Future' else 'Option' end td_Type,";
+                Strsql = Strsql + " case left(sm_productcd,1) when 'F' then '' else rtrim(sm_callput)+''+ltrim(convert(char,round(sm_strikeprice,0))) ";
+                Strsql = Strsql + " end callput, convert(char,convert(datetime,td_dt),103) td_dt,  convert(char,convert(datetime,sm_expirydt),103) as expiry, sum(td_bqty) Bqty, convert(decimal(15,2),sum(td_bqty*td_rate) * sm_multiplier ) BAmt,";
+                Strsql = Strsql + " sum(td_sqty) Sqty, convert(decimal(15,2),sum(td_sqty*td_rate) * sm_multiplier ) SAmt, sum(td_bqty-td_sqty) NQty, ";
+                Strsql = Strsql + " convert(decimal(15,2), (sum((td_bqty-td_sqty)*td_rate)) * sm_multiplier )  NAmt ";
+
+                if (_configuration["IsTradeWeb"] == "O")//Connect to Live DataBase
+                {
+                    string StrCommexConn = "";
+                    StrCommexConn = objUtility.GetCommexConnection();
+                    if (Convert.ToInt16(objUtility.fnFireQueryTradeWeb(StrCommexConn + ".sysobjects a, " + StrCommexConn + ".sysindexes b", "COUNT(0)", "a.id = b.id and a.name = 'trades' and b.name", "idx_trades_clientcd", true)) == 1)
+                    { StrComTradesIndex = "index(idx_trades_clientcd),"; }
+
+                    Strsql = Strsql + " from " + StrCommexConn + ".trades with (" + StrComTradesIndex + "nolock), " + StrCommexConn + ".series_master with (nolock)";
+                }
+                else
+                {
+                    string StrCTradesIndex = "";
+                    if (Convert.ToInt16(objUtility.fnFireQueryTradeWeb("sysobjects a, sysindexes b", "COUNT(0)", "a.id = b.id and a.name = 'Ctrades' and b.name", "idx_Ctrades_clientcd", true)) == 1)
+                    { StrCTradesIndex = "index(idx_Ctrades_clientcd),"; }
+
+                    Strsql = Strsql + " from ctrades with (" + StrCTradesIndex + "nolock), cseries_master with (nolock)";
+                }
+                Strsql = Strsql + " where td_exchange=sm_exchange and td_seriesid=sm_seriesid and td_clientcd='" + Username + "'";
+                Strsql = Strsql + " and td_seriesid='" + ot_seriesid + "' and td_exchange='" + ot_exchange + "' and td_trxflag <> 'O' ";
+                Strsql = Strsql + " group by td_dt, sm_expirydt, sm_productcd, sm_callput, sm_strikeprice ,sm_multiplier ";
+            }
+
+            return Strsql;
+        }
+
+        #endregion
         #endregion
     }
 }
