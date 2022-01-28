@@ -563,6 +563,102 @@ namespace TradeWeb.API.Controllers
             return BadRequest();
         }
 
+        /// <summary>
+        /// Get data for bind dropdownlist Act
+        /// </summary>
+        /// <returns></returns>
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpGet("GetDropDownActData", Name = "GetDropDownActData")]
+        public IActionResult GetDropDownActData()
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var getData = GetDropDownActDataHandler();
+                    if (getData != null)
+                    {
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                    }
+                    else
+                    {
+                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
+
+        /// <summary>
+        /// Get holding table data
+        /// </summary>
+        /// <returns></returns>
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpGet("GetHoldingtbl", Name = "GetHoldingtbl")]
+        public IActionResult GetHoldingtbl()
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var getData = GetHoldingtblHandler();
+                    if (getData != null)
+                    {
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                    }
+                    else
+                    {
+                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
+
+
+        ///// <summary>
+        ///// Get Holding Detail grid data
+        ///// </summary>
+        ///// <param name="userId"></param>
+        ///// <param name="scripcd"></param>
+        ///// <param name="bCode"></param>
+        ///// <returns></returns>
+        //[Authorize(AuthenticationSchemes = "Bearer")]
+        //[HttpGet("GetHoldingDetailData", Name = "GetHoldingDetailData")]
+        //public IActionResult GetHoldingDetailData(string userId, string scripcd, string bCode)
+        //{
+        //    if (ModelState.IsValid)
+        //    {
+        //        try
+        //        {
+        //            var getData = GetHoldingDetailDataHandler(userId, scripcd, bCode);
+        //            if (getData != null)
+        //            {
+        //                return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+        //            }
+        //            else
+        //            {
+        //                return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+        //            }
+        //        }
+        //        catch (Exception ex)
+        //        {
+        //            return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+        //        }
+        //    }
+        //    return BadRequest();
+        //}
+
+
+
         #endregion
         private JwtSecurityToken GetToken()
         {
@@ -2112,6 +2208,7 @@ namespace TradeWeb.API.Controllers
 
         #endregion
 
+
         #region Holding handler method
 
         //TODO : For getting Holding Page Load data
@@ -2164,6 +2261,66 @@ namespace TradeWeb.API.Controllers
             var ds = GetQueryForDatewiseHoldingData(cm_cd, Select_Type, Date);
             try
             {
+                if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                {
+                    var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
+                    return json;
+                }
+                return new List<string>();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        private dynamic GetHoldingDetailDataHandler(string cm_cd, string StrScripcd, string StrBcode)
+        {
+            string qury = GetQueryForHoldingDetailData(cm_cd, StrScripcd, StrBcode);
+            try
+            {
+                var ds = CommonRepository.FillDataset(qury);
+                if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                {
+                    var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
+                    return json;
+                }
+                return new List<string>();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        // Get data for bind dropdownlist Act
+        private dynamic GetDropDownActDataHandler()
+        {
+            List<string> EntityList = new List<string>();
+            var query = GetQueryForDropDownActData();
+            try
+            {
+                var ds = CommonRepository.OpenDataSetTmp(query);
+                if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                {
+                    var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
+                    return json;
+                }
+                return EntityList.ToList();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        // Get holding table data
+        private dynamic GetHoldingtblHandler()
+        {
+            var query = GetQueryForHoldingtbl();
+            try
+            {
+                var ds = CommonRepository.OpenDataSetTmp(query);
                 if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
                 {
                     var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
@@ -4504,7 +4661,73 @@ namespace TradeWeb.API.Controllers
             return ObjDataSet;
         }
 
+        private string GetQueryForHoldingDetailData(string cm_cd, string StrScripcd, string StrBcode)
+        {
+            string strsql = string.Empty;
+            DataSet ObjDataSet = new DataSet();
+            string Strtable = "";
 
+            if (Strtable == "")
+            {
+                strsql = "select bh_clientcd,bh_scripcd as 'dm_scripcd',bh_isin as 'dm_isin', bh_scripname as 'ss_name',bh_stlmnt as 'se_stlmnt',convert(decimal(15,2),bh_bserate) as bh_bserate,";
+                strsql += " convert(decimal(15,2),bh_valuation) as 'valuation', sum(bh_qty) as 'qty',case bh_type when 'BEN' then 'Beneficiary Holding' when 'EXP' then 'Expected Holding' when";
+                strsql += " 'UNDEL' then 'Undelivered Holding' else bh_type end bh_type,bh_type+bh_scripcd bCode from benholding with (nolock) where bh_clientcd = '" + cm_cd + "'";
+                strsql += " and bh_scripcd='" + StrScripcd + "' and bh_type='" + StrBcode + "'    group by bh_clientcd,bh_scripcd,bh_isin,  bh_scripname,bh_stlmnt,bh_bserate,bh_valuation,bh_type,bh_type+bh_scripcd having abs(sum(bh_qty)) > 0 order by bh_type,bh_scripname";
+            }
+            else
+            {
+                strsql = " select bh_clientcd,bh_scripcd as 'dm_scripcd',bh_isin as 'dm_isin', bh_scripname as 'ss_name', bh_stlmnt as 'se_stlmnt', convert(decimal(15,2),bh_bserate) as bh_bserate,sum(convert(decimal(15,2),bh_valuation)) as 'valuation',";
+                strsql += " sum(bh_qty) as 'qty',case bh_type when 'BEN' then 'Beneficiary Holding' when 'EXP' then 'Expected Holding' when 'UNDEL' then 'Undelivered Holding' else bh_type end bh_type,bh_type bCode from " + Strtable + " where bh_clientcd = '" + cm_cd + "' and  bh_scripcd='" + StrScripcd + "' and bh_type='" + StrBcode + "'   group by bh_clientcd,bh_scripcd,bh_isin, ";
+                strsql += " bh_stlmnt,bh_scripname,bh_bserate,bh_type,bh_type+bh_scripcd having abs(sum(bh_qty)) > 0 order by bh_type, bh_scripname ";
+
+            }
+
+            return strsql;
+        }
+
+        // Get data for bind dropdownlist Act
+        private string GetQueryForDropDownActData()
+        {
+            string Strsql = " select em_name from Entity_Master where em_cd=(select min(em_cd) from Entity_master Where Len(Ltrim(Rtrim(em_cd))) = 1)";
+
+            if (_configuration["IsTradeWeb"] == "T" || _configuration["IsTradeWeb"] == "O")
+            {
+                if (Convert.ToInt16(objUtility.fnFireQueryTradeWeb("Entity_master", "count(0)", " em_cd='B' and em_name like 'SYKES & RAY EQUITIES%' and 1", "1", true)) > 0)
+                    Strsql = " select em_name from Entity_Master with (nolock) where em_cd='B'";
+                else
+                    Strsql = " select em_name from Entity_Master with (nolock) where em_cd =(select min(em_cd) from Entity_master)";
+            }
+            return Strsql;
+        }
+
+        //get query for holding table
+        private string GetQueryForHoldingtbl()
+        {
+            string Strsql = GetQueryForDropDownActData();
+            if (_configuration["IsTradeWeb"] == "O")
+            {
+                char[] ArrSeparators = new char[1];
+                ArrSeparators[0] = '/';
+                if (objUtility.GetWebParameter("Cross") != "") // strBoid  LEft 2 <>IN
+                {
+                    string[] ArrCross = objUtility.GetWebParameter("Cross").Split(ArrSeparators);
+                    Strsql = " select name from [" + ArrCross[0].Trim() + "].[" + ArrCross[1].Trim() + "].[" + ArrCross[2].Trim() + "].sysobjects where xtype = 'U' and name like ('Holding_%') and ISDATE(RIGHT(name,8))=1 ";
+                }
+                if (objUtility.GetWebParameter("Estro") != "")
+                {
+                    if (Strsql != "")
+                    { Strsql += "  Union All "; }
+                    string[] ArrEstro = objUtility.GetWebParameter("Estro").Split(ArrSeparators);
+                    Strsql += " select name from [" + ArrEstro[0].Trim() + "].[" + ArrEstro[1].Trim() + "].[" + ArrEstro[2].Trim() + "].sysobjects where xtype = 'U' and name like ('Holding_%') and ISDATE(RIGHT(name,8))=1 ";
+                }
+            }
+            else
+            {
+                Strsql = " select name from sysobjects where xtype = 'U' and name like ('Holding_%') and ISDATE(RIGHT(name,8))=1  Union All ";
+                Strsql += " select name from sysobjects where xtype = 'U' and name like ('BenHolding_%') and ISDATE(RIGHT(name,8))=1 ";
+            }
+            return Strsql;
+        }
         #endregion
         #endregion
     }
