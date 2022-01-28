@@ -4389,8 +4389,8 @@ namespace TradeWeb.API.Controllers
                     {
                         string[] ArrCross = _configuration["Cross"].Split(ArrSeparators);
                         holdingQuery = "select a.hld_isin_code,b.sc_company_name,b.sc_isinname,cast((a.hld_ac_pos) as decimal(15,3)) hld_ac_pos,a.hld_ac_type, ";
-                        holdingQuery = holdingQuery + " cast(( ( a.hld_ac_pos * sc_Rate)) as decimal(15,2))  as valuation,bt_description as BType";
                         holdingQuery = holdingQuery + " d.bt_description 'bt_description', hld_market_type,a.hld_settlement,cast((sc_rate) as decimal(15,2)) as sc_security_rate, ";
+                        holdingQuery = holdingQuery + " cast(( ( a.hld_ac_pos * sc_Rate)) as decimal(15,2))  as valuation,bt_description as BType";
                         holdingQuery = holdingQuery + " from " + ArrCross[0].Trim() + "." + ArrCross[1].Trim() + "." + ArrCross[2].Trim() + ".Holding a,";
                         holdingQuery = holdingQuery + " " + ArrCross[0].Trim() + "." + ArrCross[1].Trim() + "." + ArrCross[2].Trim() + ".Security b ,";
                         holdingQuery = holdingQuery + "" + ArrCross[0].Trim() + "." + ArrCross[1].Trim() + "." + ArrCross[2].Trim() + ".Beneficiary_type d where a.hld_ac_code in (" + strBoid + " ) and a.hld_isin_code = b.sc_isincode ";
