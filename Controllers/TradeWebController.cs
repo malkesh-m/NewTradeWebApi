@@ -275,7 +275,7 @@ namespace TradeWeb.API.Controllers
         // TODO : For getting Itemwise transaction details data
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpGet("GetDateWiseTransactionDetails", Name = "GetDateWiseTransactionDetails")]
-        public async Task<IActionResult> GetDateWiseTransactionDetails([FromQuery] string tradeType, string linkCode, string settelment, string date, string fromDate, string toDate, string header)
+        public IActionResult GetDateWiseTransactionDetails([FromQuery] string tradeType, string linkCode, string settelment, string date, string fromDate, string toDate, string header)
         {
             if (ModelState.IsValid)
             {
