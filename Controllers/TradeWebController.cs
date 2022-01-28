@@ -176,7 +176,6 @@ namespace TradeWeb.API.Controllers
         }
         #endregion
 
-
         #region Transaction Api
         /// <summary>
         ///   Transaction API  
@@ -379,7 +378,6 @@ namespace TradeWeb.API.Controllers
 
         #region Portfolio Api
 
-
         /// <summary>
         /// Get Portfolio Main Data
         /// </summary>
@@ -460,6 +458,77 @@ namespace TradeWeb.API.Controllers
         }
         #endregion
 
+        #region Holding Api
+
+        /// <summary>
+        ///  Get Holding Page Load Data
+        /// </summary> 
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpGet("GetHoldingPageLoadData", Name = "GetHoldingPageLoadData")]
+        public IActionResult GetHoldingPageLoadData()
+        {
+            if (ModelState.IsValid)
+            {
+                #region
+                try
+                {
+                    var tokenS = GetToken();
+                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
+
+                    var getData = GetPageLoadData(userId);
+                    if (getData != null)
+                    {
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                    }
+                    else
+                    {
+                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+                #endregion
+            }
+            return BadRequest();
+        }
+
+        /// <summary>
+        /// Get Current Holding grid data
+        /// </summary>
+        /// <param name="selectType"></param>
+        /// <param name="holdingType"></param>
+        /// <param name="boId"></param>
+        /// <returns></returns>
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpGet("GetCurrentHoldingData", Name = "GetCurrentHoldingData")]
+        public IActionResult GetCurrentHoldingData(string selectType, string holdingType, string boId)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var dd = _configuration["Cross"];
+                    var getData = GetCurrentHoldingDataHandler(selectType, holdingType, boId);
+                    if (getData != null)
+                    {
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                    }
+                    else
+                    {
+                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
+
+        #endregion
         private JwtSecurityToken GetToken()
         {
             var handler = new JwtSecurityTokenHandler();
@@ -611,9 +680,13 @@ namespace TradeWeb.API.Controllers
         }
         #endregion
 
+
+
+
+
         #region Handler
 
-
+        #region Ledger handler methods
         private dynamic Ledger_Summary(string cm_cd, string type, string exchSeg, string Fromdate, string Todate, string CompCode)
         {
             string qury = GetQueryMainData(Fromdate, Todate, cm_cd, CompCode);
@@ -653,6 +726,7 @@ namespace TradeWeb.API.Controllers
                 throw ex;
             }
         }
+        #endregion
 
         private dynamic UserDetails(string userId, string password)
         {
@@ -2003,9 +2077,63 @@ namespace TradeWeb.API.Controllers
 
         #endregion
 
+        #region Holding handler method
+
+        //TODO : For getting Holding Page Load data
+        private dynamic GetPageLoadData(string cm_cd)
+        {
+            List<string> EntityList = new List<string>();
+            //HoldingBL _bl = new HoldingBL();
+            string qury = GetQueryPageLoadData(cm_cd);
+            try
+            {
+                var ds = CommonRepository.FillDataset(qury);
+                if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                {
+                    var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
+                    return json;
+                }
+                return EntityList.ToList();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        //TODO : For getting Holding Details Data
+        private dynamic GetCurrentHoldingDataHandler(string Select_Type, string Holding_Type, string strBoid)
+        {
+            string qury = GetQueryForCurrentHoldingData(Select_Type, Holding_Type, strBoid);
+            try
+            {
+                var ds = CommonRepository.FillDataset(qury);
+                if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                {
+                    //DataTable dt = new DataTable();
+                    //EntityList = ConvertData.ConvertDataTable<CurrentHoldingEntity>(ds.Tables[0]);
+                    var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
+                    return json;
+                }
+                return new List<string>();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
         #endregion
 
+        #endregion
+
+
+
+
+
         #region Query
+
+        #region Ledger Query
         // For Ledger summary main data
         private string GetQueryMainData(string Fromdt, string Todt, string Username, string CompCode)
         {
@@ -2243,6 +2371,7 @@ namespace TradeWeb.API.Controllers
 
             return strsql;
         }
+        #endregion
 
         #region Transaction details Query
 
@@ -4223,6 +4352,53 @@ namespace TradeWeb.API.Controllers
 
             strsql = "update #tmpfinvestorrep  set fi_mtm = fi_netvalue *(-1) where fi_type = 'R'";
             objUtility.ExecuteSQLTmp(strsql, con); ;
+        }
+
+        #endregion
+
+        #region Holding Query
+        ////// TODO : For Main grid data query
+        private string GetQueryPageLoadData(string cm_cd)
+        {
+            strsql = "select  case left(da_dpid,2) when 'IN' then  rtrim(da_dpid)+rtrim(da_actno) else da_actno end as BOId,da_name as Name, da_clientcd  from dematact with (nolock) where da_clientcd = '" + cm_cd + "' ";
+
+            return strsql;
+        }
+
+        //For Details grid data query
+        private string GetQueryForCurrentHoldingData(string Select_Type, string Holding_Type, string strBoid)
+        {
+            string holdingQuery = "";
+            if (Select_Type == "Dp" && Holding_Type == "Current Holding")
+            {
+                holdingQuery = ShowDetailsGrid(Select_Type, Holding_Type, strBoid);
+            }
+            return holdingQuery;
+        }
+
+        private string ShowDetailsGrid(string Select_Type, string Holding_Type, string strBoid)
+        {
+            string holdingQuery = "";
+            char[] ArrSeparators = new char[1];
+            ArrSeparators[0] = '/';
+            if (_configuration["IsTradeWeb"] == "O")
+            {//-----------------------------------------------------------Live----------------------------------------------------------------------------------------
+                if (_configuration["Cross"] != "" && Microsoft.VisualBasic.Strings.Mid(strBoid, 2, 2) != "IN") // strBoid  LEft 2 <>IN
+                {
+                    if (Holding_Type == "Current Holding")
+                    {
+                        string[] ArrCross = _configuration["Cross"].Split(ArrSeparators);
+                        holdingQuery = "select a.hld_isin_code,b.sc_company_name,b.sc_isinname,cast((a.hld_ac_pos) as decimal(15,3)) hld_ac_pos,a.hld_ac_type, ";
+                        holdingQuery = holdingQuery + " cast(( ( a.hld_ac_pos * sc_Rate)) as decimal(15,2))  as valuation,bt_description as BType";
+                        holdingQuery = holdingQuery + " d.bt_description 'bt_description', hld_market_type,a.hld_settlement,cast((sc_rate) as decimal(15,2)) as sc_security_rate, ";
+                        holdingQuery = holdingQuery + " from " + ArrCross[0].Trim() + "." + ArrCross[1].Trim() + "." + ArrCross[2].Trim() + ".Holding a,";
+                        holdingQuery = holdingQuery + " " + ArrCross[0].Trim() + "." + ArrCross[1].Trim() + "." + ArrCross[2].Trim() + ".Security b ,";
+                        holdingQuery = holdingQuery + "" + ArrCross[0].Trim() + "." + ArrCross[1].Trim() + "." + ArrCross[2].Trim() + ".Beneficiary_type d where a.hld_ac_code in (" + strBoid + " ) and a.hld_isin_code = b.sc_isincode ";
+                        holdingQuery = holdingQuery + " and d.bt_code = a.hld_ac_type order by BType,a.hld_ac_code,b.sc_company_name ";
+                    }
+                }
+            }
+            return holdingQuery;
         }
 
         #endregion
