@@ -85,6 +85,8 @@ namespace TradeWeb.API.Controllers
             return BadRequest();
         }
 
+        #region Ledger Api
+
         /// <summary>
         /// Ledger_Summary
         /// </summary>
@@ -120,39 +122,60 @@ namespace TradeWeb.API.Controllers
             return BadRequest();
         }
 
-        ///// <summary>
-        ///// GetLedgerDetailsData
-        ///// </summary>
-        ///// <returns></returns>//[Authorize(AuthenticationSchemes = "Bearer")]
-        //[HttpGet("GetLedgerDetailsData", Name = "GetLedgerDetailsData")]
-        //public async Task<IActionResult> GetLedgerDetailsData(string exchangeTitle, string exchangeCode, Boolean blnexseg, string fromdt, string todt, string exchangeCodeIn, string exchangeMTFTitle, string exchangeMTFCodeIn, string strNBFC, string exchangeTitlemar, string exchangeCodeMar, string exchangeCodemarIn, string exchCommCode, string exchCommTitle, string exchCommCodeMar, string exchCommTitleMar, string exchangeCommCodeIn, string exchangeCommMarIn)
-        //{
-        //    if (ModelState.IsValid)
-        //    {
-        //        try
-        //        {
-        //            var bb = _configuration["Commex"];
+        /// <summary>
+        /// GetLedgerDetailsData
+        /// </summary>
+        /// <param name="exchangeTitle"></param>
+        /// <param name="exchangeCode"></param>
+        /// <param name="blnexseg"></param>
+        /// <param name="fromdt"></param>
+        /// <param name="todt"></param>
+        /// <param name="exchangeCodeIn"></param>
+        /// <param name="exchangeMTFTitle"></param>
+        /// <param name="exchangeMTFCodeIn"></param>
+        /// <param name="NBFC"></param>
+        /// <param name="exchangeTitlemar"></param>
+        /// <param name="exchangeCodeMar"></param>
+        /// <param name="exchangeCodemarIn"></param>
+        /// <param name="exchCommCode"></param>
+        /// <param name="exchCommTitle"></param>
+        /// <param name="exchCommCodeMar"></param>
+        /// <param name="exchCommTitleMar"></param>
+        /// <param name="exchangeCommCodeIn"></param>
+        /// <param name="exchangeCommMarIn"></param>
+        /// <returns></returns>
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpGet("GetLedgerDetailsData", Name = "GetLedgerDetailsData")]
+        public IActionResult GetLedgerDetailsData(string exchangeTitle, string exchangeCode, Boolean blnexseg, string fromdt, string todt, string exchangeCodeIn, string exchangeMTFTitle, string exchangeMTFCodeIn, string NBFC, string exchangeTitlemar, string exchangeCodeMar, string exchangeCodemarIn, string exchCommCode, string exchCommTitle, string exchCommCodeMar, string exchCommTitleMar, string exchangeCommCodeIn, string exchangeCommMarIn)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var bb = _configuration["Commex"];
 
-        //            var tokenS = GetToken();
-        //            var userName = tokenS.Claims.First(claim => claim.Type == "username").Value;
+                    var tokenS = GetToken();
+                    var userName = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-        //            var getData = GetLedgerDetailsData(userName, exchangeTitle, exchangeCode, blnexseg, fromdt, todt, exchangeCodeIn, exchangeMTFTitle, exchangeMTFCodeIn, strNBFC, exchangeTitlemar, exchangeCodeMar, exchangeCodemarIn, exchCommCode, exchCommTitle, exchCommCodeMar, exchCommTitleMar, exchangeCommCodeIn, exchangeCommMarIn);
-        //            if (getData != null)
-        //            {
-        //                return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
-        //            }
-        //            else
-        //            {
-        //                return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
-        //            }
-        //        }
-        //        catch (Exception ex)
-        //        {
-        //            return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
-        //        }
-        //    }
-        //    return BadRequest();
-        //}
+                    var getData = GetLedgerDetailsData(userName, exchangeTitle, exchangeCode, blnexseg, fromdt, todt, exchangeCodeIn, exchangeMTFTitle, exchangeMTFCodeIn, NBFC, exchangeTitlemar, exchangeCodeMar, exchangeCodemarIn, exchCommCode, exchCommTitle, exchCommCodeMar, exchCommTitleMar, exchangeCommCodeIn, exchangeCommMarIn);
+                    if (getData != null)
+                    {
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                    }
+                    else
+                    {
+                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
+        #endregion
+
 
         #region Transaction Api
         /// <summary>
