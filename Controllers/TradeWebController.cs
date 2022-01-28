@@ -127,16 +127,16 @@ namespace TradeWeb.API.Controllers
         /// </summary>
         /// <param name="exchangeTitle"></param>
         /// <param name="exchangeCode"></param>
-        /// <param name="blnexseg"></param>
-        /// <param name="fromdt"></param>
-        /// <param name="todt"></param>
+        /// <param name="blnExSeg"></param>
+        /// <param name="fromDate"></param>
+        /// <param name="toDate"></param>
         /// <param name="exchangeCodeIn"></param>
         /// <param name="exchangeMTFTitle"></param>
         /// <param name="exchangeMTFCodeIn"></param>
         /// <param name="NBFC"></param>
-        /// <param name="exchangeTitlemar"></param>
+        /// <param name="exchangeTitleMar"></param>
         /// <param name="exchangeCodeMar"></param>
-        /// <param name="exchangeCodemarIn"></param>
+        /// <param name="exchangeCodeMarIn"></param>
         /// <param name="exchCommCode"></param>
         /// <param name="exchCommTitle"></param>
         /// <param name="exchCommCodeMar"></param>
@@ -146,7 +146,7 @@ namespace TradeWeb.API.Controllers
         /// <returns></returns>
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpGet("GetLedgerDetailsData", Name = "GetLedgerDetailsData")]
-        public IActionResult GetLedgerDetailsData(string exchangeTitle, string exchangeCode, Boolean blnexseg, string fromdt, string todt, string exchangeCodeIn, string exchangeMTFTitle, string exchangeMTFCodeIn, string NBFC, string exchangeTitlemar, string exchangeCodeMar, string exchangeCodemarIn, string exchCommCode, string exchCommTitle, string exchCommCodeMar, string exchCommTitleMar, string exchangeCommCodeIn, string exchangeCommMarIn)
+        public IActionResult GetLedgerDetailsData(string exchangeTitle, string exchangeCode, Boolean blnExSeg, string fromDate, string toDate, string exchangeCodeIn, string exchangeMTFTitle, string exchangeMTFCodeIn, string NBFC, string exchangeTitleMar, string exchangeCodeMar, string exchangeCodeMarIn, string exchCommCode, string exchCommTitle, string exchCommCodeMar, string exchCommTitleMar, string exchangeCommCodeIn, string exchangeCommMarIn)
         {
             if (ModelState.IsValid)
             {
@@ -157,7 +157,7 @@ namespace TradeWeb.API.Controllers
                     var tokenS = GetToken();
                     var userName = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = GetLedgerDetailsData(userName, exchangeTitle, exchangeCode, blnexseg, fromdt, todt, exchangeCodeIn, exchangeMTFTitle, exchangeMTFCodeIn, NBFC, exchangeTitlemar, exchangeCodeMar, exchangeCodemarIn, exchCommCode, exchCommTitle, exchCommCodeMar, exchCommTitleMar, exchangeCommCodeIn, exchangeCommMarIn);
+                    var getData = GetLedgerDetailsData(userName, exchangeTitle, exchangeCode, blnExSeg, fromDate, toDate, exchangeCodeIn, exchangeMTFTitle, exchangeMTFCodeIn, NBFC, exchangeTitleMar, exchangeCodeMar, exchangeCodeMarIn, exchCommCode, exchCommTitle, exchCommCodeMar, exchCommTitleMar, exchangeCommCodeIn, exchangeCommMarIn);
                     if (getData != null)
                     {
                         return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
