@@ -528,6 +528,41 @@ namespace TradeWeb.API.Controllers
             return BadRequest();
         }
 
+        /// <summary>
+        /// Get Datewise Holding grid data
+        /// </summary>
+        /// <param name="selectType"></param>
+        /// <param name="date"></param>
+        /// <returns></returns>
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpGet("GetDatewiseHoldingData", Name = "GetDatewiseHoldingData")]
+        public IActionResult GetDatewiseHoldingData(string selectType, string date)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var tokenS = GetToken();
+                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
+
+                    var getData = GetDatewiseHoldingDataHandler(userId, selectType, date);
+                    if (getData != null)
+                    {
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                    }
+                    else
+                    {
+                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
+
         #endregion
         private JwtSecurityToken GetToken()
         {
@@ -2123,6 +2158,24 @@ namespace TradeWeb.API.Controllers
             }
         }
 
+        //TODO : For getting Holding Datewise Data
+        private dynamic GetDatewiseHoldingDataHandler(string cm_cd, string Select_Type, string Date)
+        {
+            var ds = GetQueryForDatewiseHoldingData(cm_cd, Select_Type, Date);
+            try
+            {
+                if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                {
+                    var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
+                    return json;
+                }
+                return new List<string>();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
         #endregion
 
         #endregion
@@ -4400,6 +4453,57 @@ namespace TradeWeb.API.Controllers
             }
             return holdingQuery;
         }
+
+        private DataSet GetQueryForDatewiseHoldingData(string cm_cd, string Select_Type, string Date)
+        {
+            DataSet ds = new DataSet();
+            if (Conversion.Val(Date) > 0 && Select_Type == "Ben")
+            {
+                ds = BindGrid(cm_cd, Select_Type, Date);
+            }
+            return ds;
+        }
+        private DataSet BindGrid(string cm_cd, string Select_Type, string Date)
+        {
+            string Strsql = string.Empty;
+            DataSet ObjDataSet = new DataSet();
+            if (_configuration["IsTradeWeb"] == "O")
+            {
+                string strstat = string.Empty;
+                Strsql = "select st_sysvalue from stationary where st_parmcd='DMTCOLLATDP' and st_exchange = 'B' ";
+                ObjDataSet = objUtility.OpenDataSet(Strsql);
+                if (ObjDataSet.Tables[0].Rows.Count != 0)
+                    strstat = ObjDataSet.Tables[0].Rows[0][0].ToString().Trim();
+                char[] ArrSeprator = new char[1];
+                ArrSeprator[0] = ',';
+                string[] arrstat = strstat.Split(ArrSeprator);
+                string strcollat = "( ";
+                for (int i = 0; i <= arrstat.Length - 1; i++)
+                {
+                    strcollat = strcollat + "'" + arrstat[i] + "',";
+                }
+                strcollat = strcollat + ")";
+                strcollat = strcollat.Replace(",)", ")");
+
+                string dt1 = Date.Trim();
+                string dt2 = objUtility.dtos(System.DateTime.Now.ToString("dd/MM/yyyy").Replace("-", "/"));
+
+                if (Conversion.Val(dt1) >= Conversion.Val(dt2))
+                {
+                    SqlConnection con = new SqlConnection();
+                    ObjDataSet = objUtility.TradeHolding(con.ConnectionString, cm_cd, Date.Trim(), strcollat, con);
+                }
+                else
+                {
+                    SqlConnection con = new SqlConnection();
+                    ObjDataSet = objUtility.TradeHoldingAson(con.ConnectionString, cm_cd, Date.Trim(), strcollat, con);
+                }
+                return ObjDataSet;
+            }
+
+            return ObjDataSet;
+        }
+
 
         #endregion
         #endregion
