@@ -657,7 +657,62 @@ namespace TradeWeb.API.Controllers
             return BadRequest();
         }
 
+        // Get data for bind dropdownlist combo as on
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpGet("GetDropDownComboAsOnData", Name = "GetDropDownComboAsOnData")]
+        public IActionResult GetDropDownComboAsOnData(string table)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var getData = GetDropDownComboAsOnDataHandler(table);
+                    if (getData != null)
+                    {
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                    }
+                    else
+                    {
+                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
 
+        // insert unpledge request
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpGet("AddUnPledgeRequest", Name = "AddUnPledgeRequest")]
+        public IActionResult AddUnPledgeRequest(string unPledge, string scripcd, string reqQty)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var tokenS = GetToken();
+                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
+
+                    var getData = AddUnPledgeRequest(userId, unPledge, scripcd, reqQty);
+                    if (getData != null)
+                    {
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                    }
+                    else
+                    {
+                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
         #endregion
 
 
@@ -2560,6 +2615,103 @@ namespace TradeWeb.API.Controllers
             }
         }
 
+        // Get data for bind dropdownlist combo as on
+        private dynamic GetDropDownComboAsOnDataHandler(string strTable)
+        {
+            string strX = string.Empty;
+            if (_configuration["IsTradeWeb"] == "O")
+            {
+                if (strTable == "Holding")
+                {
+                    char[] ArrSeparators = new char[1];
+                    ArrSeparators[0] = '/';
+                    if (objUtility.GetWebParameter("Cross") != "") // strBoid  LEft 2 <>IN
+                    {
+                        string[] ArrCross = objUtility.GetWebParameter("Cross").Split(ArrSeparators);
+                        strX = " select name from [" + ArrCross[0].Trim() + "].[" + ArrCross[1].Trim() + "].[" + ArrCross[2].Trim() + "].sysobjects where xtype = 'U' and name like ('Holding_%') and ISDATE(RIGHT(name,8))=1 ";
+                    }
+                    if (objUtility.GetWebParameter("Estro") != "")
+                    {
+                        if (strX != "")
+                        { strX += "  Union All "; }
+                        string[] ArrEstro = objUtility.GetWebParameter("Estro").Split(ArrSeparators);
+                        strX += " select name from [" + ArrEstro[0].Trim() + "].[" + ArrEstro[1].Trim() + "].[" + ArrEstro[2].Trim() + "].sysobjects where xtype = 'U' and name like ('Holding_%') and ISDATE(RIGHT(name,8))=1 ";
+                    }
+                }
+            }
+            else
+            {
+                if (strTable == "Holding")
+                    strX = "Select Name From SysObjects where xtype = 'U' and name like 'Holding_%' and ISDATE(RIGHT(name,8))=1  order by name desc";
+                else
+                    strX = "Select Name From SysObjects where xtype = 'U' and name like 'BenHolding_%' and ISDATE(RIGHT(name,8))=1  order by name desc";
+            }
+
+            try
+            {
+                if (strX != "")
+                {
+                    var ds = CommonRepository.OpenDataSetTmp(strX);
+                    if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                    {
+                        var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
+                        return json;
+                    }
+                }
+                return new List<string>();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        // insert unpledge request
+        private dynamic AddUnPledgeRequest(string userId, string unPledge, string dmScripcd, string txtReqQty)
+        {
+            try
+            {
+                string strHostAdd = Dns.GetHostName();
+                bool blnIdentityOn = false;
+                string strsql = "";
+                blnIdentityOn = false;
+                DataSet Dstemp = new DataSet();
+                long intcnt = 0;
+                //DataSet Dstemp = new DataSet();
+                strsql = "delete from PledgeRequest where Rq_Clientcd='" + userId.ToUpper() + "' and Rq_Status1='X' and Rq_Status3 ='" + (unPledge == "Un-Re-Pledge" ? "R" : "P") + "'";
+                objUtility.ExecuteSQL(strsql);
+
+                Dstemp = objUtility.OpenDataSet("SELECT isnull (IDENT_CURRENT('PledgeRequest'),0)");
+                intcnt = 0;
+
+                if (Convert.ToInt64(Dstemp.Tables[0].Rows[0][0]) > 0)
+                {
+                    blnIdentityOn = true;
+                    DataSet DsReqId = new DataSet();
+                    DsReqId = objUtility.OpenDataSet("SELECT IDENT_CURRENT('PledgeRequest')");
+                    intcnt = Convert.ToInt64(DsReqId.Tables[0].Rows[0][0]);
+                }
+
+                if (blnIdentityOn)
+                    strsql = "insert into PledgeRequest values ( ";
+                else
+                    strsql = "insert into PledgeRequest values ( " + intcnt + ",";
+
+                strsql += " '" + userId.ToUpper() + "','','" + dmScripcd.Trim() + "','" + Conversion.Val(txtReqQty) + "','" + strHostAdd + "',";
+                strsql += " '" + DateTime.Today.ToString("yyyyMMdd") + "',";
+                strsql += " convert(char(8),getdate(),108),";
+                strsql += " 'X','P','" + (unPledge == "Un-Re-Pledge" ? "R" : "P") + "','" + objUtility.Encrypt((DateTime.Today.ToString("yyyyMMdd")).ToString().Trim()) + "','')";
+                objUtility.ExecuteSQL(strsql);
+
+
+                var json = JsonConvert.SerializeObject("Success");
+                return json;
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
         #endregion
 
         #region Transaction details Query
