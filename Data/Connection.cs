@@ -52,6 +52,7 @@ namespace TradeWeb.API.Data
         {
             //SqlDataAdapter dr = new SqlDataAdapter(Query_, ConnectionString);
             SqlDataAdapter dr = new SqlDataAdapter(Query_, con);
+            dr.SelectCommand.CommandTimeout = 5000;
             DataSet ds = new DataSet();
             dr.Fill(ds);
             object dataum = ds;//.Tables[0];
