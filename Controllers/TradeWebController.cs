@@ -705,7 +705,91 @@ namespace TradeWeb.API.Controllers
         }
         #endregion
 
+        #region Bill Api
 
+        // get settelment type for dropdown settlement
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpGet("GetSettlementData", Name = "GetSettlementData")]
+        public IActionResult GetSettlementData([FromQuery] string exchange, string status)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var getData = _tradeWebRepository.GetSettelmentType(exchange, status);
+                    if (getData != null)
+                    {
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                    }
+                    else
+                    {
+                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
+
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpGet("GetSysParmSt", Name = "GetSysParmSt")]
+        public IActionResult GetSysParmSt(string parmId, string tableName)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var dataList = _tradeWebRepository.CommonGetSysParmStHandler(parmId, tableName);
+                    if (dataList != null)
+                    {
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = JsonConvert.SerializeObject(dataList) });
+                    }
+                    return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.NotFound, data = null });
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new { response = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
+
+        // get bill main data
+        //[Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpGet("GetBillMainData", Name = "GetBillMainData")]
+        public IActionResult GetBillMainData([FromQuery] string client, string exchangeType, string settelmentType, string fromDate)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var tokenS = GetToken();
+                    var companyCode = tokenS.Claims.First(claim => claim.Type == "companyCode").Value;
+                    var clientId = tokenS.Claims.First(claim => claim.Type == "username").Value;
+
+                    var getData = _tradeWebRepository.GetBillMainData(clientId, client, exchangeType, settelmentType, fromDate, companyCode);
+                    if (getData != null)
+                    {
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                    }
+                    else
+                    {
+                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
+
+
+        #endregion
         private JwtSecurityToken GetToken()
         {
             var handler = new JwtSecurityTokenHandler();

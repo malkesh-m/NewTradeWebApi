@@ -52,6 +52,12 @@ namespace TradeWeb.API.Repository
         public dynamic GetDropDownComboAsOnDataHandler(string strTable);
 
         public dynamic AddUnPledgeRequest(string userId, string unPledge, string dmScripcd, string txtReqQty);
+
+        public dynamic GetSettelmentType(string syExchange, string syStatus);
+
+        public dynamic CommonGetSysParmStHandler(string param1, string param2);
+
+        public dynamic GetBillMainData(string strClientId, string strClient, string exchangeType, string stlmntType, string fromDt, string strCompanyCode);
     }
 
 
@@ -2789,6 +2795,11 @@ namespace TradeWeb.API.Repository
 
             strsql = "update ##tmpfinvestorrep  set fi_mtm = fi_netvalue *(-1) where fi_type = 'R'";
             objUtility.ExecuteSQLTmp(strsql, con); ;
+
+            //DataSet abc = new DataSet();
+            //strsql = "select * from ##tmpfinvestorrep";
+            //abc = objUtility.OpenDataSetTmp(strsql, con);
+            //var a = JsonConvert.SerializeObject(abc.Tables[0]);
         }
 
         private void ProfitLoss_FO_Process(string userId, string exchange, string segment, string fromDate, string toDate, SqlConnection con)
@@ -3051,6 +3062,951 @@ namespace TradeWeb.API.Repository
             objUtility.ExecuteSQLTmp(strsql, con);
         }
         #endregion
+
+        #region Bill Handler Method
+
+        // get settlement type for dropdown
+        public dynamic GetSettelmentType(string syExchange, string syStatus)
+        {
+            var query = "select sy_desc,sy_type from Settlement_type with (nolock) where sy_exchange='" + syExchange + "' and sy_Status = '" + syStatus + "' Order by case sy_maptype  when 'N' Then 1 When 'C' Then 2 else 3 end,sy_desc";
+            try
+            {
+                var ds = objUtility.OpenDataSet(query);
+                if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                {
+                    var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
+                    return json;
+                }
+                return new List<string>();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        public dynamic CommonGetSysParmStHandler(string param1, string param2)
+        {
+            try
+            {
+                string ds = objUtility.GetSysParmSt(param1, param2);
+                return ds;
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        // get bill main data
+        public dynamic GetBillMainData(string strClientId, string strClient, string exchangeType, string stlmntType, string fromDt, string strCompanyCode)
+        {
+            try
+            {
+                var ds = GetBillMainDataMehod(strClientId, strClient, exchangeType, stlmntType, fromDt, strCompanyCode);
+                if (ds != null)
+                {
+                    if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                    {
+                        var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
+                        return json;
+                    }
+                }
+                return new List<string>();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        #region Bill usefull methods
+        public DataSet GetBillMainDataMehod(string clientId, string strClient, string exchangeType, string stlmntType, string fromDt, string strCompanyCode)
+        {
+            string StrTradesIndex = "";
+            Boolean blnInterOP = new Boolean();
+            List<string> arrexchange = new List<string>();
+            List<string> arrStlmnt = new List<string>();
+            string Excode = exchangeType;
+            DataSet ObjDataSet = new DataSet();
+
+            var result = objUtility.fnFireQueryTradeWeb("sysobjects a, sysindexes b", "COUNT(0)", "a.id = b.id and a.name = 'trades' and b.name", "idx_trades_clientcd", true);
+
+            if (Convert.ToInt16(result.Trim()) == 1)
+            { StrTradesIndex = "index(idx_trades_clientcd),"; }
+
+            if ((exchangeType == "MCX") || (exchangeType == "NCDEX") || (exchangeType == "ICEX") || (exchangeType == "NCME") || (exchangeType == "NSEL") || (exchangeType == "NSX")) // 5-MCX  6-NCDEX  7-ICEX   8-NCME
+            {
+                string exchange = string.Empty;
+                string Segment = string.Empty;
+                if (exchangeType == "MCX")
+                { exchange = "M"; }
+                else if (exchangeType == "NCDEX")
+                {
+                    exchange = (objUtility.GetSysParmStComm("CHGNCDEXCD", "") == "Y" ? "F" : "N");
+                }
+                else if ((exchangeType == "ICEX"))
+                { exchange = "C"; }
+                else if ((exchangeType == "NCME"))
+                { exchange = "A"; }
+                else if ((exchangeType == "NSEL"))
+                { exchange = "S"; }
+                else if ((exchangeType == "NSX"))
+                { exchange = "D"; }
+
+                if (_configuration["IsTradeWeb"] == "O")//live database
+                {
+                    string StrConn = _configuration.GetConnectionString("DefaultConnection");
+                    using (SqlConnection ObjConnectionTmp = new SqlConnection(StrConn))
+                    {
+                        ObjConnectionTmp.Open();
+                        ObjDataSet = objUtility.fnForBill(clientId, exchange, fromDt, fromDt, Excode, Segment, ObjConnectionTmp);
+                    }
+
+                    if (ObjDataSet.Tables[0].Rows.Count == 0)
+                    {
+                        return ObjDataSet;
+                    }
+                    else
+                    {
+                        string strCharges = "";
+                        decimal TotalDrCr = 0;
+                        for (int i = 0; i <= ObjDataSet.Tables[0].Rows.Count - 1; i++)
+                        {
+                            if (strCharges == "")
+                            {
+                                if (Conversion.Val(ObjDataSet.Tables[0].Rows[i]["tx_sortlist"].ToString().Trim()) >= 10)
+                                {
+                                    strCharges = "Charges";
+                                    DataRow ObjRow1 = ObjDataSet.Tables[0].NewRow();
+                                    ObjRow1["sm_sname"] = "Value Before Adding Charges :";
+                                    //ObjRow1["dt"] = ObjDataSet.Tables[0].Rows[i]["dt"].ToString().Trim();
+                                    ObjRow1["NetValue"] = objUtility.mfnFormatCurrency(TotalDrCr, 2);
+                                    ObjDataSet.Tables[0].Rows.InsertAt(ObjRow1, i);
+                                    i = i + 1;
+                                }
+                            }
+                            TotalDrCr = TotalDrCr + (decimal)ObjDataSet.Tables[0].Rows[i]["drcr"];
+                        }
+                        DataRow ObjRow2 = ObjDataSet.Tables[0].NewRow();
+
+                        //ObjRow2["dt"] = ObjDataSet.Tables[0].Rows[ObjDataSet.Tables[0].Rows.Count - 1]["dt"].ToString().Trim();
+                        ObjRow2["NetValue"] = objUtility.mfnFormatCurrency(TotalDrCr, 2);
+                        ObjDataSet.Tables[0].Rows.InsertAt(ObjRow2, ObjDataSet.Tables[0].Rows.Count);
+                        ObjDataSet.AcceptChanges();
+                    }
+                }
+                else
+                {
+                    if (Convert.ToInt16(objUtility.fnFireQueryTradeWeb("sysobjects a, sysindexes b", "COUNT(0)", "a.id = b.id and a.name = 'Ctrades' and b.name", "idx_Ctrades_clientcd", true)) == 1)
+                    { StrTradesIndex = "index(idx_Ctrades_clientcd),"; }
+
+                    strsql = " Select 'Bill For : ' + ltrim(rtrim(convert(char,convert(datetime,td_dt),103))) as  dt,td_orderid as [Order#], td_tradeid [Trade#], left(case td_trxflag when 'O' then 'b/f' else '' end,5) Time,";
+                    strsql = strsql + " sm_symbol, left(sm_desc,3)+' '+rtrim(sm_symbol)+' Exp:'+ convert(char(5),";
+                    strsql = strsql + " convert(datetime,sm_expirydt),103)+ case sm_strikeprice when 0 then '' else ' '+ltrim(convert(char(10),sm_strikeprice))+";
+                    strsql = strsql + " lower(sm_callput) end as sm_sname,  convert(decimal(15,2),td_lastclose)td_lastclose,td_bqty,td_sqty,";
+                    strsql = strsql + " convert(decimal(15,2),td_marketrate) td_marketrate,";
+                    strsql = strsql + " convert(decimal(15,2),td_brokerage*(td_bqty+td_sqty)*sm_multiplier) Brokerage, convert(decimal(15,2),td_rate) td_rate,";
+                    strsql = strsql + " convert(decimal(15,2),case right(sm_prodtype,1) when 'F' then (((td_bqty-td_sqty)*td_rate*sm_multiplier)-((td_bqty-td_sqty)*td_lastclose*sm_multiplier)) else ((td_bqty-td_sqty)*td_rate*sm_multiplier) end) drcr,";
+                    strsql = strsql + " convert(decimal(15,2),((td_bqty-td_sqty) * td_rate*sm_multiplier)) value,td_trxflag,td_seriesid,td_exchange as exchange,td_servicetax stax,'' as NetValue";
+                    strsql = strsql + " from ctrades with (nolock), cseries_master with (nolock) ";
+                    strsql = strsql + " where td_seriesid=sm_seriesid and td_clientcd=@clcd and td_exchange = sm_exchange and td_dt between @FromDt and @ToDt and td_exchange=@Exch";
+                    strsql = strsql + " Union all ";
+                    strsql = strsql + " Select 'Bill For : ' + ltrim(rtrim(convert(char,convert(datetime,fc_dt),103)))  as dt,'0','0','Charges','zzzyy',fc_desc sm_sname,0 td_lastclose, 0 td_bqty,0 td_sqty,0,0,0 td_rate,convert(decimal(15,2),sum(fc_amount)) drcr,0 value,'C' td_trxflag,0 td_seriesid,fc_exchange as exchange,0 stax ,'' as NetValue";
+                    strsql = strsql + " from cfspecialcharges with (nolock) ";
+                    strsql = strsql + " where fc_clientcd=@clcd and fc_exchange=@Exch and fc_dt between @FromDt and @ToDt group by fc_dt,fc_dt,fc_desc,fc_exchange ";
+                    strsql = strsql + " Union all ";
+                    strsql = strsql + " Select 'Bill For : ' + ltrim(rtrim(convert(char,convert(datetime,fb_billdt),103)))  as dt ,'0','0','OpnMrg','zzzzz','[Prev. Day Mrgn.]' sm_sname, 0 td_lastclose,0 td_bqty,0 td_sqty,0,0,0 td_rate,convert(decimal(15,2),fb_margin1) drcr,0 value,'-2' td_trxflag,0 td_seriesid,fb_exchange  as exchange,0 stax,'' as NetValue ";
+                    strsql = strsql + " from cFbills with (nolock) ";
+                    strsql = strsql + " where fb_clientcd=@clcd and fb_exchange=@Exch and fb_billdt between @FromDt and @ToDt and fb_postmrgyn = 'Y' and fb_margin1 <> 0  ";
+                    strsql = strsql + " Union all ";
+                    strsql = strsql + " Select 'Bill For : ' + ltrim(rtrim(convert(char,convert(datetime,fb_billdt),103)))  as dt,'0','0','CurrMrgn','zzzzz', '[Curr. Day Mrgn.]' sm_sname, 0 td_lastclose,0 td_bqty,0 td_sqty,0,0,0 td_rate,convert(decimal(15,2),fb_margin2) drcr,0 value,'-1' td_trxflag,0 td_seriesid,fb_exchange as exchange,0 stax,'' as NetValue ";
+                    strsql = strsql + " from cFbills with (nolock) ";
+                    strsql = strsql + " where fb_clientcd=@clcd and fb_exchange=@Exch and fb_billdt between @FromDt and @ToDt and fb_postmrgyn = 'Y' and fb_margin2 <> 0 ";
+                    strsql = strsql + " order by dt,sm_symbol, sm_sname,td_trxflag desc, td_seriesid ";
+
+                    strsql = strsql.Replace("@FromDt", "'" + fromDt + "'").Replace("@clcd", "'" + clientId + "'").Replace("@Exch", "'" + exchange + "'").Replace("@ToDt", "'" + fromDt + "'");
+                    ObjDataSet = objUtility.OpenDataSet(strsql);
+
+                    if (ObjDataSet.Tables[0].Rows.Count == 0)
+                    {
+                        return ObjDataSet;
+                    }
+                    else
+                    {
+                        string strCharges = "";
+                        decimal TotalDrCr = 0;
+                        for (int i = 0; i <= ObjDataSet.Tables[0].Rows.Count - 1; i++)
+                        {
+                            if (strCharges == "")
+                            {
+                                if (ObjDataSet.Tables[0].Rows[i]["Time"].ToString().Trim() == "Charges" || ObjDataSet.Tables[0].Rows[i]["Time"].ToString().Trim() == "OpnMrg" || ObjDataSet.Tables[0].Rows[i]["Time"].ToString().Trim() == "CurrMrgn")
+                                {
+                                    strCharges = "Charges";
+                                    DataRow ObjRow1 = ObjDataSet.Tables[0].NewRow();
+                                    ObjRow1["sm_sname"] = "Value Before Adding Charges :";
+                                    ObjRow1["dt"] = ObjDataSet.Tables[0].Rows[i]["dt"].ToString().Trim();
+                                    ObjRow1["NetValue"] = objUtility.mfnFormatCurrency(TotalDrCr, 2);
+                                    ObjDataSet.Tables[0].Rows.InsertAt(ObjRow1, i);
+                                    i = i + 1;
+                                }
+                            }
+                            TotalDrCr = TotalDrCr + (decimal)ObjDataSet.Tables[0].Rows[i]["drcr"];
+                        }
+                    }
+                }
+            }
+            if ((exchangeType == "MCXFX") || (exchangeType == "BSEFX") || (exchangeType == "NSEFX") || (exchangeType == "NSEDERV") || (exchangeType == "MCXDERV") || (exchangeType == "BSEDERV"))
+            {
+                string exchange = string.Empty;
+                string Segment = string.Empty;
+                string StrExchWhere = string.Empty;
+
+                if (exchangeType == "NSEDERV")
+                { exchange = "N"; Segment = "F"; }
+                else if (exchangeType == "MCXFX")
+                { exchange = "M"; Segment = "K"; }
+                else if (exchangeType == "BSEFX")
+                { exchange = "B"; Segment = "K"; }
+                else if (exchangeType == "NSEFX")
+                { exchange = "N"; Segment = "K"; }
+                else if (exchangeType == "MCXDERV")
+                { exchange = "M"; Segment = "F"; }
+                else if (exchangeType == "BSEDERV")
+                { exchange = "B"; Segment = "F"; }
+
+
+                string StrMsg;
+                StrMsg = objUtility.fnCheckInterOperability(fromDt, Segment);
+
+                if (StrMsg.ToUpper().Trim() == "TRUE")
+                {
+                    string apiRes7 = objUtility.fnGetInterOpExchange(Segment);
+
+                    blnInterOP = true;
+                    arrexchange = apiRes7.Split(',').ToList();
+                    StrExchWhere += "('" + arrexchange[0] + "'";
+                    for (int j = 1; j < arrexchange.Count; j++)
+                    {
+                        StrExchWhere += ",'" + arrexchange[j] + "'";
+                    }
+                    StrExchWhere += ")";
+                }
+
+
+                if (_configuration["IsTradeWeb"] == "O")//live database
+                {
+                    if (blnInterOP)
+                    { exchange = "IOP" + exchange; }
+
+                    string StrConn = _configuration.GetConnectionString("DefaultConnection");
+                    using (SqlConnection ObjConnectionTmp = new SqlConnection(StrConn))
+                    {
+                        ObjConnectionTmp.Open();
+                        ObjDataSet = objUtility.fnForBill(clientId, exchange, fromDt, fromDt, Excode, Segment, ObjConnectionTmp);
+                    }
+
+                    if (ObjDataSet.Tables[0].Rows.Count == 0)
+                    {
+                        return ObjDataSet;
+                    }
+                    else
+                    {
+                        string strCharges = "";
+                        decimal TotalDrCr = 0;
+                        for (int i = 0; i <= ObjDataSet.Tables[0].Rows.Count - 1; i++)
+                        {
+                            if (strCharges == "")
+                            {
+                                if (Conversion.Val(ObjDataSet.Tables[0].Rows[i]["tx_sortlist"].ToString().Trim()) >= 10)
+                                {
+                                    strCharges = "Charges";
+
+                                    DataRow ObjRow1 = ObjDataSet.Tables[0].NewRow();
+                                    ObjRow1["tx_desc"] = "Value Before Adding Charges :";
+                                    ObjRow1["dt"] = ObjDataSet.Tables[0].Rows[i]["dt"].ToString().Trim();
+                                    ObjRow1["NetValue"] = objUtility.mfnFormatCurrency(TotalDrCr, 2);
+                                    ObjDataSet.Tables[0].Rows.InsertAt(ObjRow1, i);
+                                    i = i + 1;
+                                }
+                            }
+                            TotalDrCr = TotalDrCr + (decimal)ObjDataSet.Tables[0].Rows[i]["drcr"];
+                        }
+                        DataRow ObjRow2 = ObjDataSet.Tables[0].NewRow();
+
+                        ObjRow2["dt"] = ObjDataSet.Tables[0].Rows[ObjDataSet.Tables[0].Rows.Count - 1]["dt"].ToString().Trim();
+                        ObjRow2["NetValue"] = objUtility.mfnFormatCurrency(TotalDrCr, 2);
+                        ObjDataSet.Tables[0].Rows.InsertAt(ObjRow2, ObjDataSet.Tables[0].Rows.Count);
+                        ObjDataSet.AcceptChanges();
+
+                        return ObjDataSet;
+                    }
+                }
+                else
+                {
+                    if (blnInterOP)
+                    {
+                        strsql = " Select 'Bill For : ' + ltrim(rtrim(convert(char,convert(datetime,td_dt),103))) as  dt,td_orderid as [Order#], td_tradeid [Trade#], left(case td_trxflag when 'O' then 'b/f' else '' end,5) Time, ";
+                        strsql = strsql + " sm_symbol, left(sm_desc,3)+' '+rtrim(sm_symbol)+' Exp:'+ convert(char(5),convert(datetime,sm_expirydt),103)+ ";
+                        strsql = strsql + " case sm_strikeprice when 0 then '' else ' '+ltrim(convert(char(10),sm_strikeprice))+lower(sm_callput) end as sm_sname,";
+                        strsql = strsql + " convert(decimal(15,2),td_lastclose) td_lastclose,td_bqty,td_sqty,convert(decimal(15,2),td_marketrate) td_marketrate,";
+                        strsql = strsql + "  convert(decimal(15,2),td_brokerage*(td_bqty+td_sqty)*sm_multiplier) Brokerage, convert(decimal(15,2),td_rate)td_rate,";
+                        strsql = strsql + " convert(decimal(15,2),case right(sm_prodtype,1) when 'F' then (((td_bqty-td_sqty)*td_rate*sm_multiplier)-((td_bqty-td_sqty)*td_lastclose*";
+                        strsql = strsql + " sm_multiplier)) else ((td_bqty-td_sqty)*td_rate) end) drcr, convert(decimal(15,2),((td_bqty-td_sqty) * td_rate*sm_multiplier)) value,";
+                        strsql = strsql + " td_trxflag,td_seriesid,td_exchange as exchange,td_Segment as Segment,convert(decimal(15,2),td_servicetax) stax,'' NetValue  ";
+                        strsql = strsql + " from trades with(" + StrTradesIndex + "nolock), series_master with (nolock) ";
+                        strsql = strsql + " where td_seriesid=sm_seriesid and td_clientcd=@clcd and td_exchange = sm_exchange and td_Segment = sm_Segment and td_dt = @FromDt  and td_exchange=@Exch  and td_Segment=@Seg";
+
+                        strsql = strsql + " union all";
+                        strsql = strsql + " select 'Bill For : ' + ltrim(rtrim(convert(char,convert(datetime,ex_dt),103))) as  dt,0,0,case ex_eaflag when 'E' then 'Exercise' else 'Assignment' end ,sm_symbol,  ";
+                        strsql = strsql + "left(sm_desc,3)+' '+rtrim(sm_symbol)+' Exp:'+ convert(char(5),convert(char,convert(decimal(15,2), convert(datetime,sm_expirydt),103))+ case sm_strikeprice when 0 then '' else ' '+  ltrim(convert(char(10),sm_strikeprice))+lower(sm_callput) end), ";
+                        //strsql = strsql + " left(sm_desc,3)+' '+rtrim(sm_symbol)+' Exp:'+ convert(char(5),convert(decimal(15,2),convert(datetime,sm_expirydt),103)+ case sm_strikeprice when 0 then '' else ' '+ltrim(convert(char(10),sm_strikeprice))+lower(sm_callput) end),";
+                        strsql = strsql + "  0  ,ex_aqty as td_bqty,ex_eqty as td_sqty, 0, convert(decimal(15,2),ex_brokerage*(ex_eqty+ex_aqty)), ";
+                        strsql = strsql + " convert(decimal(15,2),ex_diffbrokrate )as td_rate,convert(decimal(15,2),(-(ex_eqty+ex_aqty) * ex_diffbrokrate)) drcr, ";
+                        strsql = strsql + " convert(decimal(15,2),((ex_eqty+ex_aqty) * ex_diffbrokrate)) as value, '' as td_trxflag, ex_seriesid as td_seriesid,";
+                        strsql = strsql + " ex_exchange as exchange,ex_Segment as Segment,0 stax,'' NetValue  ";
+                        strsql = strsql + " from exercise with (nolock),series_master with (nolock)  ";
+                        strsql = strsql + " where ex_seriesid=sm_seriesid and ex_clientcd=@clcd and ex_exchange = sm_exchange and ex_Segment = sm_Segment and ex_dt = @FromDt  and ex_exchange=@Exch and ex_Segment=@Seg ";
+
+                        strsql = strsql + " Union all  ";
+                        strsql = strsql + " Select 'Bill For : ' + ltrim(rtrim(convert(char,convert(datetime,fc_dt),103))) as  dt,0,0,'Charges','zzzyy',fc_desc sm_sname,0 td_lastclose, 0 td_bqty,0 td_sqty,0,0,0 td_rate,";
+                        strsql = strsql + " convert(decimal(15,2),convert(decimal(15,2),sum(fc_amount))) drcr,0 value,'C' td_trxflag,0 td_seriesid,fc_exchange as exchange,fc_Segment as Segment,0 stax,'' NetValue  ";
+                        strsql = strsql + " from fspecialcharges with (nolock)  ";
+                        strsql = strsql + " where fc_clientcd=@clcd and fc_exchange=@Exch and fc_Segment=@Seg and fc_dt = @FromDt";
+                        strsql = strsql + " group by fc_dt,fc_dt,fc_desc,fc_exchange,fc_Segment ";
+
+                        strsql = strsql + " Union all";
+                        strsql = strsql + " Select  'Bill For : ' + ltrim(rtrim(convert(char,convert(datetime,fb_billdt),103))) as  dt,0,0,'OpnMrg','zzzzz','[Prev. Day Mrgn.]' sm_sname, 0 td_lastclose,0 td_bqty,0 td_sqty,0,0,";
+                        strsql = strsql + " 0 td_rate,convert(decimal(15,2),fb_margin1) drcr,0 value,'-2' td_trxflag,0 td_seriesid,fb_exchange  as exchange,fb_Segment  as Segment,0 stax,'' NetValue  ";
+                        strsql = strsql + " from Fbills with (nolock)  ";
+                        strsql = strsql + " where fb_clientcd=@clcd and fb_exchange=@Exch and fb_Segment=@Seg and fb_billdt = @FromDt  and fb_postmrgyn = 'Y' and fb_margin1 <> 0";
+
+                        strsql = strsql + " Union all  ";
+                        strsql = strsql + " Select 'Bill For : ' + ltrim(rtrim(convert(char,convert(datetime,fb_billdt),103))) as  dt,0,0,'CurrMrgn','zzzzz', '[Curr. Day Mrgn.]' sm_sname, 0 td_lastclose,0 td_bqty,0 td_sqty,0,0,";
+                        strsql = strsql + " 0 td_rate,convert(decimal(15,2),fb_margin2) drcr,0 value,'-1' td_trxflag,0 td_seriesid,fb_exchange as exchange,fb_Segment as Segment,0 stax,'' NetValue  ";
+                        strsql = strsql + " from Fbills with (nolock)  ";
+                        strsql = strsql + " where fb_clientcd=@clcd and fb_exchange=@Exch and fb_Segment=@Seg and fb_billdt = @FromDt  and fb_postmrgyn = 'Y' and fb_margin2 <> 0  ";
+                        strsql = strsql + " order by dt,sm_symbol, sm_sname,td_trxflag desc, td_seriesid ";
+
+                        strsql = strsql.Replace("@FromDt", "'" + fromDt + "'").Replace("@clcd", "'" + clientId + "'").Replace("=@Exch", " in " + StrExchWhere).Replace("@Seg", "'" + Segment + "'");
+                    }
+                    else
+                    {
+                        strsql = " Select 'Bill For : ' + ltrim(rtrim(convert(char,convert(datetime,td_dt),103))) as  dt,td_orderid as [Order#], td_tradeid [Trade#], left(case td_trxflag when 'O' then 'b/f' else '' end,5) Time, ";
+                        strsql = strsql + " sm_symbol, left(sm_desc,3)+' '+rtrim(sm_symbol)+' Exp:'+ convert(char(5),convert(datetime,sm_expirydt),103)+ ";
+                        strsql = strsql + " case sm_strikeprice when 0 then '' else ' '+ltrim(convert(char(10),sm_strikeprice))+lower(sm_callput) end as sm_sname,";
+                        strsql = strsql + " convert(decimal(15,2),td_lastclose) td_lastclose,td_bqty,td_sqty,convert(decimal(15,2),td_marketrate) td_marketrate,";
+                        strsql = strsql + "  convert(decimal(15,2),td_brokerage*(td_bqty+td_sqty)*sm_multiplier) Brokerage, convert(decimal(15,2),td_rate)td_rate,";
+                        strsql = strsql + " convert(decimal(15,2),case right(sm_prodtype,1) when 'F' then (((td_bqty-td_sqty)*td_rate*sm_multiplier)-((td_bqty-td_sqty)*td_lastclose*";
+                        strsql = strsql + " sm_multiplier)) else ((td_bqty-td_sqty)*td_rate) end) drcr, convert(decimal(15,2),((td_bqty-td_sqty) * td_rate*sm_multiplier)) value,";
+                        strsql = strsql + " td_trxflag,td_seriesid,td_exchange as exchange,td_Segment as Segment,convert(decimal(15,2),td_servicetax) stax,'' NetValue  ";
+                        strsql = strsql + " from trades with(" + StrTradesIndex + "nolock), series_master with (nolock) ";
+                        strsql = strsql + " where td_seriesid=sm_seriesid and td_clientcd=@clcd and td_exchange = sm_exchange and td_Segment = sm_Segment and td_dt = @FromDt  and td_exchange=@Exch  and td_Segment=@Seg";
+
+                        strsql = strsql + " union all";
+                        strsql = strsql + " select 'Bill For : ' + ltrim(rtrim(convert(char,convert(datetime,ex_dt),103))) as  dt,0,0,case ex_eaflag when 'E' then 'Exercise' else 'Assignment' end ,sm_symbol,  ";
+                        strsql = strsql + "left(sm_desc,3)+' '+rtrim(sm_symbol)+' Exp:'+ convert(char(5),convert(char,convert(decimal(15,2), convert(datetime,sm_expirydt),103))+ case sm_strikeprice when 0 then '' else ' '+  ltrim(convert(char(10),sm_strikeprice))+lower(sm_callput) end), ";
+                        //strsql = strsql + " left(sm_desc,3)+' '+rtrim(sm_symbol)+' Exp:'+ convert(char(5),convert(decimal(15,2),convert(datetime,sm_expirydt),103)+ case sm_strikeprice when 0 then '' else ' '+ltrim(convert(char(10),sm_strikeprice))+lower(sm_callput) end),";
+                        strsql = strsql + "  0  ,ex_aqty as td_bqty,ex_eqty as td_sqty, 0, convert(decimal(15,2),ex_brokerage*(ex_eqty+ex_aqty)), ";
+                        strsql = strsql + " convert(decimal(15,2),ex_diffbrokrate )as td_rate,convert(decimal(15,2),(-(ex_eqty+ex_aqty) * ex_diffbrokrate)) drcr, ";
+                        strsql = strsql + " convert(decimal(15,2),((ex_eqty+ex_aqty) * ex_diffbrokrate)) as value, '' as td_trxflag, ex_seriesid as td_seriesid,";
+                        strsql = strsql + " ex_exchange as exchange,ex_Segment as Segment,0 stax,'' NetValue  ";
+                        strsql = strsql + " from exercise with (nolock),series_master with (nolock)  ";
+                        strsql = strsql + " where ex_seriesid=sm_seriesid and ex_clientcd=@clcd and ex_exchange = sm_exchange and ex_Segment = sm_Segment and ex_dt = @FromDt  and ex_exchange=@Exch and ex_Segment=@Seg ";
+
+                        strsql = strsql + " Union all  ";
+                        strsql = strsql + " Select 'Bill For : ' + ltrim(rtrim(convert(char,convert(datetime,fc_dt),103))) as  dt,0,0,'Charges','zzzyy',fc_desc sm_sname,0 td_lastclose, 0 td_bqty,0 td_sqty,0,0,0 td_rate,";
+                        strsql = strsql + " convert(decimal(15,2),convert(decimal(15,2),sum(fc_amount))) drcr,0 value,'C' td_trxflag,0 td_seriesid,fc_exchange as exchange,fc_Segment as Segment,0 stax,'' NetValue  ";
+                        strsql = strsql + " from fspecialcharges with (nolock)  ";
+                        strsql = strsql + " where fc_clientcd=@clcd and fc_exchange=@Exch and fc_Segment=@Seg and fc_dt = @FromDt";
+                        strsql = strsql + " group by fc_dt,fc_dt,fc_desc,fc_exchange,fc_Segment ";
+
+                        strsql = strsql + " Union all";
+                        strsql = strsql + " Select  'Bill For : ' + ltrim(rtrim(convert(char,convert(datetime,fb_billdt),103))) as  dt,0,0,'OpnMrg','zzzzz','[Prev. Day Mrgn.]' sm_sname, 0 td_lastclose,0 td_bqty,0 td_sqty,0,0,";
+                        strsql = strsql + " 0 td_rate,convert(decimal(15,2),fb_margin1) drcr,0 value,'-2' td_trxflag,0 td_seriesid,fb_exchange  as exchange,fb_Segment  as Segment,0 stax,'' NetValue  ";
+                        strsql = strsql + " from Fbills with (nolock)  ";
+                        strsql = strsql + " where fb_clientcd=@clcd and fb_exchange=@Exch and fb_Segment=@Seg and fb_billdt = @FromDt  and fb_postmrgyn = 'Y' and fb_margin1 <> 0";
+
+                        strsql = strsql + " Union all  ";
+                        strsql = strsql + " Select 'Bill For : ' + ltrim(rtrim(convert(char,convert(datetime,fb_billdt),103))) as  dt,0,0,'CurrMrgn','zzzzz', '[Curr. Day Mrgn.]' sm_sname, 0 td_lastclose,0 td_bqty,0 td_sqty,0,0,";
+                        strsql = strsql + " 0 td_rate,convert(decimal(15,2),fb_margin2) drcr,0 value,'-1' td_trxflag,0 td_seriesid,fb_exchange as exchange,fb_Segment as Segment,0 stax,'' NetValue  ";
+                        strsql = strsql + " from Fbills with (nolock)  ";
+                        strsql = strsql + " where fb_clientcd=@clcd and fb_exchange=@Exch and fb_Segment=@Seg and fb_billdt = @FromDt  and fb_postmrgyn = 'Y' and fb_margin2 <> 0  ";
+                        strsql = strsql + " order by dt,sm_symbol, sm_sname,td_trxflag desc, td_seriesid ";
+
+                        strsql = strsql.Replace("@FromDt", "'" + fromDt + "'").Replace("@clcd", "'" + clientId + "'").Replace("@Exch", "'" + exchange + "'").Replace("@Seg", "'" + Segment + "'");
+
+                    }
+                    ObjDataSet = objUtility.OpenDataSet(strsql);
+
+                    if (ObjDataSet.Tables[0].Rows.Count == 0)
+                    {
+                        return ObjDataSet;
+                    }
+                    else
+                    {
+                        string strCharges = "";
+                        decimal TotalDrCr = 0;
+                        for (int i = 0; i <= ObjDataSet.Tables[0].Rows.Count - 1; i++)
+                        {
+                            if (strCharges == "")
+                            {
+                                if (ObjDataSet.Tables[0].Rows[i]["Time"].ToString().Trim() == "Charges" || ObjDataSet.Tables[0].Rows[i]["Time"].ToString().Trim() == "OpnMrg" || ObjDataSet.Tables[0].Rows[i]["Time"].ToString().Trim() == "CurrMrgn")
+                                {
+                                    strCharges = "Charges";
+                                    DataRow ObjRow1 = ObjDataSet.Tables[0].NewRow();
+                                    ObjRow1["sm_sname"] = "Value Before Adding Charges :";
+                                    ObjRow1["dt"] = ObjDataSet.Tables[0].Rows[i]["dt"].ToString().Trim();
+                                    ObjRow1["NetValue"] = objUtility.mfnFormatCurrency(TotalDrCr, 2);
+                                    ObjDataSet.Tables[0].Rows.InsertAt(ObjRow1, i);
+                                    i = i + 1;
+                                }
+                            }
+                            TotalDrCr = TotalDrCr + (decimal)ObjDataSet.Tables[0].Rows[i]["drcr"];
+                        }
+                    }
+                }
+            }
+            if ((exchangeType == "BSE Cash") || (exchangeType == "NSE Cash") || (exchangeType == "MCX Cash"))  //0-BSE CASH  1-NSE CASH
+            {
+                string exchange = exchangeType;
+                string Stlmnt = string.Empty;
+                string strRefDt = "";
+                string StrStlmntWhere = string.Empty;
+
+                if (exchangeType == "BSE Cash")
+                {
+                    Stlmnt = "B" + stlmntType.Trim();
+                }
+                else if (exchangeType == "NSE Cash")
+                {
+                    Stlmnt = "N" + stlmntType.Trim();
+                }
+                else if (exchangeType == "MCX Cash")
+                {
+                    Stlmnt = "M" + stlmntType.Trim();
+                }
+
+                string StrMsg;
+
+                StrMsg = objUtility.fnCheckInterOperability(fromDt, "C");
+
+                if (StrMsg.ToUpper().Trim() == "TRUE")
+                {
+                    string apiRes6 = objUtility.fnGetInterOpStlmnts(Stlmnt, fromDt, false);
+                    blnInterOP = true;
+                    arrStlmnt = apiRes6.Split(',').ToList();
+                    StrStlmntWhere += "('" + arrStlmnt[0] + "'";
+                    for (int j = 1; j < arrStlmnt.Count; j++)
+                    {
+                        StrStlmntWhere += ",'" + arrStlmnt[j] + "'";
+                    }
+                    StrStlmntWhere += ")";
+
+                }
+                else if (StrMsg.Trim() != "")
+                {
+                    //ShowMessage(StrMsg.Trim(), MessageType.Info);
+                    //return;
+                }
+
+                string StrTRXIndex = "";
+
+                string apiRes = objUtility.fnFireQueryTradeWeb("sysobjects a, sysindexes b", "COUNT(0)", "a.id = b.id and a.name = 'Trx' and b.name", "idx_Trx_Clientcd", true);
+                if (Convert.ToInt16(apiRes.Trim()) == 1)
+                { StrTRXIndex = "index(idx_trx_clientcd),"; }
+
+                if (_configuration["IsTradeWeb"] == "O")//Live
+                {
+                    if (blnInterOP)
+                    {
+                        strsql = " select '" + arrStlmnt[0] + "' as td_stlmnt, '" + arrStlmnt[0] + "' +'['+ ltrim(rtrim(convert(char,convert(datetime,td_dt),103))) + ']' Heading ,";
+                        strsql = strsql + " td_scripcd,td_orderid as [Order#], td_tradeid [Trade#],";
+                        strsql = strsql + " case td_ssrno when -1 then 'b/f' else td_time end Time, ";
+                        strsql = strsql + " rtrim(ss_name)+' ('+td_scripcd+')' Security, td_bqty Buy, ";
+                        strsql = strsql + " td_sqty Sell, ";
+                        strsql = strsql + " convert(decimal (15,2),td_marketrate) as [Market Rate], ";
+                        strsql = strsql + " convert(decimal (15,4),td_brokerage*(td_bqty+td_sqty)) [Brokerage], ";
+                        strsql = strsql + " convert(decimal (15,4),convert(money, case left(td_stlmnt,1) when 'N' then  case sr_nodelyn when 'Y' then 0 else td_rate end else td_rate end *td_bqty)) [Buy Value], ";
+                        strsql = strsql + " convert(decimal (15,4),convert(money, case left(td_stlmnt,1) when 'N' then case sr_nodelyn when 'Y' then 0 else td_rate  end else td_rate end *td_sqty)) [Sell Value] ,";
+                        strsql = strsql + " case sr_nodelyn when 'Y' then 'NoDelv' else '' end [_], ";
+                        strsql = strsql + " rtrim(ss_name)+case td_ssrno when -1 then 'a' else 'b' end [Ordr] ,td_dt BDate,'' [Net Value]";
+                        strsql = strsql + " from trx with(" + StrTRXIndex + "nolock) left outer join std_rates with (nolock) on td_stlmnt = sr_stlmnt and td_scripcd = sr_scripcd and sr_nodelyn='Y' ,securities with (nolock) ";
+                        strsql = strsql + " where td_clientcd =@clcd and td_stlmnt=@stlmnt  and  td_Dt between '" + fromDt + "' and '" + fromDt + "'  ";
+                        strsql = strsql + " and td_scripcd = ss_cd ";
+
+                        strsql = strsql + " union All  ";
+                        strsql = strsql + " select '" + arrStlmnt[0] + "' as td_stlmnt, '" + arrStlmnt[0] + "' +'['+ ltrim(rtrim(convert(char,convert(datetime,td_dt),103))) + ']' Heading ,";
+                        strsql = strsql + " td_scripcd,td_orderid as [Order#], td_tradeid [Trade#],";
+                        strsql = strsql + " case td_ssrno when -1 then 'b/f' else td_time end Time, ";
+                        strsql = strsql + " rtrim(ss_name)+' ('+td_scripcd+')' Security, td_sqty  Buy, ";
+                        strsql = strsql + " td_bqty Sell, ";
+                        strsql = strsql + " convert(decimal (15,2),td_marketrate) as [Market Rate], ";
+                        strsql = strsql + " convert(decimal (15,4),0) [Brokerage], ";
+                        strsql = strsql + " convert(decimal (15,4),convert(money, case left(td_stlmnt,1) when 'N' then  case sr_nodelyn when 'Y' then 0 else td_marketrate end else td_marketrate end *td_sqty)) [Buy Value], ";
+                        strsql = strsql + " convert(decimal (15,4),convert(money, case left(td_stlmnt,1) when 'N' then case sr_nodelyn when 'Y' then 0 else td_marketrate end else td_marketrate end *td_bqty)) [Sell Value] ,";
+                        strsql = strsql + " case sr_nodelyn when 'Y' then 'NoDelv' else '' end [_], ";
+                        strsql = strsql + " rtrim(ss_name)+case td_ssrno when -1 then 'a' else 'b' end [Ordr] ,td_dt BDate,'' [Net Value]";
+                        strsql = strsql + " from trx with(" + StrTRXIndex + "nolock) left outer join std_rates with (nolock) on td_stlmnt = sr_stlmnt and td_scripcd = sr_scripcd and sr_nodelyn='Y' ,securities with (nolock) ";
+                        strsql = strsql + " where td_clientcd =@clcd and td_stlmnt=@stlmnt  and  td_Dt between '" + fromDt + "' and '" + fromDt + "'  ";
+                        strsql = strsql + " and td_scripcd = ss_cd and td_marginyn='B'";
+
+                        strsql = strsql + " union All  ";
+                        strsql = strsql + " select '" + arrStlmnt[0] + "' as td_stlmnt, '" + arrStlmnt[0] + "' +'['+ ltrim(rtrim(convert(char,convert(datetime,td_dt),103))) + ']' Heading,";
+                        strsql = strsql + " '0',0 , 0, 'C/F', rtrim(ss_name)+' ('+td_scripcd+')' Security, ";
+                        strsql = strsql + " case sign(sum(td_bqty-td_sqty)) when 1 then 0 else sum(td_bqty-td_sqty) end , ";
+                        strsql = strsql + " case sign(sum(td_sqty-td_bqty)) when 1 then 0 else sum(td_bqty-td_sqty) end ,  ";
+                        strsql = strsql + " convert(decimal(15,2),max(sr_makingrate)),convert(decimal (15,4),0), ";
+                        strsql = strsql + " convert(decimal (15,4),case sign(sum(td_bqty-td_sqty)) when 1 then 0 else sum((td_bqty-td_sqty)*sr_makingrate) end) , ";
+                        strsql = strsql + " convert(decimal (15,4),case sign(sum(td_sqty-td_bqty)) when 1 then 0 else  sum((td_bqty-td_sqty)*sr_makingrate) end) ,  ";
+                        strsql = strsql + " 'c/f', rtrim(ss_name)+'z' ,td_dt BDate,'' [Net Value] ";
+                        strsql = strsql + " from trx with(" + StrTRXIndex + "nolock) ,securities with (nolock),std_rates with (nolock) ";
+                        strsql = strsql + " where td_clientcd =@clcd and td_stlmnt=@stlmnt and left(td_stlmnt,1)='B' ";
+                        strsql = strsql + " and  td_Dt between '" + fromDt + "' and '" + fromDt + "'  and td_stlmnt = sr_stlmnt and td_scripcd = sr_scripcd  ";
+                        strsql = strsql + " and sr_nodelyn='Y' and td_scripcd = ss_cd ";
+                        strsql = strsql + " group by ss_name, td_scripcd,td_stlmnt,td_dt ";
+                        strsql = strsql + "  having sum(td_bqty-td_sqty)<>0 ";
+
+                        strsql = strsql + " union all";
+
+                        strsql = strsql + " select td_stlmnt,sh_stlmnt, 'Charges',0,0,'Charges',rtrim(sh_desc),0,0,convert(decimal(15,2),0),0, ";
+                        strsql = strsql + " convert(decimal (15,4),SUM(sh_amount)),convert(decimal (15,2),0) ,'','zzz', BDate ,'' [Net Value]";
+                        strsql = strsql + " From (";
+
+                        strsql = strsql + " select '" + arrStlmnt[0] + "' as td_stlmnt, '" + arrStlmnt[0] + "' +'['+ ltrim(rtrim(convert(char,convert(datetime,se_stdt),103))) + ']' sh_stlmnt, rtrim(sh_desc) sh_desc ,sh_amount, se_stdt BDate";
+                        strsql = strsql + " from Specialcharges with (nolock),settlements with (nolock) ";
+                        strsql = strsql + " where sh_clientcd=@clcd and sh_stlmnt=@stlmnt and sh_stlmnt = se_Stlmnt ";
+                        strsql = strsql + " and se_stdt between '" + fromDt + "' and '" + fromDt + "' ";
+
+                        strsql = strsql + " union all   ";
+
+                        strsql = strsql + " select  '" + arrStlmnt[0] + "' as td_stlmnt,'" + arrStlmnt[0] + "' +'['+ ltrim(rtrim(convert(char,convert(datetime,se_stdt),103))) + ']', rtrim(cg_desc), bc_amount, se_stdt BDate";
+                        strsql = strsql + " from Cbilled_charges with (nolock),settlements with (nolock),charges_master with (nolock)  ";
+                        strsql = strsql + " where bc_clientcd=@clcd and bc_stlmnt=@stlmnt and bc_stlmnt = se_Stlmnt  ";
+                        strsql = strsql + " and bc_companycode = cg_companycode and Left(bc_stlmnt,1) = cg_exchange and  bc_chargecode =cg_cd ";
+                        strsql = strsql + " and se_stdt between '" + fromDt + "' and '" + fromDt + "'  ";
+
+                        strsql = strsql + " union all ";
+
+                        strsql = strsql + " select '" + arrStlmnt[0] + "' as td_stlmnt,'" + arrStlmnt[0] + "' +'['+ ltrim(rtrim(convert(char,convert(datetime,se_stdt),103))) + ']',rtrim(cg_desc), sh_servicetax, se_stdt BDate";
+                        strsql = strsql + " from Specialcharges with (nolock),settlements with (nolock),charges_master with (nolock)  ";
+                        strsql = strsql + " where sh_clientcd=@clcd and sh_stlmnt=@stlmnt and sh_stlmnt = se_Stlmnt  ";
+                        strsql = strsql + " and sh_companycode = cg_companycode and Left(sh_stlmnt,1) = cg_exchange and  cg_cd = '01' ";
+                        strsql = strsql + " and se_stdt between '" + fromDt + "' and '" + fromDt + "'  and sh_servicetax > 0 ) A";
+                        strsql = strsql + " gROUP bY sh_stlmnt,rtrim(sh_desc),BDate,td_stlmnt order by  Heading,ordr, Security,Time";
+                        strsql = strsql.Replace("=@stlmnt", " in " + StrStlmntWhere + "").Replace("@clcd", "'" + clientId + "'");
+                    }
+                    else
+                    {
+                        strsql = " select td_stlmnt, td_stlmnt +'['+ ltrim(rtrim(convert(char,convert(datetime,td_dt),103))) + ']' Heading ,";
+                        strsql = strsql + " td_scripcd,td_orderid as [Order#], td_tradeid [Trade#],";
+                        strsql = strsql + " case td_ssrno when -1 then 'b/f' else td_time end Time, ";
+                        strsql = strsql + " rtrim(ss_name)+' ('+td_scripcd+')' Security, td_bqty Buy, ";
+                        strsql = strsql + " td_sqty Sell, ";
+                        strsql = strsql + " convert(decimal (15,2),td_marketrate) as [Market Rate], ";
+                        strsql = strsql + " convert(decimal (15,4),td_brokerage*(td_bqty+td_sqty)) [Brokerage], ";
+                        strsql = strsql + " convert(decimal (15,4),convert(money, case left(td_stlmnt,1) when 'N' then  case sr_nodelyn when 'Y' then 0 else td_rate end else td_rate end *td_bqty)) [Buy Value], ";
+                        strsql = strsql + " convert(decimal (15,4),convert(money, case left(td_stlmnt,1) when 'N' then case sr_nodelyn when 'Y' then 0 else td_rate  end else td_rate end *td_sqty)) [Sell Value] ,";
+                        strsql = strsql + " case sr_nodelyn when 'Y' then 'NoDelv' else '' end [_], ";
+                        strsql = strsql + " rtrim(ss_name)+case td_ssrno when -1 then 'a' else 'b' end [Ordr] ,td_dt BDate,'' [Net Value]";
+                        strsql = strsql + " from trx with(" + StrTRXIndex + "nolock) left outer join std_rates with (nolock) on td_stlmnt = sr_stlmnt and td_scripcd = sr_scripcd and sr_nodelyn='Y' ,securities with (nolock) ";
+                        strsql = strsql + " where td_clientcd =@clcd and td_stlmnt=@stlmnt  and  td_Dt between '" + fromDt + "' and '" + fromDt + "'  ";
+                        strsql = strsql + " and td_scripcd = ss_cd ";
+
+                        strsql = strsql + " union All  ";
+                        strsql = strsql + " select td_stlmnt, td_stlmnt +'['+ ltrim(rtrim(convert(char,convert(datetime,td_dt),103))) + ']' Heading ,";
+                        strsql = strsql + " td_scripcd,td_orderid as [Order#], td_tradeid [Trade#],";
+                        strsql = strsql + " case td_ssrno when -1 then 'b/f' else td_time end Time, ";
+                        strsql = strsql + " rtrim(ss_name)+' ('+td_scripcd+')' Security, td_sqty  Buy, ";
+                        strsql = strsql + " td_bqty Sell, ";
+                        strsql = strsql + " convert(decimal (15,2),td_marketrate) as [Market Rate], ";
+                        strsql = strsql + " convert(decimal (15,4),0) [Brokerage], ";
+                        strsql = strsql + " convert(decimal (15,4),convert(money, case left(td_stlmnt,1) when 'N' then  case sr_nodelyn when 'Y' then 0 else td_marketrate end else td_marketrate end *td_sqty)) [Buy Value], ";
+                        strsql = strsql + " convert(decimal (15,4),convert(money, case left(td_stlmnt,1) when 'N' then case sr_nodelyn when 'Y' then 0 else td_marketrate end else td_marketrate end *td_bqty)) [Sell Value] ,";
+                        strsql = strsql + " case sr_nodelyn when 'Y' then 'NoDelv' else '' end [_], ";
+                        strsql = strsql + " rtrim(ss_name)+case td_ssrno when -1 then 'a' else 'b' end [Ordr] ,td_dt BDate,'' [Net Value]";
+                        strsql = strsql + " from trx with(" + StrTRXIndex + "nolock) left outer join std_rates with (nolock) on td_stlmnt = sr_stlmnt and td_scripcd = sr_scripcd and sr_nodelyn='Y' ,securities with (nolock) ";
+                        strsql = strsql + " where td_clientcd =@clcd and td_stlmnt=@stlmnt  and  td_Dt between '" + fromDt + "' and '" + fromDt + "'  ";
+                        strsql = strsql + " and td_scripcd = ss_cd and td_marginyn='B'";
+
+                        strsql = strsql + " union All  ";
+                        strsql = strsql + " select td_stlmnt, td_stlmnt +'['+ ltrim(rtrim(convert(char,convert(datetime,td_dt),103))) + ']' Heading,";
+                        strsql = strsql + " '0',0 , 0, 'C/F', rtrim(ss_name)+' ('+td_scripcd+')' Security, ";
+                        strsql = strsql + " case sign(sum(td_bqty-td_sqty)) when 1 then 0 else sum(td_bqty-td_sqty) end , ";
+                        strsql = strsql + " case sign(sum(td_sqty-td_bqty)) when 1 then 0 else sum(td_bqty-td_sqty) end ,  ";
+                        strsql = strsql + " convert(decimal(15,2),max(sr_makingrate)),convert(decimal (15,4),0), ";
+                        strsql = strsql + " convert(decimal (15,4),case sign(sum(td_bqty-td_sqty)) when 1 then 0 else sum((td_bqty-td_sqty)*sr_makingrate) end) , ";
+                        strsql = strsql + " convert(decimal (15,4),case sign(sum(td_sqty-td_bqty)) when 1 then 0 else  sum((td_bqty-td_sqty)*sr_makingrate) end) ,  ";
+                        strsql = strsql + " 'c/f', rtrim(ss_name)+'z' ,td_dt BDate,'' [Net Value] ";
+                        strsql = strsql + " from trx with(" + StrTRXIndex + "nolock) ,securities with (nolock),std_rates with (nolock) ";
+                        strsql = strsql + " where td_clientcd =@clcd and td_stlmnt=@stlmnt and left(td_stlmnt,1)='B' ";
+                        strsql = strsql + " and  td_Dt between '" + fromDt + "' and '" + fromDt + "'  and td_stlmnt = sr_stlmnt and td_scripcd = sr_scripcd  ";
+                        strsql = strsql + " and sr_nodelyn='Y' and td_scripcd = ss_cd ";
+                        strsql = strsql + " group by ss_name, td_scripcd,td_stlmnt,td_dt ";
+                        strsql = strsql + "  having sum(td_bqty-td_sqty)<>0 ";
+
+                        strsql = strsql + " union all";
+
+                        strsql = strsql + " select td_stlmnt,sh_stlmnt, 'Charges',0,0,'Charges',rtrim(sh_desc),0,0,convert(decimal(15,2),0),0, ";
+                        strsql = strsql + " convert(decimal (15,4),SUM(sh_amount)),convert(decimal (15,2),0) ,'','zzz', BDate ,'' [Net Value]";
+                        strsql = strsql + " From (";
+
+                        strsql = strsql + " select sh_stlmnt td_stlmnt, sh_stlmnt +'['+ ltrim(rtrim(convert(char,convert(datetime,se_stdt),103))) + ']' sh_stlmnt, rtrim(sh_desc) sh_desc ,sh_amount, se_stdt BDate";
+                        strsql = strsql + " from Specialcharges with (nolock),settlements with (nolock) ";
+                        strsql = strsql + " where sh_clientcd=@clcd and sh_stlmnt=@stlmnt and sh_stlmnt = se_Stlmnt ";
+                        strsql = strsql + " and se_stdt between '" + fromDt + "' and '" + fromDt + "' ";
+
+                        strsql = strsql + " union all   ";
+
+                        strsql = strsql + " select  bc_stlmnt td_stlmnt,bc_stlmnt +'['+ ltrim(rtrim(convert(char,convert(datetime,se_stdt),103))) + ']', rtrim(cg_desc), bc_amount, se_stdt BDate";
+                        strsql = strsql + " from Cbilled_charges with (nolock),settlements with (nolock),charges_master with (nolock)  ";
+                        strsql = strsql + " where bc_clientcd=@clcd and bc_stlmnt=@stlmnt and bc_stlmnt = se_Stlmnt  ";
+                        strsql = strsql + " and bc_companycode = cg_companycode and Left(bc_stlmnt,1) = cg_exchange and  bc_chargecode =cg_cd ";
+                        strsql = strsql + " and se_stdt between '" + fromDt + "' and '" + fromDt + "'  ";
+
+                        strsql = strsql + " union all ";
+
+                        strsql = strsql + " select sh_stlmnt td_stlmnt,sh_stlmnt +'['+ ltrim(rtrim(convert(char,convert(datetime,se_stdt),103))) + ']',rtrim(cg_desc), sh_servicetax, se_stdt BDate";
+                        strsql = strsql + " from Specialcharges with (nolock),settlements with (nolock),charges_master with (nolock)  ";
+                        strsql = strsql + " where sh_clientcd=@clcd and sh_stlmnt=@stlmnt and sh_stlmnt = se_Stlmnt  ";
+                        strsql = strsql + " and sh_companycode = cg_companycode and Left(sh_stlmnt,1) = cg_exchange and  cg_cd = '01' ";
+                        strsql = strsql + " and se_stdt between '" + fromDt + "' and '" + fromDt + "'  and sh_servicetax > 0 ) A";
+                        strsql = strsql + " gROUP bY sh_stlmnt,rtrim(sh_desc),BDate,td_stlmnt order by  Heading,ordr, Security,Time";
+                        strsql = strsql.Replace("=@stlmnt", " like '" + Stlmnt + "%'").Replace("@clcd", "'" + clientId + "'");
+                    }
+                    ObjDataSet = objUtility.OpenDataSet(strsql);
+                    if (ObjDataSet.Tables[0].Rows.Count == 0)
+                    {
+                        return ObjDataSet;
+                    }
+                    else
+                    {
+                        int i = 0;
+                        string strstlmnt = string.Empty;
+                        string strCharges = "";
+                        decimal TotalBval = 0;
+                        decimal TotalSval = 0;
+                        decimal TotalDiff = 0;
+                        string strHeading = string.Empty;
+
+                        string strparmcd = objUtility.GetSysParmSt("ROUNDOFF", "");
+
+                        for (i = 0; i <= ObjDataSet.Tables[0].Rows.Count - 1; i++)
+                        {
+                            strRefDt = ObjDataSet.Tables[0].Rows[i]["BDate"].ToString().Trim();
+                            if (strstlmnt != string.Empty && strstlmnt != ObjDataSet.Tables[0].Rows[i]["td_stlmnt"].ToString().Trim())
+                            {
+                                strstlmnt = ObjDataSet.Tables[0].Rows[i]["td_stlmnt"].ToString().Trim();
+                                DataRow ObjRow1 = ObjDataSet.Tables[0].NewRow();
+                                TotalDiff = Math.Round((decimal)(TotalSval - TotalBval), strparmcd == "Y" ? 0 : 2);
+                                if (TotalBval < TotalSval)
+                                {
+                                    ObjRow1["Security"] = "Due To You :";
+                                    ObjRow1["Heading"] = strHeading;
+                                    ObjDataSet.Tables[0].Rows.InsertAt(ObjRow1, i);
+                                    i = i + 1;
+                                }
+                                else
+                                {
+                                    ObjRow1["Security"] = "Due To Us :";
+                                    ObjRow1["Heading"] = strHeading;
+                                    ObjDataSet.Tables[0].Rows.InsertAt(ObjRow1, i);
+                                    i = i + 1;
+                                }
+
+                                var apiRes2 = objUtility.mfnRoundoffCashbill(strClient, strRefDt, TotalDiff, Strings.Left(strstlmnt, 1), strCompanyCode);
+
+                                ObjRow1["Net Value"] = objUtility.mfnFormatCurrency(Convert.ToDecimal(apiRes2), 2);
+                                TotalBval = 0;
+                                TotalSval = 0;
+                                TotalDiff = 0;
+                            }
+                            if (strstlmnt == string.Empty)
+                            {
+                                strstlmnt = ObjDataSet.Tables[0].Rows[i]["td_stlmnt"].ToString().Trim();
+                            }
+                            if (strstlmnt == ObjDataSet.Tables[0].Rows[i]["td_stlmnt"].ToString().Trim())
+                            {
+                                TotalBval = TotalBval + (decimal)ObjDataSet.Tables[0].Rows[i]["Buy Value"];
+                                TotalSval = TotalSval + (decimal)ObjDataSet.Tables[0].Rows[i]["Sell Value"];
+                                TotalSval = System.Math.Abs(TotalSval);
+                                TotalBval = System.Math.Abs(TotalBval);
+                            }
+
+                            strHeading = ObjDataSet.Tables[0].Rows[i]["Heading"].ToString().Trim();
+
+                            if (strCharges == "")
+                            {
+                                if (ObjDataSet.Tables[0].Rows[i]["td_scripcd"].ToString().Trim() == "Charges")
+                                {
+                                    strCharges = "Charges";
+                                    DataRow ObjRow1 = ObjDataSet.Tables[0].NewRow();
+
+                                    TotalDiff = Math.Round((decimal)(TotalSval - TotalBval), strparmcd == "Y" ? 0 : 2);
+
+                                    var apiRes2 = objUtility.mfnRoundoffCashbill(strClient, strRefDt, TotalDiff, Strings.Left(strstlmnt, 1), strCompanyCode);
+
+                                    TotalDiff = Convert.ToDecimal(apiRes2);
+
+                                    ObjRow1["Security"] = "Net Item Amount (Sale-Buy) :";
+                                    ObjRow1["Net Value"] = objUtility.mfnFormatCurrency(TotalDiff, 2);
+                                    ObjRow1["Heading"] = strHeading;
+                                    ObjDataSet.Tables[0].Rows.InsertAt(ObjRow1, i);
+                                    i = i + 1;
+                                }
+                            }
+                        }
+                        DataRow ObjRow2 = ObjDataSet.Tables[0].NewRow();
+                        TotalDiff = Math.Round((decimal)(TotalSval - TotalBval), strparmcd == "Y" ? 0 : 2);
+
+                        var apiRes3 = objUtility.mfnRoundoffCashbill(strClient, strRefDt, TotalDiff, Strings.Left(strstlmnt, 1), strCompanyCode);
+
+                        TotalDiff = Convert.ToDecimal(apiRes3);
+
+                        if (TotalBval < TotalSval)
+                        {
+                            ObjRow2["Security"] = "Due To You :";
+                        }
+                        else
+                        {
+                            ObjRow2["Security"] = "Due To Us :";
+                        }
+                        ObjRow2["Net Value"] = objUtility.mfnFormatCurrency(TotalDiff, 2);
+                        ObjRow2["Heading"] = strHeading;
+                        ObjDataSet.Tables[0].Rows.InsertAt(ObjRow2, ObjDataSet.Tables[0].Rows.Count);
+                        ObjDataSet.AcceptChanges();
+
+                        TotalBval = 0;
+                        TotalSval = 0;
+                    }
+                }
+                else
+                {
+                    if (blnInterOP) //Offline
+                    {
+                        strsql = "select '1' Odr,'" + arrStlmnt[0] + "' as td_stlmnt,'" + arrStlmnt[0] + "' +' [ '+ ltrim(rtrim(convert(char,convert(datetime,td_dt),103))) + ' ]' Heading ,ltrim(rtrim(convert(char,convert(datetime,td_dt),103))) as td_dt,td_scripcd,max(td_orderid) as [Order#], max(td_tradeid) [Trade#], max(case td_ssrno when -1 then 'b/f' else td_time end) Time, rtrim(td_scripnm)+' ('+td_scripcd+')' Security, ";
+                        strsql = strsql + " Case td_bsflag when 'B' then sum(td_bqty) else 0 end as Buy, Case td_bsflag when 'S' then sum(td_sqty) else 0 end as Sell, convert(decimal (15,2),sum((td_bqty+td_sqty)*td_rate)/sum(td_bqty+td_sqty)) as [Market Rate], convert(decimal (15,2),sum(td_brokerage*(td_bqty+td_sqty))) [Brokerage], ";
+                        strsql = strsql + " case td_bsflag when 'B' then sum(convert(decimal(15,2), case left(td_stlmnt,1) when 'N' then case td_Nodel when 'Y' then 0 else td_rate end else td_rate end *td_bqty)) else 0 end [Buy Value], ";
+                        strsql = strsql + " case td_bsflag when 'S' then sum(convert(decimal(15,2), case left(td_stlmnt,1) when 'N' then case td_Nodel when 'Y' then 0 else td_rate end else td_rate end *td_sqty)) else 0 end [Sell Value] ,";
+                        strsql = strsql + " max(case td_nodel when 'Y' then 'NoDelv' else '' end) [_], rtrim(td_scripnm)+ max(case td_ssrno when -1 then 'a' else 'b' end) [Ordr],td_scripnm ";
+                        strsql = strsql + " ,0 'Net Qty' ,0 'Net Value' ,0 'Net Rate'";
+                        strsql = strsql + " from trx with(" + StrTRXIndex + "nolock) where td_clientcd =@clcd ";
+                        strsql = strsql + " and td_Dt between @FromDt and @ToDt ";
+                        strsql = strsql + " and  td_stlmnt=@stlmnt";
+                        strsql = strsql + " group by td_stlmnt,td_dt,td_scripcd,td_scripnm,td_bsflag ";
+
+                        strsql = strsql + " union All ";
+                        strsql = strsql + " select '2' Odr,'" + arrStlmnt[0] + "' as td_stlmnt,'" + arrStlmnt[0] + "' +' [ '+ ltrim(rtrim(convert(char,convert(datetime,td_dt),103))) + ' ]' Heading ,";
+                        strsql = strsql + " ltrim(rtrim(convert(char,convert(datetime,td_dt),103))) as td_dt,td_scripcd,";
+                        strsql = strsql + " '0' as [Order#], '0' [Trade#], 'T' Time, ";
+                        strsql = strsql + " rtrim(td_scripnm)+' ('+td_scripcd+')' Security, ";
+                        strsql = strsql + " 0 as Buy, 0 as Sell, 0 [Market Rate], 0 [Brokerage], 0 [Buy Value], 0 [Sell Value] ,";
+                        strsql = strsql + " max(case td_nodel when 'Y' then 'NoDelv' else '' end) [_], ";
+                        strsql = strsql + " rtrim(td_scripnm)+ max(case td_ssrno when -1 then 'a' else 'b' end) [Ordr],";
+                        strsql = strsql + " td_scripnm ,";
+                        strsql = strsql + " Sum(td_bqty-td_sqty) 'Net Qty',";
+                        strsql = strsql + " Convert(decimal(15,2),Sum((td_bqty-td_sqty)* td_rate)) 'Net Value',";
+                        strsql = strsql + " Convert(decimal(15,2),Round(case When Sum(td_bqty-td_sqty) <> 0 Then Sum((td_bqty-td_sqty)* td_rate)/Sum(td_bqty-td_sqty) else 0 end,2)) 'Net Rate'";
+                        strsql = strsql + " from trx with(" + StrTRXIndex + "nolock) where td_clientcd =@clcd ";
+                        strsql = strsql + " and td_Dt between @FromDt and @ToDt ";
+                        strsql = strsql + " and  td_stlmnt=@stlmnt";
+                        strsql = strsql + " group by td_stlmnt, td_dt,td_scripcd,td_scripnm  ";
+                        strsql = strsql + " having count(distinct td_bsflag) > 1";
+
+                        strsql = strsql + " union All ";
+                        strsql = strsql + " select '3' Odr, '" + arrStlmnt[0] + "' as td_stlmnt,'" + arrStlmnt[0] + "' +' [ '+ ltrim(rtrim(convert(char,convert(datetime,td_dt),103))) + ' ]',ltrim(rtrim(convert(char,convert(datetime,td_dt),103))) as td_dt,'0',0 , 0, 'C/F', rtrim(td_scripnm)+' ('+td_scripcd+')' Security, ";
+                        strsql = strsql + " case sign(sum(td_bqty-td_sqty)) when 1 then 0 else sum(td_bqty-td_sqty) end , ";
+                        strsql = strsql + " case sign(sum(td_sqty-td_bqty)) when 1 then 0 else sum(td_bqty-td_sqty) end , convert(decimal(15,2),max(td_makingrt)), 0, ";
+                        strsql = strsql + " case sign(sum(td_bqty-td_sqty)) when 1 then 0 else sum((td_bqty-td_sqty)*td_makingrt) end , ";
+                        strsql = strsql + " case sign(sum(td_sqty-td_bqty)) when 1 then 0 else sum((td_bqty-td_sqty)*td_makingrt) end ,  'c/f', rtrim(td_scripnm)+'z', td_scripnm";
+                        strsql = strsql + " ,0,0,0";
+                        strsql = strsql + " from trx with(" + StrTRXIndex + "nolock) ";
+                        strsql = strsql + " where td_clientcd =@clcd ";
+                        strsql = strsql + " and td_Dt between @FromDt and @ToDt ";
+                        strsql = strsql + " and td_stlmnt=@stlmnt";
+                        strsql = strsql + " and td_nodel='Y' and left(td_stlmnt,1)='B' ";
+                        strsql = strsql + " group by td_stlmnt,td_dt,td_scripnm, td_scripcd having sum(td_bqty-td_sqty)<>0";//td_stlmnt='" + Stlmnt + "'
+
+                        strsql = strsql + " union all ";
+                        strsql = strsql + " select  '4' Odr,'" + arrStlmnt[0] + "' as sh_stlmnt,'" + arrStlmnt[0] + "' +' [ '+ ltrim(rtrim(convert(char,convert(datetime,se_stdt),103))) + ' ]',ltrim(rtrim(convert(char,convert(datetime,se_stdt),103))),'Charges',0,0,'Charges', rtrim(sh_desc), 0,0,convert(decimal(15,2),0),0,convert(decimal(15,2),sum(sh_amount)),0 ,'','zzz','' ";
+                        strsql = strsql + " ,0,0,0";
+                        strsql = strsql + " from Specialcharges with(nolock),settlements with(nolock)  where sh_clientcd=@clcd and sh_stlmnt = se_Stlmnt ";
+                        strsql = strsql + " and se_stdt between  @FromDt and @ToDt";
+                        strsql = strsql + " and sh_stlmnt=@stlmnt";
+                        strsql = strsql + " group by sh_stlmnt,se_stdt,sh_desc ";
+                        strsql = strsql + " order by  Heading,ordr, Security,Odr ";
+                        strsql = strsql.Replace("=@stlmnt", " in " + StrStlmntWhere + "").Replace("@clcd", "'" + clientId + "'").Replace("@FromDt", "'" + fromDt + "'").Replace("@ToDt", "'" + fromDt + "'");
+                    }
+                    else
+                    {
+                        strsql = "select '1' Odr,td_stlmnt,td_stlmnt +' [ '+ ltrim(rtrim(convert(char,convert(datetime,td_dt),103))) + ' ]' Heading ,ltrim(rtrim(convert(char,convert(datetime,td_dt),103))) as td_dt,td_scripcd,max(td_orderid) as [Order#], max(td_tradeid) [Trade#], max(case td_ssrno when -1 then 'b/f' else td_time end) Time, rtrim(td_scripnm)+' ('+td_scripcd+')' Security, ";
+                        strsql = strsql + " Case td_bsflag when 'B' then sum(td_bqty) else 0 end as Buy, Case td_bsflag when 'S' then sum(td_sqty) else 0 end as Sell, convert(decimal (15,2),sum((td_bqty+td_sqty)*td_rate)/sum(td_bqty+td_sqty)) as [Market Rate], convert(decimal (15,2),sum(td_brokerage*(td_bqty+td_sqty))) [Brokerage], ";
+                        strsql = strsql + " case td_bsflag when 'B' then sum(convert(decimal(15,2), case left(td_stlmnt,1) when 'N' then case td_Nodel when 'Y' then 0 else td_rate end else td_rate end *td_bqty)) else 0 end [Buy Value], ";
+                        strsql = strsql + " case td_bsflag when 'S' then sum(convert(decimal(15,2), case left(td_stlmnt,1) when 'N' then case td_Nodel when 'Y' then 0 else td_rate end else td_rate end *td_sqty)) else 0 end [Sell Value] ,";
+                        strsql = strsql + " max(case td_nodel when 'Y' then 'NoDelv' else '' end) [_], rtrim(td_scripnm)+ max(case td_ssrno when -1 then 'a' else 'b' end) [Ordr],td_scripnm ";
+                        strsql = strsql + " ,0 'Net Qty' ,0 'Net Value' ,0 'Net Rate'";
+                        strsql = strsql + " from trx with(" + StrTRXIndex + "nolock) where td_clientcd =@clcd ";
+                        strsql = strsql + " and td_Dt between @FromDt and @ToDt ";
+                        strsql = strsql + " and  left(td_stlmnt,2)  = '" + Stlmnt + "'";
+                        strsql = strsql + " group by td_stlmnt,td_dt,td_scripcd,td_scripnm,td_bsflag ";
+
+                        strsql = strsql + " union All ";
+                        strsql = strsql + " select '2' Odr,td_stlmnt,td_stlmnt +' [ '+ ltrim(rtrim(convert(char,convert(datetime,td_dt),103))) + ' ]' Heading ,";
+                        strsql = strsql + " ltrim(rtrim(convert(char,convert(datetime,td_dt),103))) as td_dt,td_scripcd,";
+                        strsql = strsql + " '0' as [Order#], '0' [Trade#], 'T' Time, ";
+                        strsql = strsql + " rtrim(td_scripnm)+' ('+td_scripcd+')' Security, ";
+                        strsql = strsql + " 0 as Buy, 0 as Sell, 0 [Market Rate], 0 [Brokerage], 0 [Buy Value], 0 [Sell Value] ,";
+                        strsql = strsql + " max(case td_nodel when 'Y' then 'NoDelv' else '' end) [_], ";
+                        strsql = strsql + " rtrim(td_scripnm)+ max(case td_ssrno when -1 then 'a' else 'b' end) [Ordr],";
+                        strsql = strsql + " td_scripnm ,";
+                        strsql = strsql + " Sum(td_bqty-td_sqty) 'Net Qty',";
+                        strsql = strsql + " Convert(decimal(15,2),Sum((td_bqty-td_sqty)* td_rate)) 'Net Value',";
+                        strsql = strsql + " Convert(decimal(15,2),Round(case When Sum(td_bqty-td_sqty) <> 0 Then Sum((td_bqty-td_sqty)* td_rate)/Sum(td_bqty-td_sqty) else 0 end,2)) 'Net Rate'";
+                        strsql = strsql + " from trx with(" + StrTRXIndex + "nolock) where td_clientcd =@clcd ";
+                        strsql = strsql + " and td_Dt between @FromDt and @ToDt ";
+                        strsql = strsql + " and  left(td_stlmnt,2)  = '" + Stlmnt + "'";
+                        strsql = strsql + " group by td_stlmnt, td_dt,td_scripcd,td_scripnm  ";
+                        strsql = strsql + " having count(distinct td_bsflag) > 1";
+
+                        strsql = strsql + " union All ";
+                        strsql = strsql + " select '3' Odr, td_stlmnt,td_stlmnt +' [ '+ ltrim(rtrim(convert(char,convert(datetime,td_dt),103))) + ' ]',ltrim(rtrim(convert(char,convert(datetime,td_dt),103))) as td_dt,'0',0 , 0, 'C/F', rtrim(td_scripnm)+' ('+td_scripcd+')' Security, ";
+                        strsql = strsql + " case sign(sum(td_bqty-td_sqty)) when 1 then 0 else sum(td_bqty-td_sqty) end , ";
+                        strsql = strsql + " case sign(sum(td_sqty-td_bqty)) when 1 then 0 else sum(td_bqty-td_sqty) end , convert(decimal(15,2),max(td_makingrt)), 0, ";
+                        strsql = strsql + " case sign(sum(td_bqty-td_sqty)) when 1 then 0 else sum((td_bqty-td_sqty)*td_makingrt) end , ";
+                        strsql = strsql + " case sign(sum(td_sqty-td_bqty)) when 1 then 0 else sum((td_bqty-td_sqty)*td_makingrt) end ,  'c/f', rtrim(td_scripnm)+'z', td_scripnm";
+                        strsql = strsql + " ,0,0,0";
+                        strsql = strsql + " from trx with(" + StrTRXIndex + "nolock) ";
+                        strsql = strsql + " where td_clientcd =@clcd ";
+                        strsql = strsql + " and td_Dt between @FromDt and @ToDt ";
+                        strsql = strsql + " and  left(td_stlmnt,2)  = '" + Stlmnt + "'";
+
+                        strsql = strsql + " and td_nodel='Y' and left(td_stlmnt,1)='B' ";
+                        strsql = strsql + " group by td_stlmnt,td_dt,td_scripnm, td_scripcd having sum(td_bqty-td_sqty)<>0";//td_stlmnt='" + Stlmnt + "'
+
+                        strsql = strsql + " union all ";
+                        strsql = strsql + " select  '4' Odr,sh_stlmnt,sh_stlmnt +' [ '+ ltrim(rtrim(convert(char,convert(datetime,se_stdt),103))) + ' ]',ltrim(rtrim(convert(char,convert(datetime,se_stdt),103))),'Charges',0,0,'Charges', rtrim(sh_desc), 0,0,convert(decimal(15,2),0),0,convert(decimal(15,2),sum(sh_amount)),0 ,'','zzz','' ";
+                        strsql = strsql + " ,0,0,0";
+                        strsql = strsql + " from Specialcharges with(nolock),settlements with(nolock)  where sh_clientcd=@clcd and sh_stlmnt = se_Stlmnt ";
+                        strsql = strsql + " and se_stdt between  @FromDt and @ToDt";
+                        strsql = strsql + " and left(sh_stlmnt,2) = '" + Stlmnt + "'";
+
+                        strsql = strsql + " group by sh_stlmnt,se_stdt,sh_desc ";
+                        strsql = strsql + " order by  Heading,ordr, Security,Odr ";
+                        strsql = strsql.Replace("@clcd", "'" + clientId + "'").Replace("@FromDt", "'" + fromDt + "'").Replace("@ToDt", "'" + fromDt + "'");
+
+                    }
+                    ObjDataSet = objUtility.OpenDataSet(strsql);
+
+                    if (ObjDataSet.Tables[0].Rows.Count > 0)
+                    {
+                        int i = 0;
+                        string strstlmnt = string.Empty;
+                        decimal TotalBval = 0;
+                        decimal TotalSval = 0;
+                        decimal TotalDiff = 0;
+                        decimal TotalNet = 0;
+                        string strHeading = string.Empty;
+                        string strCharges = "";
+
+                        string strparmcd = objUtility.GetSysParmSt("ROUNDOFF", "");
+
+                        for (i = 0; i <= ObjDataSet.Tables[0].Rows.Count - 1; i++)
+                        {
+                            strRefDt = ObjDataSet.Tables[0].Rows[i]["td_dt"].ToString().Trim();
+
+                            if (strstlmnt != string.Empty && strstlmnt != ObjDataSet.Tables[0].Rows[i]["td_stlmnt"].ToString().Trim())
+                            {
+                                strstlmnt = ObjDataSet.Tables[0].Rows[i]["td_stlmnt"].ToString().Trim();
+                                DataRow ObjRow1 = ObjDataSet.Tables[0].NewRow();
+                                TotalDiff = Math.Round((decimal)(TotalSval - TotalBval), strparmcd == "Y" ? 0 : 2);
+                                if (TotalBval < TotalSval)
+                                {
+                                    ObjRow1["Security"] = "Due To You :";
+                                    ObjRow1["Heading"] = strHeading;
+                                    ObjDataSet.Tables[0].Rows.InsertAt(ObjRow1, i);
+                                    i = i + 1;
+                                }
+                                else
+                                {
+                                    ObjRow1["Security"] = "Due To Us :";
+                                    ObjRow1["Heading"] = strHeading;
+                                    ObjDataSet.Tables[0].Rows.InsertAt(ObjRow1, i);
+                                    i = i + 1;
+                                }
+
+                                var apiRes4 = objUtility.mfnRoundoffCashbill(strClient, strRefDt, TotalDiff, Strings.Left(strstlmnt, 1), strCompanyCode);
+
+                                ObjRow1["Net Value"] = objUtility.mfnFormatCurrency(Convert.ToDecimal(apiRes4), 2);
+
+                                TotalBval = 0;
+                                TotalSval = 0;
+                                TotalDiff = 0;
+                            }
+                            if (strstlmnt == string.Empty)
+                            {
+                                strstlmnt = ObjDataSet.Tables[0].Rows[i]["td_stlmnt"].ToString().Trim();
+                            }
+                            if (strstlmnt == ObjDataSet.Tables[0].Rows[i]["td_stlmnt"].ToString().Trim())
+                            {
+                                TotalBval = TotalBval + (decimal)ObjDataSet.Tables[0].Rows[i]["Buy Value"];
+                                TotalSval = TotalSval + (decimal)ObjDataSet.Tables[0].Rows[i]["Sell Value"];
+                                TotalSval = System.Math.Abs(TotalSval);
+                                TotalBval = System.Math.Abs(TotalBval);
+                            }
+                            strHeading = ObjDataSet.Tables[0].Rows[i]["Heading"].ToString().Trim();
+
+                            if (strCharges == "")
+                            {
+                                if (Conversion.Val(ObjDataSet.Tables[0].Rows[i]["Odr"].ToString().Trim()) == 4)
+                                {
+                                    strCharges = "Charges";
+
+                                    DataRow ObjRow1 = ObjDataSet.Tables[0].NewRow();
+                                    ObjRow1["Heading"] = strHeading;
+                                    ObjRow1["Security"] = "Value Before Adding Charges :";
+                                    ObjRow1["Net Value"] = objUtility.mfnFormatCurrency(TotalNet, 2);
+                                    ObjDataSet.Tables[0].Rows.InsertAt(ObjRow1, i);
+                                    i = i + 1;
+                                }
+                            }
+
+                            TotalNet = TotalNet + (decimal)ObjDataSet.Tables[0].Rows[i]["Net Value"];
+                        }
+
+                        DataRow ObjRow2 = ObjDataSet.Tables[0].NewRow();
+                        TotalDiff = Math.Round((decimal)(TotalSval - TotalBval), strparmcd == "Y" ? 0 : 2);
+
+                        var apiRes3 = objUtility.mfnRoundoffCashbill(strClient, strRefDt, TotalDiff, Strings.Left(strstlmnt, 1), strCompanyCode);
+
+                        TotalDiff = Convert.ToDecimal(apiRes3);
+
+                        if (TotalBval < TotalSval)
+                        {
+                            ObjRow2["Security"] = "Due To You :";
+                        }
+                        else
+                        {
+                            ObjRow2["Security"] = "Due To Us :";
+                        }
+
+                        ObjRow2["Net Value"] = objUtility.mfnFormatCurrency(TotalDiff, 2);
+                        ObjRow2["Heading"] = strHeading;
+                        ObjDataSet.Tables[0].Rows.InsertAt(ObjRow2, ObjDataSet.Tables[0].Rows.Count);
+                        ObjDataSet.AcceptChanges();
+
+                    }
+                    else
+                    {
+                        return ObjDataSet;
+                    }
+                }
+            }
+
+            return ObjDataSet;
+        }
+        #endregion
+        #endregion
+
 
         #endregion
     }
