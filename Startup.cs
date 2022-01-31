@@ -36,6 +36,7 @@ namespace TradeWeb.API
 
             //// TODO : Added dependancy here
             services.AddScoped<UtilityCommon>();
+            services.AddScoped<ITradeWebRepository, TradeWebRepository>();
 
             //// End dependancy
             services.AddControllers();
