@@ -24,8 +24,7 @@ namespace TradeWeb.Repo.Interface
         string GetLeftPaddedString(string StringToPad, int TotalExpectedLength);
         string GetFormattedDate(string Date);
         string dtos(string dDate);
-        DateTime stod(string Date);
-        DataSet TradeHolding(string rsCon, string strClient, string strdate, string strcollat, SqlConnection ObjConnectionTmp);
+        DateTime stod(string Date);        
         string mfnFormatCurrency(Object objAmount, int intDecimal);
         string GetHtmlFromUrl(string url);
         HttpWebRequest GenerateHttpWebRequest(string UriString);
