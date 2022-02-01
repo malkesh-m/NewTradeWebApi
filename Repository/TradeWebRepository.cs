@@ -17,6 +17,8 @@ namespace TradeWeb.API.Repository
     {
         public dynamic UserDetails(string userId, string password);
 
+        public dynamic GetUserDetais(string userId);
+
         public dynamic Transaction_Summary(string userId, string type, string FromDate, string ToDate);
 
         public dynamic Transaction_Accounts(string userId, string type, string fromDate, string toDate);
@@ -92,6 +94,29 @@ namespace TradeWeb.API.Repository
             try
             {
                 string qury = "select cm_cd ClientCode, cm_Name ClientName from Client_master with (nolock) where cm_cd='" + userId + "'  and cm_pwd='" + password + "'";
+                var ds = CommonRepository.FillDataset(qury);
+                if (ds != null)
+                {
+                    if (ds.Tables.Count > 0)
+                    {
+                        DataTable Dt = new DataTable();
+                        Dt = ds.Tables[0];
+                        return JsonConvert.SerializeObject(Dt);
+                    }
+                }
+                return null;
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        public dynamic GetUserDetais(string userId)
+        {
+            try
+            {
+                string qury = "Select LTrim(RTrim(cm_name)) as Name , LTrim(RTrim(cm_add1)) As Address1, LTrim(RTrim(cm_add2)) As Address2, LTrim(RTrim(cm_add3)) As Address3, LTrim(RTrim(cm_add4)) as Address4, LTrim(RTrim(cm_pincode)) as Pincode, LTrim(RTrim(cm_state)) as State, LTrim(RTrim(cm_pcountry)) as Country, LTrim(RTrim(cm_email)) as Email, LTrim(RTrim(cm_mobile)) as Mobile, LTrim(RTrim(cm_tele1)) as Telephone1, LTrim(RTrim(cm_tele2)) as Telephone2 , LTrim(RTrim(cm_panno)) as PanNo, LTrim(RTrim(bk_name)) as BankName, LTrim(RTrim(ba_actno)) as BankAccountNo, LTrim(RTrim(ba_micr)) as MICR, LTrim(RTrim(ba_ifsccode)) as IFSC, LTrim(RTrim(da_dpid)) as DPID, LTrim(RTrim(da_actno)) as DematAccountNo,  case cm_freezeyn when 'Y' then 'Freeze for Trades' when 'B' then 'Freeze for Branches' when 'A' then 'Freeze for All'  else 'Active'  end cm_freezestatus from client_master,client_info,Bankact,Bank_master,Dematact with (nolock) where cm_cd=cm2_cd and cm_cd='" + userId + "' and da_clientcd='" + userId + "' and da_defaultyn='y' and ba_clientcd='" + userId + "' and ba_default='y' and ba_micr=bk_micr  and ba_ifsccode = bk_IFCCode;";
                 var ds = CommonRepository.FillDataset(qury);
                 if (ds != null)
                 {

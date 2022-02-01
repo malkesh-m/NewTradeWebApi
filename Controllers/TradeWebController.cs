@@ -83,6 +83,36 @@ namespace TradeWeb.API.Controllers
             return BadRequest();
         }
 
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpPost("GetUserDetails", Name = "GetUserDetails")]
+        public IActionResult GetUserDetails()
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var tokenS = GetToken();
+                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
+
+                    var getData = _tradeWebRepository.GetUserDetais(userId);
+                    if (getData != null)
+                    {
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                    }
+                    else
+                    {
+                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
+
+
         #region Ledger Api
 
         /// <summary>
