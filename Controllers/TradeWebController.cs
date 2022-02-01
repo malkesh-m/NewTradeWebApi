@@ -790,6 +790,100 @@ namespace TradeWeb.API.Controllers
 
 
         #endregion
+
+        #region Confirmation Api
+        // get dropdown menu cumulative details data
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpGet("GetCumulativeDetails", Name = "GetCumulativeDetails")]
+        public IActionResult GetCumulativeDetails([FromQuery] string order, string scripCode, string bsflag, string date, string lookup)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var tokenS = GetToken();
+                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
+
+                    var getData = _tradeWebRepository.GetCumulativeDetailsHandler(userId, order, scripCode, bsflag, date, lookup);
+                    if (getData != null)
+                    {
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                    }
+                    else
+                    {
+                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
+
+        // get dropdown menu confirmation details data
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpGet("GetConfirmationDetails", Name = "GetConfirmationDetails")]
+        public IActionResult GetConfirmationDetails([FromQuery] string Order, string loopUp)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var tokenS = GetToken();
+                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
+
+                    var getData = _tradeWebRepository.GetConfirmationDetailsHandler(userId, Order, loopUp);
+                    if (getData != null)
+                    {
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                    }
+                    else
+                    {
+                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
+
+        // get confirmation main data
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpGet("GetConfirmationData", Name = "GetConfirmationData")]
+        public IActionResult GetConfirmationData([FromQuery] int lstConfirmationSelectIndex, string date)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var tokenS = GetToken();
+                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
+
+                    var getData = _tradeWebRepository.GetConfirmationMainDataHandler(userId, lstConfirmationSelectIndex, date);
+                    if (getData != null)
+                    {
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                    }
+                    else
+                    {
+                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
+
+        #endregion
+
         private JwtSecurityToken GetToken()
         {
             var handler = new JwtSecurityTokenHandler();
@@ -939,16 +1033,6 @@ namespace TradeWeb.API.Controllers
 
             }
         }
-        #endregion
-
-
-        #region Handler
-
-        
-
-       
-                
-        
         #endregion
     }
 }
