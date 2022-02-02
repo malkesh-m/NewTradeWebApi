@@ -17,6 +17,10 @@ namespace TradeWeb.API.Repository
     {
         public dynamic UserDetails(string userId, string password);
 
+        public dynamic Login_validate_USER(string userId);
+
+        public dynamic Login_validate_Password(string userId, string password);
+
         public dynamic GetUserDetais(string userId);
 
         public dynamic Transaction_Summary(string userId, string type, string FromDate, string ToDate);
@@ -105,6 +109,50 @@ namespace TradeWeb.API.Repository
                     }
                 }
                 return null;
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        public dynamic Login_validate_USER(string userId)
+        {
+            try
+            {
+                string qury = "select cm_cd ClientCode, cm_Name ClientName from Client_master with (nolock) where cm_cd='" + userId + "'";
+                var ds = objUtility.OpenDataSet(qury);
+                if (ds != null)
+                {
+                    if (ds.Tables[0].Rows.Count > 0 )
+                    {
+                        return "success";
+                    }
+                }
+                return "failed";
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        public dynamic Login_validate_Password(string userId, string password)
+        {
+            try
+            {
+                string qury = "select cm_mobile from Client_master with (nolock) where cm_cd='" + userId + "'  and cm_pwd='" + password + "'";
+                var ds = objUtility.OpenDataSet(qury);
+                if (ds != null)
+                {
+                    if (ds.Tables[0].Rows.Count > 0)
+                    {
+                        DataTable Dt = new DataTable();
+                        Dt = ds.Tables[0];
+                        return JsonConvert.SerializeObject(Dt);
+                    }
+                }
+                return "failed";
             }
             catch (Exception ex)
             {

@@ -83,6 +83,7 @@ namespace TradeWeb.API.Controllers
             return BadRequest();
         }
 
+
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpPost("GetUserDetails", Name = "GetUserDetails")]
         public IActionResult GetUserDetails()
@@ -912,6 +913,61 @@ namespace TradeWeb.API.Controllers
             return BadRequest();
         }
 
+
+        /// <summary>
+        /// Login validate USER
+        /// </summary>
+        /// <param name="userId"></param>
+        /// <returns></returns>
+        [HttpPost("Login_validate_USER", Name = "Login_validate_USER")]
+        public IActionResult Login_validate_USER(string userId)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var result = _tradeWebRepository.Login_validate_USER(userId);
+                    if (result != "failed")
+                    {
+                        return Ok(new tokenResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = result });
+                    }
+                    return Ok(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, data = result });
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
+
+        /// <summary>
+        /// Login validate Password
+        /// </summary>
+        /// <param name="userId"></param>
+        /// <param name="password"></param>
+        /// <returns></returns>
+        [HttpPost("Login_validate_Password", Name = "Login_validate_Password")]
+        public IActionResult Login_validate_Password(string userId, string password)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var result = _tradeWebRepository.Login_validate_Password(userId, password);
+                    if (result != "failed")
+                    {
+                        return Ok(new tokenResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = result });
+                    }
+                    return Ok(new commonResponse { status = false, message = "failed", status_code = (int)HttpStatusCode.NotFound, data = result });
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
         #endregion
 
         private JwtSecurityToken GetToken()
