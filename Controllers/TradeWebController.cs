@@ -53,8 +53,8 @@ namespace TradeWeb.API.Controllers
 
         #region API Methods
         [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpPost("GetUserDetails", Name = "GetUserDetails")]
-        public IActionResult GetUserDetails()
+        [HttpPost("Home_UserProfile", Name = "Home_UserProfile")]
+        public IActionResult Home_UserProfile()
         {
             if (ModelState.IsValid)
             {
