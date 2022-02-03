@@ -83,6 +83,11 @@ namespace TradeWeb.API.Repository
         public dynamic GetDropdownListData(string cm_cd, string strCompanyCode);
 
         public dynamic GetMarginPledgeData(string cm_cd, string UserId, string strCompanyCode, string CmbDPID_Value);
+
+        public dynamic GetCurrentPledgeRequest(string UserId);
+
+        public dynamic AddPledgeRequest(string UserId, string CmbDPID_Value, bool blnIdentityOn, string intcnt, string lblScripcd, string txtQty);
+        
     }
 
 
@@ -5019,6 +5024,41 @@ namespace TradeWeb.API.Repository
             }
         }
 
+        // For getting current pledge request
+        public dynamic GetCurrentPledgeRequest(string UserId)
+        {
+            try
+            {
+                var ds = GetQueryCurrentPledgeRequest(UserId);
+
+                if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                {
+                    var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
+                    return json;
+                }
+                return new List<string>();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        // For insert margin pledge request
+        public dynamic AddPledgeRequest(string UserId, string CmbDPID_Value, bool blnIdentityOn, string intcnt, string lblScripcd, string txtQty)
+        {
+            try
+            {
+                var ds = AddQueryPledgeRequest(UserId, CmbDPID_Value, blnIdentityOn, intcnt, lblScripcd, txtQty);
+                var json = JsonConvert.SerializeObject(ds);
+                return json;
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
         #region Margin usefull method
 
         // get data for margin main grid
@@ -5605,6 +5645,44 @@ namespace TradeWeb.API.Repository
             }
 
             return null;
+        }
+
+        //get current pledge request
+        public DataSet GetQueryCurrentPledgeRequest(string UserId)
+        {
+            strsql = "delete from PledgeRequest where Rq_Clientcd='" + UserId + "' and Rq_Status1='P'";
+            objUtility.ExecuteSQL(strsql);
+
+            DataSet Dstemp = new DataSet();
+            Dstemp = objUtility.OpenDataSet("SELECT isnull (IDENT_CURRENT('PledgeRequest'),0)");
+
+            if (Convert.ToInt64(Dstemp.Tables[0].Rows[0][0]) > 0)
+            {
+                DataSet DsReqId = new DataSet();
+                DsReqId = objUtility.OpenDataSet("SELECT IDENT_CURRENT('PledgeRequest')");
+                return DsReqId;
+            }
+
+            return Dstemp;
+        }
+
+        // insert margin pledge request
+        public string AddQueryPledgeRequest(string UserId, string CmbDPID_Value, bool blnIdentityOn, string intcnt, string lblScripcd, string txtQty)
+        {
+            string gstrToday = DateTime.Today.ToString("yyyyMMdd");
+            string strHostAdd = Dns.GetHostName();
+            if (blnIdentityOn)
+                strsql = "insert into PledgeRequest values ( ";
+            else
+                strsql = "insert into PledgeRequest values ( " + Convert.ToInt64(intcnt) + ",";
+
+            strsql += " '" + UserId + "','" + CmbDPID_Value.Trim() + "','" + lblScripcd.Trim() + "','" + Conversion.Val(txtQty) + "','" + strHostAdd + "',";
+            strsql += " '" + gstrToday + "',";
+            strsql += " convert(char(8),getdate(),108),";
+            strsql += " 'P','P','P','" + objUtility.Encrypt((gstrToday).ToString().Trim()) + "','')";
+            objUtility.ExecuteSQL(strsql);
+
+            return "Success";
         }
 
         #endregion
