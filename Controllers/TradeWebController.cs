@@ -52,38 +52,6 @@ namespace TradeWeb.API.Controllers
         #endregion
 
         #region API Methods
-        /// <summary>
-        /// Login
-        /// </summary>
-        /// <param name="data"></param>
-        /// <returns></returns>
-        [HttpPost("Login", Name = "Login")]
-        public IActionResult Login([FromBody] TradeWebLoginModel data)
-        {
-            // TODO : IsValid returns false then the Model contains some validation error and the controller would not allow the model to pass into the controller.
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    // LoginHandler logHandler = new LoginHandler();
-                    var userList =  _tradeWebRepository.UserDetails(data.username, data.password);
-                    if (userList != null)
-                    {
-                        var tokenString = GenerateJSONWebToken(data);
-                        FillConfigParametersString();
-                        return Ok(new tokenResponse { status = true, message = "success", token = tokenString, status_code = (int)HttpStatusCode.OK, data = userList });
-                    }
-                    return Ok(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
-                }
-                catch (Exception ex)
-                {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
-                }
-            }
-            return BadRequest();
-        }
-
-
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpPost("GetUserDetails", Name = "GetUserDetails")]
         public IActionResult GetUserDetails()
@@ -955,11 +923,14 @@ namespace TradeWeb.API.Controllers
                 try
                 {
                     var result = _tradeWebRepository.Login_validate_Password(userId, password);
-                    if (result != "failed")
+                    var userList = _tradeWebRepository.UserDetails(userId, password);
+                    if (userList != null)
                     {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = result });
+                        var tokenString = GenerateJSONWebToken(new TradeWebLoginModel { username=userId, password=password });
+                        FillConfigParametersString();
+                        return Ok(new tokenResponse { status = true, message = "success", token = tokenString, status_code = (int)HttpStatusCode.OK, data = userList });
                     }
-                    return Ok(new commonResponse { status = false, message = "failed", status_code = (int)HttpStatusCode.NotFound, data = result });
+                    return Ok(new commonResponse { status = false, message = "failed", status_code = (int)HttpStatusCode.NotFound, error_message = "Invalid userid / password" });
                 }
                 catch (Exception ex)
                 {

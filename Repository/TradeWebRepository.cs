@@ -148,7 +148,7 @@ namespace TradeWeb.API.Repository
         {
             try
             {
-                string qury = "select cm_mobile from Client_master with (nolock) where cm_cd='" + userId + "'  and cm_pwd='" + password + "'";
+                string qury = "select cm_cd 'ClientCode',cm_Name 'ClientName', cm_mobile 'Mobile' from Client_master with (nolock) where cm_cd='" + userId + "'  and cm_pwd='" + password + "'";
                 var ds = objUtility.OpenDataSet(qury);
                 if (ds != null)
                 {
