@@ -78,6 +78,16 @@ namespace TradeWeb.API.Repository
 
         public dynamic GetConfirmationMainDataHandler(string userId, int lstConfirmationSelectIndex, string tdDt);
 
+        public dynamic GetMarginMainData(string cm_cd, string strCompanyCode);
+
+        public dynamic GetDropdownListData(string cm_cd, string strCompanyCode);
+
+        public dynamic GetMarginPledgeData(string cm_cd, string UserId, string strCompanyCode, string CmbDPID_Value);
+
+        public dynamic GetCurrentPledgeRequest(string UserId);
+
+        public dynamic AddPledgeRequest(string UserId, string CmbDPID_Value, bool blnIdentityOn, string intcnt, string lblScripcd, string txtQty);
+        
     }
 
 
@@ -4952,6 +4962,730 @@ namespace TradeWeb.API.Repository
                 return "";
             }
         }
+        #endregion
+
+        #region Margin Handler method
+        // For getting margin data
+        public dynamic GetMarginMainData(string cm_cd, string strCompanyCode)
+        {
+            try
+            {
+                var ds = GetQueryMainData(cm_cd, strCompanyCode);
+                if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                {
+                    var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
+                    return json;
+                }
+                return new List<string>();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        // For getting dropdownlist data
+        public dynamic GetDropdownListData(string cm_cd, string strCompanyCode)
+        {
+            var query = GetQueryDropdownData(cm_cd, strCompanyCode);
+            try
+            {
+                var ds = CommonRepository.OpenDataSetTmp(query);
+                if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                {
+                    var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
+                    return json;
+                }
+                return new List<string> ();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        // For getting Margin Pledge data
+        public dynamic GetMarginPledgeData(string cm_cd, string UserId, string strCompanyCode, string CmbDPID_Value)
+        {
+            try
+            {
+                var ds = GetQueryMarginPledgeData(cm_cd, UserId, strCompanyCode, CmbDPID_Value);
+                //var ds = CommonRepository.OpenDataSetTmp(query);
+                if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                {
+                    var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
+                    return json;
+                }
+                return new List<string>();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        // For getting current pledge request
+        public dynamic GetCurrentPledgeRequest(string UserId)
+        {
+            try
+            {
+                var ds = GetQueryCurrentPledgeRequest(UserId);
+
+                if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                {
+                    var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
+                    return json;
+                }
+                return new List<string>();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        // For insert margin pledge request
+        public dynamic AddPledgeRequest(string UserId, string CmbDPID_Value, bool blnIdentityOn, string intcnt, string lblScripcd, string txtQty)
+        {
+            try
+            {
+                var ds = AddQueryPledgeRequest(UserId, CmbDPID_Value, blnIdentityOn, intcnt, lblScripcd, txtQty);
+                var json = JsonConvert.SerializeObject(ds);
+                return json;
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        #region Margin usefull method
+
+        // get data for margin main grid
+        private DataSet GetQueryMainData(string cm_cd, string strCompanyCode)
+        {
+            DataSet objdataset = new DataSet();
+            if (_configuration["IsTradeWeb"] == "O")//Live DB {
+            {
+                objdataset = fnGetRptSQL(true, cm_cd, strCompanyCode);
+            }
+            else
+            {
+                strsql = " Select case right(fm_companycode,2) When 'BF' Then 'BSE F&O' When 'NF' Then 'NSE F&O' When 'MF' Then 'MCX F&O' else '' end ExchSeg,";
+                strsql += " fm_clientcd,cast(fm_spanmargin as decimal(15,2)) as fm_spanmargin,cast(fm_exposurevalue as decimal(15,2)) as fm_exposurevalue, cast(fm_buypremmargin as decimal(15,2)) as fm_buypremmargin,";
+                strsql += " cast(fm_initialmargin as decimal(15,2)) as fm_initialmargin,cast(fm_additionalmargin as decimal(15,2)) as fm_additionalmargin, cast(fm_collected as decimal(15,2)) as fm_collected,cast(isnull(fm_spanmargin,0 )+ isnull(fm_exposurevalue,0) as decimal(15,2)) 'margin',";
+                strsql += " cast(case when (fm_initialmargin + fm_exposurevalue- case when fm_collected > 0 then fm_collected else 0 end) >0 then (fm_initialmargin + fm_exposurevalue- case when fm_collected > 0 then fm_collected else 0 end) else 0 end as decimal(15,2)) ShortFall";
+                strsql += " ,convert(char,convert(datetime, fm_dt),103) as DisplayDate from fmargins where right(fm_companycode,1) = 'F' and fm_dt = (select max(fm_Dt) from fmargins Where right(fm_companycode,1) = 'F' ) and fm_clientcd='" + cm_cd + "'";
+                strsql += " union all";
+                strsql += " Select case right(fm_companycode,2) When 'BK' Then 'BSE FX' When 'NK' Then 'NSE FX' When 'MK' Then 'MCX FX' else '' end ExchSeg,";
+                strsql += " fm_clientcd,cast(fm_spanmargin as decimal(15,2)) as fm_spanmargin,cast(fm_exposurevalue as decimal(15,2)) as fm_exposurevalue, cast(fm_buypremmargin as decimal(15,2)) as fm_buypremmargin,";
+                strsql += " cast(fm_initialmargin as decimal(15,2)) as fm_initialmargin,cast(fm_additionalmargin as decimal(15,2)) as fm_additionalmargin, cast(fm_collected as decimal(15,2)) as fm_collected,cast(isnull(fm_spanmargin,0 )+ isnull(fm_exposurevalue,0) as decimal(15,2)) 'margin',";
+                strsql += " cast(case when (fm_initialmargin + fm_exposurevalue- case when fm_collected > 0 then fm_collected else 0 end) >0 then (fm_initialmargin + fm_exposurevalue- case when fm_collected > 0 then fm_collected else 0 end) else 0 end as decimal(15,2)) ShortFall";
+                strsql += " ,convert(char,convert(datetime, fm_dt),103) as DisplayDate from fmargins where right(fm_companycode,1) = 'K' and fm_dt = (select max(fm_Dt) from fmargins Where right(fm_companycode,1) = 'K' ) and fm_clientcd='" + cm_cd + "'";
+                strsql += " union all";
+                strsql += " Select case right(fm_companycode,2) When 'MX' Then 'MCX Commodity' When 'NX' Then 'NCDEX Commodity' else '' end ExchSeg,fm_clientcd,cast(fm_spanmargin as decimal(15,2)) as fm_spanmargin,";
+                strsql += " cast(fm_exposurevalue as decimal(15,2)) as fm_exposurevalue, cast(fm_buypremmargin as decimal(15,2)) as fm_buypremmargin,cast(fm_initialmargin as decimal(15,2)) as fm_initialmargin,cast(fm_additionalmargin as decimal(15,2)) as fm_additionalmargin, cast(fm_collected as decimal(15,2)) as fm_collected,";
+                strsql += " cast(isnull(fm_spanmargin,0 )+ isnull(fm_exposurevalue,0) as decimal(15,2)) 'margin',cast(case when (fm_initialmargin + fm_exposurevalue- case when fm_collected > 0 then fm_collected else 0 end) >0 then (fm_initialmargin + fm_exposurevalue- case when fm_collected > 0 then fm_collected else 0 end) else 0 end as decimal(15,2)) ShortFall,convert(char,convert(datetime, fm_dt),103) as  DisplayDate ";
+                strsql += " from fmargins  where right(fm_companycode,1) = 'X' and fm_dt = (select max(fm_Dt)  from fmargins Where right(fm_companycode,1) = 'X' ) and fm_clientcd='" + cm_cd + "'";
+                objdataset = objUtility.OpenDataSet(strsql);
+
+            }
+            return objdataset;
+        }
+
+        // used for getting margin main data
+        public DataSet fnGetRptSQL(bool blnisLetter, string cm_cd, string strCompanyCode)
+        {
+            string StrConn = _configuration.GetConnectionString("DefaultConnection");
+            string strCase = "";
+            string strFild = "";
+            string strExchSegme = "";
+            string strSegCode = "";
+            DataSet rsExcgSeg;
+
+            string strTotalShortFallX = "";
+            string strTotalCollectedX = "";
+            string strClientWhere = "";
+
+            using (SqlConnection ObjConnectionTmp = new SqlConnection(StrConn))
+            {
+                string StrCommexConn = "";
+                if (objUtility.GetWebParameter("Commex") != null && objUtility.GetWebParameter("Commex") != string.Empty)
+                {
+                    StrCommexConn = objUtility.GetCommexConnection();
+                }
+
+                string strSql = "";
+                ObjConnectionTmp.Open();
+                objUtility.ExecuteSQLTmp("if OBJECT_ID('tempdb..#TmpPeakColl') is not null Drop Table #TmpPeakColl", ObjConnectionTmp);
+                objUtility.ExecuteSQLTmp("Create Table #TmpPeakColl (Tmp_Clientcd VarChaR(8),Tmp_CompanyCode VarChaR(3),Tmp_PeakMargin Money,Tmp_PeakColl Money,Tmp_Shortfall Money, Tmp_exchange char(1), Tmp_segment char(1) , Tmp_Nfiller4 money, Tmp_Nfiller5 money )", ObjConnectionTmp);
+
+                string strdate = "";
+                strdate = objUtility.fnFireQueryTradeWeb("Fmargins", "max(fm_Dt)", "1", "1", true).ToString().Trim();
+                if (Conversion.Val(objUtility.fnFireQueryTradeWeb("Fmargin_PeakMargin", "Count(0)", "fc_companycode='" + strCompanyCode + "' and fc_dt ", "(select max(fc_dt) from Fmargin_PeakMargin)", true).ToString()) > 0)
+                {
+
+                    strSql = " insert into #TmpPeakColl ";
+                    strSql += " select fm_clientcd,'" + strCompanyCode + "'+fm_exchange+fm_Segment ,isNull(fm_NFiller4,0), isNull(fm_NFiller5,0) , 0,  fm_exchange, fm_Segment ,isNull(fm_NFiller4,0), isNull(fm_NFiller5,0) ";
+                    strSql += " from Fmargins, Client_master ";
+                    strSql += " Where fm_clientcd=cm_cd and fm_Companycode ='" + strCompanyCode + "' and fm_dt = (select max(fm_Dt) from fmargins) ";
+                    if (objUtility.GetWebParameter("Commex") != null && objUtility.GetWebParameter("Commex") != string.Empty)
+                    {
+                        strSql += " union ";
+                        strSql += " select fm_clientcd,'" + strCompanyCode + "'+fm_exchange+'X',isNull(fm_PeakMargin,0)+isNull(fm_Filler2,0),isNull(fm_Filler1,0), 0 ,  fm_exchange, 'X' fm_Segment ,isNull(fm_PeakMargin,0)+isNull(fm_Filler2,0),isNull(fm_Filler1,0)";
+                        strSql += " from " + StrCommexConn + ".Fmargins, Client_master ";
+                        strSql += " Where fm_clientcd=cm_cd and fm_Companycode ='" + strCompanyCode + "' and fm_dt = (select max(fm_Dt) from fmargins) and fm_clientcd ='" + cm_cd + "'";
+                    }
+                    objUtility.ExecuteSQLTmp(strSql, ObjConnectionTmp);
+
+                    strSql = " Update #TmpPeakColl set Tmp_PeakMargin = Round(Tmp_PeakMargin * " + objUtility.fnPeakFactor(strdate) + "/100,2) Where Right(Tmp_CompanyCode,2) <> 'MX' ";
+                    objUtility.ExecuteSQLTmp(strSql, ObjConnectionTmp);
+                }
+                else
+                {
+                    strSql = " insert into #TmpPeakColl ";
+                    strSql += " select fm_clientcd,fm_exchange+fm_Segment,isNull(fm_NFiller4,0), 0 , 0 , fm_exchange, fm_Segment ,isNull(fm_NFiller4,0), isNull(fm_NFiller5,0)";
+                    strSql += " from Fmargins, Client_master ";
+                    strSql += " Where fm_clientcd=cm_cd and fm_Companycode ='" + strCompanyCode + "' and fm_dt = (select max(fm_Dt) from fmargins) ";
+                    if (objUtility.GetWebParameter("Commex") != null && objUtility.GetWebParameter("Commex") != string.Empty)
+                    {
+                        strSql += " union ";
+                        strSql += " select fm_clientcd,fm_exchange+'X',isNull(fm_PeakMargin,0)+isNull(fm_Filler2,0), 0 , 0 , fm_exchange, 'X' fm_Segment, isNull(fm_PeakMargin,0)+isNull(fm_Filler2,0),isNull(fm_Filler1,0) ";
+                        strSql += " from " + StrCommexConn + ".Fmargins, Client_master ";
+                        strSql += " Where fm_clientcd=cm_cd and fm_Companycode ='" + strCompanyCode + "' and fm_dt = (select max(fm_Dt) from fmargins) ";
+                    }
+                    objUtility.ExecuteSQLTmp(strSql, ObjConnectionTmp);
+
+                    strSql = " Update #TmpPeakColl set Tmp_PeakMargin = Round(Tmp_PeakMargin * " + objUtility.fnPeakFactor(strdate) + "/100,2) Where Right(Tmp_CompanyCode,2) <> 'MX'";
+                    objUtility.ExecuteSQLTmp(strSql, ObjConnectionTmp);
+
+                    strSql = " Update #TmpPeakColl set Tmp_PeakColl = case When isNull(fc_FillerN9,0) > 0 then isNull(fc_FillerN9,0) else 0 end ";
+                    strSql += " from Fmargin_clients ";
+                    strSql += " Where fc_clientcd=Tmp_clientcd and fc_Companycode ='" + strCompanyCode + "' and fc_Exchange = '' and fc_dt = (select max(fm_Dt) from fmargins) ";
+                    objUtility.ExecuteSQLTmp(strSql, ObjConnectionTmp);
+                }
+                strSql = " Update #TmpPeakColl set Tmp_PeakMargin=0,Tmp_PeakColl=0 Where Tmp_PeakColl>=Tmp_PeakMargin";
+                objUtility.ExecuteSQLTmp(strSql, ObjConnectionTmp);
+
+
+                if (blnisLetter)
+                {
+                    strSql = " Update #TmpPeakColl set Tmp_ShortFall = case When (Tmp_PeakMargin-Tmp_PeakColl) > 0 then (Tmp_PeakMargin-Tmp_PeakColl) else 0 end";
+                    objUtility.ExecuteSQLTmp(strSql, ObjConnectionTmp);
+                }
+
+                strClientWhere += " and cm_cd = '" + cm_cd + "'";
+                strClientWhere += " and cm_type <> 'I'";
+
+
+                strCase = "";
+                strFild = "";
+
+                if (objUtility.GetWebParameter("Commex") != null && objUtility.GetWebParameter("Commex") != string.Empty)
+                {
+                    try
+                    {
+                        strSql = "Drop table #FmarginsRpt";
+                        objUtility.ExecuteSQLTmp(strSql, ObjConnectionTmp);
+                    }
+                    catch (Exception ex)
+                    {
+                    }
+                    finally
+                    {
+                        strSql = " CREATE TABLE [#FmarginsRpt]( ";
+                        strSql += " [fm_companycode] [char](1) NOT NULL,[fm_exchange] [char](1) NOT NULL,[fm_dt] [char](8) NOT NULL, ";
+                        strSql += " [fm_clientcd] [char](8) NOT NULL,[fm_spanmargin] [money] NOT NULL,[fm_buypremmargin] [money] NOT NULL, ";
+                        strSql += " [fm_initialmargin] [money] NOT NULL,[fm_exposurevalue] [money] NOT NULL,[fm_clienttype] [char](1) NOT NULL, ";
+                        strSql += " [fm_additionalmargin] [money] NOT NULL,[fm_collected] [money] NOT NULL,[fm_mainbrcd] [char](8) NOT NULL, ";
+                        strSql += " [mkrid] [char](8) NOT NULL,[mkrdt] [char](8) NOT NULL,[fm_Regmargin] [money] NULL,[fm_Tndmargin] [money] NULL, ";
+                        strSql += " [fm_Dlvmargin] [money] NULL,[fm_SpreadBen] [money] NULL,[fm_SplMargin] [money] NULL,[fm_collectedT2] [money] NOT NULL, ";
+                        strSql += " [fm_InitShort] [money] NOT NULL,[fm_MTMAddShort] [money] NOT NULL,[fm_OthShort] [money] NOT NULL,[fm_ConcMargin] [money] NOT NULL, ";
+                        strSql += " [fm_DelvPMargin] [money] NOT NULL,[fm_MTMLoss] [money] NOT NULL) ";
+                        objUtility.ExecuteSQLTmp(strSql, ObjConnectionTmp);
+                    }
+
+
+                    strSql = " Insert into #FmarginsRpt select fm_companycode,fm_exchange,fm_dt,fm_clientcd,Sum(fm_spanmargin),Sum(fm_buypremmargin),Sum(fm_initialmargin),Sum(fm_exposurevalue),''fm_clienttype,";
+                    strSql += " Sum(fm_additionalmargin),Sum(fm_collected),'' fm_mainbrcd,'' mkrid,'' mkrdt,Sum(fm_Regmargin),Sum(fm_Tndmargin),Sum(fm_Dlvmargin),Sum(fm_SpreadBen),Sum(fm_SplMargin),Sum(fm_collectedT2),Sum(fm_InitShort),";
+                    strSql += " Sum(fm_MTMAddShort),Sum(fm_OthShort),Sum(fm_ConcMargin),Sum(fm_DelvPMargin),Sum(fm_MTMLoss) from ( ";
+                    strSql += " select fm_companycode,fm_exchange,fm_dt,fm_clientcd,fm_spanmargin,fm_buypremmargin,fm_initialmargin,fm_exposurevalue,''fm_clienttype,fm_additionalmargin,fm_collected,";
+                    strSql += " ''fm_mainbrcd,''mkrid,''mkrdt,fm_Regmargin,fm_Tndmargin,fm_Dlvmargin,fm_SpreadBen,fm_SplMargin,fm_collectedT2,fm_InitShort,fm_MTMAddShort,fm_OthShort,fm_ConcMargin,fm_DelvPMargin,0 fm_MTMLoss ";
+                    strSql += " from  " + StrCommexConn + ".Fmargins, " + StrCommexConn + ".Client_master ";
+                    strSql += " Where fm_clientcd = cm_cd and fm_Companycode ='" + strCompanyCode + "' and fm_dt =  (select max(fm_Dt) from fmargins) " + strClientWhere;
+                    strSql += " union all ";
+                    strSql += " select po_companycode,po_exchange,po_dt,po_clientcd,0 fm_spanmargin,0 fm_buypremmargin,0 fm_initialmargin,0 fm_exposurevalue,0 fm_clienttype,0 fm_additionalmargin,";
+                    strSql += " 0 fm_collected,'' fm_mainbrcd,'' mkrid,'' mkrdt,0 fm_Regmargin,0 fm_Tndmargin,0 fm_Dlvmargin,0 fm_SpreadBen,0 fm_SplMargin,0 fm_collectedT2,0 fm_InitShort,";
+                    strSql += " 0 fm_MTMAddShort,0 fm_OthShort,0 fm_ConcMargin,0 fm_DelvPMargin,case When -sum(po_futvalue) > 0 Then -sum(po_futvalue) else 0 end MarginReq ";
+                    strSql += " from  " + StrCommexConn + ".Fpositions,  " + StrCommexConn + ".Client_master";
+                    strSql += " Where po_companycode='" + strCompanyCode + "' and po_clientcd = cm_cd ";
+                    strSql += " and po_dt = (select max(fm_Dt) from fmargins) " + strClientWhere;
+                    strSql += " Group by po_clientcd,po_companycode,po_exchange,po_dt";
+                    strSql += " Having case When -sum(po_futvalue) > 0 Then -sum(po_futvalue) else 0 end > 0 ";
+                    strSql += " ) a Group by fm_companycode,fm_exchange,fm_dt,fm_clientcd ";
+                    objUtility.ExecuteSQLTmp(strSql, ObjConnectionTmp);
+
+                    strSql = " Update #FmarginsRpt set fm_collected = fc_collected , fm_collectedT2  = fc_Collected1 ";
+                    strSql += " From Fmargin_Clients  ";
+                    strSql += " Where fc_companycode = '" + strCompanyCode + "' and fc_exchange = fm_Exchange and fc_Segment = 'X' and fc_dt = (select max(fm_Dt) from fmargins) and fm_clientcd = fc_clientcd ";
+                    strSql += " and not exists ( Select fm_clientcd from " + StrCommexConn + ".Fmargins Where fm_companycode = '" + strCompanyCode + "' and fm_dt = (select max(fm_Dt) from fmargins) and fc_clientcd  = fm_clientcd and fm_Exchange = fc_Exchange ) ";
+                    objUtility.ExecuteSQLTmp(strSql, ObjConnectionTmp);
+
+                }
+
+                strSql = "select  distinct  '0' 'Product' ,(fm_exchange+fm_segment) fm_ExchSeg,fm_segment Seg from Fmargins, Client_master ";
+                strSql += " Where fm_clientcd=cm_cd and fm_Companycode ='" + strCompanyCode + "' and fm_dt = (select max(fm_Dt) from fmargins) ";
+                if (objUtility.GetWebParameter("Commex") != null && objUtility.GetWebParameter("Commex") != string.Empty)
+                {
+                    strSql += " union ";
+                    strSql += " select distinct '1' 'Product' ,(fm_exchange+'X') fm_ExchSeg,'X' Seg from #FmarginsRpt ";
+                    strSql += " Where fm_Companycode ='" + strCompanyCode + "' and fm_dt = (select max(fm_Dt) from fmargins) ";
+                }
+                strSql += " Order by Product,Seg,fm_ExchSeg ";
+                rsExcgSeg = objUtility.OpenDataSetTmp(strSql, ObjConnectionTmp);
+                string strTemp = "";
+                strFild = "";
+                foreach (DataRow objrow in rsExcgSeg.Tables[0].Rows)
+                {
+                    strExchSegme = objrow["fm_ExchSeg"].ToString();
+                    if (Strings.Right(strExchSegme, 1) == "C")
+                    { strSegCode = "Cash"; }
+                    else if (Strings.Right(strExchSegme, 1) == "F")
+                    { strSegCode = "Fo"; }
+                    else if (Strings.Right(strExchSegme, 1) == "K")
+                    { strSegCode = "Fx"; }
+                    else if (Strings.Right(strExchSegme, 1) == "X")
+                    { strSegCode = "Cx"; }
+
+                    strCase = strCase + " case fm_exchange+fm_Segment when '" + strExchSegme + "' then case When (fm_TotalMrgn-(fm_collected+fm_collected1)) > 0 Then (fm_TotalMrgn-(fm_collected+fm_collected1)) else 0 end else 0 end TotalShort" + strSegCode + strExchSegme + ",";
+                    strTotalShortFallX += "sum(TotalShort" + strSegCode + strExchSegme + ")+";
+
+                    strCase = strCase + " case fm_exchange+fm_Segment when '" + strExchSegme + "' then (fm_collected+fm_collected1) else 0 end Collected" + strSegCode + strExchSegme + ",";
+                    strTotalCollectedX += "sum(Collected" + strSegCode + strExchSegme + ")+";
+
+                    strCase = strCase + " case fm_exchange+fm_Segment when '" + strExchSegme + "' then fm_TotalMrgn else 0 end TotalMrgn" + strSegCode + strExchSegme + ",";
+                    strTemp = strTemp + "sum(TotalMrgn" + strSegCode + strExchSegme + ") TotalMrgn" + strSegCode + strExchSegme + ",";
+                }
+
+                if (strCase.Trim() != "")
+                //{ Return "";}
+                {
+                    if (blnisLetter)
+                    {
+                        strCase = Strings.Left(strCase.Trim(), Strings.Len(strCase.Trim()) - 1);
+                        strFild = "";
+                        strFild = " fm_clientcd,fm_exchange,fm_segment,isNull(cm_Name,'Not Found') cm_Name,cm_email,bm_email,cm_brboffcode,bm_branchname,bm_add1 ,cm_add1,bm_add2 ,cm_add2,bm_add3 ,cm_add3,";
+                        strFild += " Tmp_Shortfall PeakShort, Tmp_NFiller4, Tmp_NFiller5 , Tmp_PeakColl , Tmp_PeakMargin ,";
+
+                        if (Strings.Right(strTotalShortFallX.Trim(), 1) == "+")
+                        {
+                            strTotalShortFallX = Strings.Left(strTotalShortFallX, Strings.Len(strTotalShortFallX) - 1) + " TotalShort";
+                            strFild += strTotalShortFallX + ", ";
+                        }
+                        if (Strings.Right(strTotalCollectedX.Trim(), 1) == "+")
+                        {
+                            strTotalCollectedX = Strings.Left(strTotalCollectedX, Strings.Len(strTotalCollectedX) - 1) + " Collected";
+                            strFild += strTotalCollectedX + ", ";
+                        }
+                        strFild += strTemp;
+                        strFild = Strings.Left(strFild.Trim(), Strings.Len(strFild.Trim()) - 1);
+
+
+                        strCase += " , fm_TotalMrgn ";
+                        strFild += " , Sum(fm_TotalMrgn) fm_TotalMrgn ";
+
+                        strSql = " Select case fm_exchange when 'B' then 'BSE-' when 'N' then 'NSE-' when 'M' then 'MCX-' when 'F' then 'NCDEX-' else '' end + case fm_segment when 'C' then 'CASH'  when 'F' then 'FO'  when 'K' then 'FX' when 'M' then 'MF' when 'X' then 'COMM' else '' end ExchSeg,cast(fm_TotalMrgn as decimal(15,2)) fm_TotalMrgn,cast(Collected as decimal(15,2)) Collected,cast(TotalShort as decimal(15,2)) TotalShort,";
+                        strSql += " cast(case when fm_TotalMrgn > 0 then ((TotalShort * 100)/ fm_TotalMrgn) else 0 end as decimal(15,2)) TotalShortPER,cast(Tmp_NFiller4 as decimal(15,2)) Tmp_NFiller4,cast(Tmp_PeakMargin as decimal(15,2)) Tmp_PeakMargin,";
+                        strSql += " cast(Tmp_NFiller5 as decimal(15,2)) Tmp_NFiller5,cast(PeakShort as decimal(15,2)) PeakShort,cast(Case When PeakShort > TotalShort then PeakShort else TotalShort end as decimal(15,2)) 'Tmp_HighestShortFall' ";
+
+                        if (Conversion.Val(objUtility.fnFireQueryTradeWeb("Sysparameter", "Count(0)", "sp_parmcd", "MGPENALTY", true)) > 0)
+                        {
+                            strSql += ",";
+                            strSql += " Convert(Decimal(15,2), Round(( ((Case When PeakShort > TotalShort then PeakShort else TotalShort end)) *  ";
+                            strSql += " (Case When ((Case When PeakShort > TotalShort then PeakShort else TotalShort end)) < 100000  ";
+                            strSql += " and Case When  fm_TotalMrgn = 0 then 0 else ((((Case When PeakShort > TotalShort then PeakShort else TotalShort end))*100) / (fm_TotalMrgn)) end < 10 Then 0.5 Else 1 End/100)),2)  ";
+                            strSql += " ) ShortPenalty ";
+                        }
+                        strSql += "  from ( ";
+                        strSql += "  select " + strFild + " From (";
+                        strSql += " Select fm_clientcd,fm_exchange,fm_segment," + strCase;
+                        strSql += " from ( select fm_clientcd,fm_exchange,fm_Segment,Sum(fm_TotalMrgn) fm_TotalMrgn,Sum(fm_collected) fm_collected,Sum(fm_collected1) fm_collected1 from ( ";
+                        strSql += " select fm_clientcd,fm_exchange,fm_Segment,fm_TotalMrgn,fm_collected,fm_collected1  from Fmargins, Client_master Where cm_cd=fm_clientcd and fm_Companycode ='" + strCompanyCode + "' and fm_dt = (select max(fm_Dt) from fmargins)";
+                        if (objUtility.GetSysParmSt("FMRGCombined", "").Trim() == "F")
+                        {
+                            strSql += " union all ";
+                            strSql += " select fc_Filler1,fc_exchange,fc_Segment,0 fm_TotalMrgn,fc_collected,fc_collected1  from Fmargin_Clients, Client_master Where cm_cd=fc_clientcd and fc_exchange <> '' and fc_Companycode ='" + strCompanyCode + "' and fc_dt = (select max(fm_Dt) from fmargins)";
+                        }
+                        strSql += " ) a Group By fm_clientcd,fm_exchange,fm_Segment ";
+                        strSql += " ) z , Client_master,branch_master ";
+                        strSql += " Where fm_clientcd = cm_cd and cm_brboffcode = bm_branchcd " + strClientWhere;
+                        if (objUtility.GetWebParameter("Commex") != null && objUtility.GetWebParameter("Commex") != string.Empty)
+                        {
+                            strSql += " union all ";
+                            string strTotalMargin = "";
+                            strTotalMargin = " (case fm_exchange When 'M' Then fm_Regmargin + fm_exposurevalue + fm_buypremmargin else fm_initialmargin + fm_exposurevalue end) + case fm_Exchange When 'M' Then fm_additionalmargin + fm_Tndmargin + fm_Dlvmargin - fm_SpreadBen + fm_ConcMargin + fm_DelvPMargin else fm_additionalmargin + fm_SplMargin end + fm_MTMLoss ";
+                            strCase = strCase.Replace("fm_Segment", "'X'");
+                            strCase = strCase.Replace("fm_TotalMrgn", strTotalMargin);
+                            strCase = strCase.Replace("(fm_collected+fm_collected1)", "(fm_collected+fm_collectedt2)");
+                            strSql += " Select fm_clientcd,fm_exchange,'X' fm_Segment," + strCase;
+                            strSql += " from #FmarginsRpt," + StrCommexConn + ".Client_master," + StrCommexConn + ".branch_master Where fm_clientcd = cm_cd and cm_brboffcode = bm_branchcd and fm_Companycode ='" + strCompanyCode + "' and fm_dt = (select max(fm_Dt) from fmargins) ";
+                        }
+                        strSql += " ) a , Client_master,branch_master , #TmpPeakColl p ";
+                        strSql += " Where fm_clientcd = cm_cd and fm_exchange=tmp_exchange and fm_segment=tmp_segment and cm_brboffcode = bm_branchcd and fm_clientcd = Tmp_Clientcd ";
+                        strSql += " Group by fm_clientcd,fm_exchange,fm_Segment,cm_Name,cm_email,bm_email,cm_brboffcode,bm_branchname,bm_add1 ,cm_add1,bm_add2 ,cm_add2,bm_add3 ,cm_add3,Tmp_Shortfall,Tmp_NFiller4, Tmp_Nfiller5, Tmp_PeakColl, Tmp_PeakMargin ";
+                        if (Conversion.Val(objUtility.fnFireQueryTradeWeb("Sysparameter", "Count(0)", "sp_parmcd", "MGPENALTY", true)) > 0)
+                        {
+                            strSql += " Having Sum(fm_TotalMrgn) > 0  ";
+                        }
+                        strSql += " ) b ";
+
+                        //strSql += " Where PeakShort > 0 Or TotalShort > 0 ";
+
+                        strSql += " Order By fm_clientcd ";
+                    }
+                    return objUtility.OpenDataSetTmp(strSql, ObjConnectionTmp);
+
+                }
+                return null;
+
+            }
+        }
+
+        // get data for dropdown
+        public string GetQueryDropdownData(string cm_cd, string strCompanyCode)
+        {
+            DataSet DsReqP = new DataSet();
+            DsReqP = objUtility.OpenDataSet("select * from SysObjects where name= 'PledgeRequest'");
+            if (DsReqP.Tables[0].Rows.Count == 0)
+            {
+                prCreate();
+            }
+            string strServer = "";
+            char[] ArrSeparators = new char[1];
+            ArrSeparators[0] = '/';
+            strsql = "select  case left(da_dpid,2) when 'IN' then  rtrim(da_dpid)+rtrim(da_actno) else da_actno end as BOId,da_name as Name, da_clientcd  from dematact with (nolock) where DA_STATUS = 'A' and da_clientcd = '" + cm_cd + "' ";
+            if (objUtility.GetWebParameter("Cross") != "" && objUtility.GetWebParameter("Cross") != null)
+            {
+                string[] ArrCross = objUtility.GetWebParameter("Cross").Split(ArrSeparators);
+                strServer = "[" + ArrCross[0].Trim() + "].[" + ArrCross[1].Trim() + "].[" + ArrCross[2].Trim() + "].";
+                strsql += " and exists (select cud_boid from " + strServer.Trim() + "Client_UCC_Details where cud_boid=da_actno and cud_UCC = '" + cm_cd + "' and cud_tmid in (" + mfnGetTMID(strCompanyCode) + ") ) ";
+            }
+            if (objUtility.GetWebParameter("Estro") != "" && objUtility.GetWebParameter("Estro") != null)
+            {
+                string[] ArrEstro = objUtility.GetWebParameter("Estro").Split(ArrSeparators);
+                strServer = "[" + ArrEstro[0].Trim() + "]" + "." + "[" + ArrEstro[1].Trim() + "]" + "." + "[" + ArrEstro[2].Trim() + "]" + ".";
+                strsql += " and exists (select cud_clientID from " + strServer.Trim() + "Client_UCC_Details where cud_clientID=da_actno and cud_UCC = '" + cm_cd + "' and cud_tmid in (" + mfnGetTMID(strCompanyCode) + ") ) ";
+            }
+            return strsql;
+        }
+
+        // used for dropdown method
+        public void prCreate()
+        {
+            strsql = "Create table PledgeRequest  ( ";
+            strsql += " Rq_SrNo Numeric Identity(1,1) not null,";
+            strsql += " Rq_Clientcd varchar(8) not null,";
+            strsql += " Rq_DematActNo char(16) not null,";
+            strsql += " Rq_Scripcd varchar(6) not null,";
+            strsql += " Rq_Qty numeric not null,";
+            strsql += " Rq_IpAddress varchar(50) not null,";
+            strsql += " Rq_Date char(8) not null,";
+            strsql += " Rq_Time char(8) not null,";
+            strsql += " Rq_Status1 char(1) not null,";
+            strsql += " Rq_Status2 char(1) not null,";
+            strsql += " Rq_Status3 char(1) not null,";
+            strsql += " Rq_Status4 char(8) not null,";
+            strsql += " Rq_Note varchar(50) NOT NULL, ";
+            strsql += " CONSTRAINT [Pk_PledgeRequest] PRIMARY KEY CLUSTERED ";
+            strsql += "([Rq_SrNo] ASC)";
+            strsql += ")";
+            objUtility.ExecuteSQL(strsql);
+        }
+
+        //used for dropdown method
+        private string mfnGetTMID(string srtCompanyCode)
+        {
+            string strValue = "";
+            string strExchange = "";
+            DataSet ds = new DataSet();
+            strsql = " select distinct ces_exchange from CompanyExchangeSegments ";
+            ds = objUtility.OpenDataSet(strsql);
+            if (ds.Tables[0].Rows.Count > 0)
+            {
+                strsql = "";
+                for (int p = 0; p <= ds.Tables[0].Rows.Count - 1; p++)
+                {
+                    switch (ds.Tables[0].Rows[p]["ces_exchange"].ToString().Trim())
+                    {
+                        case "BSE":
+                            if (strsql != "")
+                                strsql += "Union All ";
+                            strsql += "select 'BSE' Exch, em_bclearingno clearingno  from Entity_master where em_cd = '" + srtCompanyCode + "' ";
+                            break;
+                        case "NSE":
+                            if (strsql != "")
+                                strsql += "Union All ";
+                            strsql += "select 'NSE' Exch, em_nclearingno clearingno  from Entity_master where em_cd = '" + srtCompanyCode + "' ";
+                            break;
+                    }
+                }
+            }
+
+            ds = new DataSet();
+            ds = objUtility.OpenDataSet(strsql);
+            for (int p = 0; p <= ds.Tables[0].Rows.Count - 1; p++)
+            {
+                if (ds.Tables[0].Rows[p]["Exch"].ToString().Trim() == "BSE")
+                    strValue += "'" + Conversion.Val(ds.Tables[0].Rows[p]["clearingno"].ToString().Trim()) + "',";
+                else
+                    strValue += "'" + ds.Tables[0].Rows[p]["clearingno"].ToString().Trim().PadLeft(5, '0') + "',";
+            }
+            return Strings.Left(strValue, strValue.Length - 1);
+        }
+
+        // get data for margin pledge
+        public DataSet GetQueryMarginPledgeData(string cm_cd, string UserId, string strCompanyCode, string CmbDPID_Value)
+        {
+            string StrConn = _configuration.GetConnectionString("DefaultConnection");
+            using (SqlConnection ObjConnectionTmp = new SqlConnection(StrConn))
+            {
+                ObjConnectionTmp.Open();
+                try
+                {
+                    objUtility.ExecuteSQLTmp("Drop Table #TblHolding", ObjConnectionTmp);
+                }
+                catch (Exception ex)
+                { }
+                finally
+                {
+                    strsql = "Create Table #TblHolding ( ";
+                    strsql += " th_Identity Numeric Identity(1,1) , ";
+                    strsql += " th_cmCd VarChar(8), ";
+                    strsql += " th_DematActNo Char(16), ";
+                    strsql += " th_Scripcd Char(8), ";
+                    strsql += " th_ISIN Char(12), ";
+                    strsql += " th_Qty Numeric , ";
+                    strsql += " th_Rate Money  , ";
+                    strsql += " th_MrgShortFall money,";
+                    strsql += " th_PorjectedRisk money,";
+                    strsql += " th_Haircut money,";
+                    strsql += " th_NetRate money,";
+                    strsql += " th_netValue money, ";
+                    strsql += " th_Retain money, ";
+                    strsql += " th_Approved varchar(12) , ";
+                    strsql += " th_RegForFO char(1), ";
+                    strsql += " th_Value money";
+                    strsql += " ) ";
+                    objUtility.ExecuteSQLTmp(strsql, ObjConnectionTmp);
+                }
+
+                string strServer = "";
+
+                if (_configuration["IsTradeWeb"] == "O")
+                {//-----------------------------------------------------------Live----------------------------------------------------------------------------------------
+
+                    char[] ArrSeparators = new char[1];
+                    ArrSeparators[0] = '/';
+
+                    if (objUtility.GetWebParameter("Cross") != "" && Microsoft.VisualBasic.Strings.Mid(CmbDPID_Value.Trim(), 1, 2) != "IN") // strBoid  LEft 2 <>IN           
+                    {
+                        string[] ArrCross = objUtility.GetWebParameter("Cross").Split(ArrSeparators);
+
+                        strServer = "[" + ArrCross[0].Trim() + "].[" + ArrCross[1].Trim() + "].[" + ArrCross[2].Trim() + "].";
+                        strsql = "Insert into #TblHolding ";
+                        strsql += " select '',hld_ac_code,'',hld_isin_code,hld_ac_pos,0,0,0,0,0,0,0,'','',0 ";
+                        strsql += " from " + strServer.Trim() + "Holding , ";
+                        strsql += " " + strServer.Trim() + "Client_master ";
+                        strsql += " where cm_cd = hld_ac_code and hld_ac_type = '11' and cm_active = '01'";
+                        strsql += " and exists (select da_actno from Dematact,Client_master Where cm_cd = da_clientcd and da_actno = hld_ac_code and DA_STATUS = 'A' and left(da_dpid,2) <> 'IN' and ltrim(rtrim(cm_cd)) = '" + cm_cd.Trim() + "')";
+                        strsql += " and exists (select cud_boid from " + strServer.Trim() + "Client_UCC_Details where cud_boid=hld_ac_code and cud_UCC = '" + cm_cd.Trim() + "' and cud_tmid in (" + mfnGetTMID(strCompanyCode) + ")) ";
+                        strsql += " and hld_ac_code = '" + CmbDPID_Value.Trim() + "'";
+                        objUtility.ExecuteSQLTmp(strsql, ObjConnectionTmp);
+
+                        strsql = "Update #TblHolding set th_cmCd = cud_UCC from " + strServer.Trim() + "Client_UCC_Details where cud_boid=th_DematActNo and cud_tmid in (" + mfnGetTMID(strCompanyCode) + ")";
+                        objUtility.ExecuteSQLTmp(strsql, ObjConnectionTmp);
+                    }
+
+                    if (objUtility.GetWebParameter("Estro") != "" && Microsoft.VisualBasic.Strings.Mid(CmbDPID_Value.Trim(), 1, 2) == "IN")
+                    {
+                        string[] ArrEstro = objUtility.GetWebParameter("Estro").Split(ArrSeparators);
+
+                        strServer = "[" + ArrEstro[0].Trim() + "].[" + ArrEstro[1].Trim() + "].[" + ArrEstro[2].Trim() + "].";
+                        DataSet Dsx = new DataSet();
+                        strsql = "Select sp_sysvalue from " + strServer + "Sysparameter where sp_parmcd = 'DPID'";
+                        Dsx = objUtility.OpenDataSet(strsql);
+                        string strDpid = Dsx.Tables[0].Rows[0][0].ToString().Trim();
+
+                        strsql = "Insert into #TblHolding ";
+                        strsql += " select '','" + strDpid + "'+hld_ac_code,'',hld_isin_code,hld_ac_pos,0,0,0,0,0,0,0,'','',0 ";
+                        strsql += " from " + strServer.Trim() + "Holding , " + strServer.Trim() + "Client_master ";
+                        strsql += " where cm_cd = hld_ac_code and hld_ac_type = '22' and cm_active = '01'";
+                        strsql += " and ltrim(rtrim(cm_blsavingcd)) <> '' ";
+                        strsql += " and '" + strDpid + "'+hld_ac_code in (select da_dpid+da_actno from Dematact,Client_master Where cm_cd=da_clientcd and DA_STATUS = 'A' and left(da_dpid,2) = 'IN' and ltrim(rtrim(cm_cd)) = '" + cm_cd.Trim() + "'";
+                        strsql += " ) ";
+                        objUtility.ExecuteSQLTmp(strsql, ObjConnectionTmp);
+
+                        strsql = "Update #TblHolding set th_cmCd = da_clientcd from Dematact Where DA_STATUS = 'A' and case When left(da_dpid,2) = 'IN' Then da_dpid+da_actno else da_actno end = th_DematActNo ";
+                        objUtility.ExecuteSQLTmp(strsql, ObjConnectionTmp);
+                    }
+
+                    strsql = "Update #TblHolding set th_Scripcd =  im_scripcd From ISIN Where im_isin = th_ISIN and im_active = 'Y' and im_scripcd not Between '600000' and '699999' ";
+                    objUtility.ExecuteSQLTmp(strsql, ObjConnectionTmp);
+
+                    if (objUtility.GetSysParmSt("PRMISECURITY", "").Trim() == "Y")
+                    {
+                        strsql = " Delete From #TblHolding ";
+                        strsql += " from securities Where th_scripcd =ss_cd and ss_Permscm <> 'Y' ";
+                        objUtility.ExecuteSQLTmp(strsql, ObjConnectionTmp);
+                    }
+
+                    strsql = "Update #TblHolding set th_haircut = 100 ";
+                    objUtility.ExecuteSQLTmp(strsql, ObjConnectionTmp);
+
+                    string strRMSVALATLTRT = objUtility.GetSysParmSt("RMSVALATLTRT", "").ToUpper().Trim();
+                    double gHAIRCUT = Conversion.Val(objUtility.GetSysParmSt("HAIRCUTVAL", "").ToUpper().Trim());
+                    double gAddHairCut = Conversion.Val(objUtility.GetSysParmSt("FMRADDHRCUT", "").ToUpper().Trim());
+                    strsql = " update #TblHolding set th_haircut = case vm_exchange When 'B' then vm_margin_rate  else vm_applicable_var end from VarMargin ";
+                    strsql += " where vm_exchange = 'B' and vm_scripcd = th_scripcd ";
+                    strsql += " and vm_dt =(select max(vm_dt) from VarMargin where vm_exchange = 'B' and vm_scripcd = th_scripcd ";
+                    strsql += " and vm_dt " + (gHAIRCUT == 0 ? "<=" : "<") + " '" + DateTime.Today.ToString("yyyyMMdd") + "')";
+                    objUtility.ExecuteSQLTmp(strsql, ObjConnectionTmp);
+
+                    if (Conversion.Val(strRMSVALATLTRT) > 0)
+                    {
+                        strsql = " update #TblHolding set th_haircut = case vm_exchange When 'B' then vm_margin_rate  else vm_applicable_var end from VarMargin,Securities ";
+                        strsql += " where vm_exchange = 'B' and vm_scripcd = th_scripcd And vm_scripcd = ss_cd And ss_group = 'F' ";
+                        strsql += " and vm_dt =(select max(vm_dt) from VarMargin where vm_exchange = 'B' and vm_scripcd = th_scripcd ";
+                        strsql += " and vm_dt " + (gHAIRCUT == 0 ? "<=" : "<") + " '" + DateTime.Today.ToString("yyyyMMdd") + "')";
+                        objUtility.ExecuteSQLTmp(strsql, ObjConnectionTmp);
+                    }
+
+                    strsql = " update #TblHolding set th_haircut = case vm_exchange When 'B' then vm_margin_rate  else vm_applicable_var end from VarMargin ";
+                    strsql += " where vm_exchange = 'N' and vm_scripcd = th_scripcd ";
+                    strsql += " and vm_dt =(select max(vm_dt) from VarMargin where vm_exchange = 'N' and vm_scripcd = th_scripcd ";
+                    strsql += " and vm_dt " + (gHAIRCUT == 0 ? "<=" : "<") + " '" + DateTime.Today.ToString("yyyyMMdd") + "')";
+                    objUtility.ExecuteSQLTmp(strsql, ObjConnectionTmp);
+
+                    if (Conversion.Val(strRMSVALATLTRT) > 0)
+                    {
+                        strsql = " update #TblHolding set th_haircut = case vm_exchange When 'B' then vm_margin_rate  else vm_applicable_var end from VarMargin,Securities ";
+                        strsql += " where vm_exchange = 'N' and vm_scripcd = th_scripcd And vm_scripcd = ss_cd And ss_group = 'F'";
+                        strsql += " and vm_dt =(select max(vm_dt) from VarMargin where vm_exchange = 'N' and vm_scripcd = th_scripcd ";
+                        strsql += " and vm_dt " + (gHAIRCUT == 0 ? "<=" : "<") + " '" + DateTime.Today.ToString("yyyyMMdd") + "')";
+                        objUtility.ExecuteSQLTmp(strsql, ObjConnectionTmp);
+                    }
+
+                    if (gAddHairCut > 0)
+                    {
+                        strsql = " update #TblHolding set th_haircut = th_haircut + " + gAddHairCut + " Where th_haircut <= 100 - " + gAddHairCut;
+                        objUtility.ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
+                    }
+                    strsql = " update #TblHolding set th_Rate = mk_closerate from Market_Rates ";
+                    strsql += " where mk_exchange = 'B' and mk_scripcd = th_scripcd ";
+                    strsql += " and mk_dt =(select max(mk_dt) from Market_Rates  where mk_exchange = 'B'";
+                    strsql += " and mk_scripcd = th_scripcd ";
+                    strsql += " and mk_dt " + (gHAIRCUT == 0 ? "<=" : "<") + "'" + DateTime.Today.ToString("yyyyMMdd") + "')";
+                    objUtility.ExecuteSQLTmp(strsql, ObjConnectionTmp);
+
+                    if (Conversion.Val(strRMSVALATLTRT) > 0)
+                    {
+                        strsql = " update #TblHolding set th_Rate = mk_closerate from Market_Rates ,Securities";
+                        strsql += " where mk_exchange = 'B' and mk_scripcd = th_scripcd And mk_scripcd = ss_cd And ss_group = 'F'";
+                        strsql += " and mk_dt =(select max(mk_dt) from Market_Rates  where mk_exchange = 'B'";
+                        strsql += " and mk_scripcd = th_scripcd ";
+                        strsql += " and mk_dt " + (gHAIRCUT == 0 ? "<=" : "<") + "'" + DateTime.Today.ToString("yyyyMMdd") + "')";
+                        objUtility.ExecuteSQLTmp(strsql, ObjConnectionTmp);
+                    }
+                    strsql = " update #TblHolding set th_Rate = mk_closerate from Market_Rates ";
+                    strsql += " where mk_exchange = 'N' and mk_scripcd = th_scripcd ";
+                    strsql += " and mk_dt =(select max(mk_dt) from Market_Rates  where mk_exchange = 'N'";
+                    strsql += " and mk_scripcd = th_scripcd ";
+                    strsql += " and mk_dt " + (gHAIRCUT == 0 ? "<=" : "<") + "'" + DateTime.Today.ToString("yyyyMMdd") + "')";
+                    objUtility.ExecuteSQLTmp(strsql, ObjConnectionTmp);
+
+                    if (Conversion.Val(strRMSVALATLTRT) > 0)
+                    {
+                        strsql = " update #TblHolding set th_Rate = mk_closerate from Market_Rates ,Securities";
+                        strsql += " where mk_exchange = 'N' and mk_scripcd = th_scripcd And mk_scripcd = ss_cd And ss_group = 'F'";
+                        strsql += " and mk_dt =(select max(mk_dt) from Market_Rates  where mk_exchange = 'N'";
+                        strsql += " and mk_scripcd = th_scripcd ";
+                        strsql += " and mk_dt " + (gHAIRCUT == 0 ? "<=" : "<") + "'" + DateTime.Today.ToString("yyyyMMdd") + "')";
+                        objUtility.ExecuteSQLTmp(strsql, ObjConnectionTmp);
+                    }
+
+                    objUtility.ExecuteSQLTmp("Delete from #TblHolding where th_Rate <= 0 ", ObjConnectionTmp);
+                    objUtility.ExecuteSQLTmp("Delete from #TblHolding where th_Qty <= 0 ", ObjConnectionTmp);
+
+                    strsql = "update #TblHolding set th_NetRate =  th_Rate - (Round(th_Rate * ((th_Haircut) / 100), 2)) ";
+                    objUtility.ExecuteSQLTmp(strsql, ObjConnectionTmp);
+                    objUtility.ExecuteSQLTmp("Delete from #TblHolding where th_NetRate <= 0 ", ObjConnectionTmp);
+
+                    objUtility.ExecuteSQLTmp("Update #TblHolding  set th_netValue= Round(th_Qty*th_NetRate,2) ", ObjConnectionTmp);
+
+                    strsql = "update #TblHolding set th_Value = Round(th_Qty*th_rate,2) ";
+                    objUtility.ExecuteSQLTmp(strsql, ObjConnectionTmp);
+
+                    DataSet dsOpen = new DataSet();
+                    strsql = " select * from PledgeRequest where rq_clientcd='" + UserId + "' and Rq_Status1='P' ";
+                    dsOpen = objUtility.OpenDataSet(strsql);
+                    if (dsOpen.Tables[0].Rows.Count > 0)
+                    {
+                        strsql = "update #TblHolding set th_retain = isNull((select sum(Rq_Qty) From PledgeRequest Where Rq_Clientcd = '" + UserId + "' and Rq_Scripcd=th_scripcd and Rq_Status1 = 'P'),0) ";
+                        objUtility.ExecuteSQLTmp(strsql, ObjConnectionTmp);
+                    }
+                    strsql = "select th_cmcd,cm_Name,th_MrgShortFall,";
+                    strsql += " th_scripcd,ss_Name,cast(th_qty as decimal(15,0)) as th_qty,cast(th_rate as decimal(15,2)) th_rate,cast(th_HairCut as decimal(15,2)) th_HairCut,th_ISIN,";
+                    strsql += " cast(th_netValue as decimal(15,2)) th_netValue,cast(th_retain as decimal(15,0)) Retain,th_DematActNo,th_ISIN,cast(th_Value as decimal(15,2)) th_Value,th_NetRate,";
+                    strsql += " cast(((th_netValue/th_qty)* th_qty ) as decimal(15,2)) th_ReqValue from #TblHolding,Securities,Client_master ";
+                    strsql += " where th_scripcd = ss_cd and th_cmcd = cm_cd ";
+                    strsql += " order by th_retain desc,th_netValue desc,ss_Name";
+
+                    return objUtility.OpenDataSetTmp(strsql, ObjConnectionTmp);
+                }
+            }
+
+            return null;
+        }
+
+        //get current pledge request
+        public DataSet GetQueryCurrentPledgeRequest(string UserId)
+        {
+            strsql = "delete from PledgeRequest where Rq_Clientcd='" + UserId + "' and Rq_Status1='P'";
+            objUtility.ExecuteSQL(strsql);
+
+            DataSet Dstemp = new DataSet();
+            Dstemp = objUtility.OpenDataSet("SELECT isnull (IDENT_CURRENT('PledgeRequest'),0)");
+
+            if (Convert.ToInt64(Dstemp.Tables[0].Rows[0][0]) > 0)
+            {
+                DataSet DsReqId = new DataSet();
+                DsReqId = objUtility.OpenDataSet("SELECT IDENT_CURRENT('PledgeRequest')");
+                return DsReqId;
+            }
+
+            return Dstemp;
+        }
+
+        // insert margin pledge request
+        public string AddQueryPledgeRequest(string UserId, string CmbDPID_Value, bool blnIdentityOn, string intcnt, string lblScripcd, string txtQty)
+        {
+            string gstrToday = DateTime.Today.ToString("yyyyMMdd");
+            string strHostAdd = Dns.GetHostName();
+            if (blnIdentityOn)
+                strsql = "insert into PledgeRequest values ( ";
+            else
+                strsql = "insert into PledgeRequest values ( " + Convert.ToInt64(intcnt) + ",";
+
+            strsql += " '" + UserId + "','" + CmbDPID_Value.Trim() + "','" + lblScripcd.Trim() + "','" + Conversion.Val(txtQty) + "','" + strHostAdd + "',";
+            strsql += " '" + gstrToday + "',";
+            strsql += " convert(char(8),getdate(),108),";
+            strsql += " 'P','P','P','" + objUtility.Encrypt((gstrToday).ToString().Trim()) + "','')";
+            objUtility.ExecuteSQL(strsql);
+
+            return "Success";
+        }
+
+        #endregion
         #endregion
         #endregion
     }
