@@ -1,4 +1,5 @@
-﻿using Microsoft.Data.SqlClient;
+﻿using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.VisualBasic;
@@ -6,10 +7,14 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Mail;
+using System.Text;
 using System.Threading.Tasks;
 using TradeWeb.API.Data;
+using static TradeWeb.API.Repository.UtilityCommon;
 
 namespace TradeWeb.API.Repository
 {
@@ -20,6 +25,8 @@ namespace TradeWeb.API.Repository
         public dynamic Login_validate_USER(string userId);
 
         public dynamic Login_validate_Password(string userId, string password);
+
+        public dynamic Login_GetPassword(string userId);
 
         public dynamic GetUserDetais(string userId);
 
@@ -124,7 +131,7 @@ namespace TradeWeb.API.Repository
                 var ds = objUtility.OpenDataSet(qury);
                 if (ds != null)
                 {
-                    if (ds.Tables[0].Rows.Count > 0 )
+                    if (ds.Tables[0].Rows.Count > 0)
                     {
                         return "success";
                     }
@@ -151,6 +158,23 @@ namespace TradeWeb.API.Repository
                         Dt = ds.Tables[0];
                         return JsonConvert.SerializeObject(Dt);
                     }
+                }
+                return "failed";
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        public dynamic Login_GetPassword(string userId)
+        {
+            try
+            {
+                string result = ResetPassword(userId); //"select cm_mobile from Client_master with (nolock) where cm_cd='" + userId + "'  and cm_pwd='" + password + "'";
+                if (result != null)
+                {
+                    return JsonConvert.SerializeObject(result);
                 }
                 return "failed";
             }
@@ -226,7 +250,7 @@ namespace TradeWeb.API.Repository
                 throw ex;
             }
         }
-       
+
         //TODO : For getting Transaction data
         public dynamic Transaction_Summary(string userId, string type, string FromDate, string ToDate)
         {
@@ -4589,7 +4613,346 @@ namespace TradeWeb.API.Repository
         #endregion
         #endregion
 
+        #region Reset Password method
+        public string ResetPassword(string userId)
+        {
+            string Strsql = "";
+            string[] strSMSParamVal = new string[5];
+            string strSMSParameter = "SMSUSERID/SMSPWD/SMSSENDER/SMSLENGTH/SMSLINK";
+            string strvalue = string.Empty;
+            Boolean blnSMS = false;
+            string strContrycd = string.Empty;
+            string strVal = "";
+            if (_configuration["IsTradeWeb"] == "O")
+            {
+                for (int i = 0; i <= 4; i++)
+                {
+                    strvalue = strSMSParameter.Split('/')[i];
+                    strVal = objUtility.fnFireQueryTradeWeb("sysparameter", "SP_SYSVALUE", "sp_parmcd", strvalue, true);
+                    ////  End API Logic
+                    strSMSParamVal[i] = strVal;
+                }
+                if (strSMSParamVal[0] != "" && strSMSParamVal[1] != "" && strSMSParamVal[2] != "" && strSMSParamVal[3] != "" && strSMSParamVal[4] != "")
+                {
+                    blnSMS = true;
+                }
+            }
+            else
+            {
+                if (Convert.ToInt32(objUtility.fnFireQueryTradeWeb("webparameter", "count(0)", "sp_parmcd", "SMSSETUP", true)) > 0)
+                {
+                    strvalue = objUtility.fnFireQueryTradeWeb("webparameter", "SP_SYSVALUE", "sp_parmcd", "SMSSETUP", true);
+                    strSMSParamVal[0] = strvalue.Split('~')[1];
+                    strSMSParamVal[1] = strvalue.Split('~')[2];
+                    strSMSParamVal[2] = strvalue.Split('~')[3];
+                    strSMSParamVal[3] = strvalue.Split('~')[4];
+                    strSMSParamVal[4] = strvalue.Split('~')[0];
+                    strContrycd = strvalue.Split('~')[5];
+                    blnSMS = true;
+                }
+            }
 
+            if (blnSMS == true)
+            {
+                try
+                {
+                    string strMobileNo = string.Empty;
+                    string strPass = string.Empty;
+                    string strMsgTxt = string.Empty;
+                    string strUser = string.Empty;
+                    string strMobile = string.Empty;
+                    string strUserCd = string.Empty;
+                    string strFromNo1 = "";
+                    string strFromNo2 = "";
+                    DataSet ds = new DataSet();
+
+                    Strsql = "Select * from Client_master where cm_cd = '" + userId.Trim() + "'";
+                    ds = objUtility.OpenDataSet(Strsql);
+
+                    if (ds.Tables[0].Rows.Count == 0)
+                    {
+                        return "No Records Found";
+                    }
+                    if (ds.Tables[0].Rows[0]["cm_mobile"].ToString().Trim() == "")
+                    {
+                        return "Mobile Number is not available";
+                    }
+                    strMobileNo = ds.Tables[0].Rows[0]["cm_mobile"].ToString().Trim();
+                    strPass = ds.Tables[0].Rows[0]["cm_pwd"].ToString().Trim();
+                    if (Convert.ToInt16(objUtility.fnFireQueryTradeWeb("Sysparameter", "count(0)", "sp_parmcd", "SMSTWEBPWD", true)) > 0)
+                    {
+                        strMsgTxt = objUtility.fnFireQueryTradeWeb("sysparameter", "SP_SYSVALUE", "sp_parmcd", "SMSTWEBPWD", true);
+                    }
+                    else if (Convert.ToInt16(objUtility.fnFireQueryTradeWeb("Webparameter", "count(0)", "sp_parmcd", "SMSGETPWD", true)) > 0)
+                    {
+                        strMsgTxt = objUtility.fnFireQueryTradeWeb("Webparameter", "SP_SYSVALUE", "sp_parmcd", "SMSGETPWD", true);
+                    }
+                    else
+                    {
+                        strMsgTxt = "Your password to access TradeWeb is <Password> login ID : <Client>";
+                    }
+                    strUserCd = ds.Tables[0].Rows[0]["cm_cd"].ToString().Trim();
+
+                    StringBuilder sb = new StringBuilder(strMobileNo);
+                    for (int i = 2; i <= strMobileNo.Length - 3; i++)
+                    {
+                        sb[i] = 'x';
+                    }
+                    strMobile = sb.ToString();
+                    sb = new StringBuilder(userId.Trim().ToUpper());
+                    for (int j = 1; j < userId.Trim().Length - 1; j++)
+                    {
+                        sb[j] = 'x';
+                    }
+                    strUser = sb.ToString();
+                    strMsgTxt = strMsgTxt.Replace("<Client>", strUser);
+                    strMsgTxt = strMsgTxt.Replace("<Password>", strPass);
+
+                    strMsgTxt = strMsgTxt.Replace("<&>", "<~>");
+                    strMsgTxt = strMsgTxt.Replace("&", "");
+                    strMsgTxt = strMsgTxt.Replace("<~>", "&");
+
+                    string strURLLink = strSMSParamVal[4];
+
+                    if (strURLLink.IndexOf("<USERID>") != -1 && strSMSParamVal[0].Trim() != "")
+                    {
+                        strURLLink = strURLLink.Replace("<USERID>", strSMSParamVal[0].Trim());
+                    }
+                    if (strURLLink.IndexOf("<PASSWORD>") != -1 && strSMSParamVal[1].Trim() != "")
+                    {
+                        strURLLink = strURLLink.Replace("<PASSWORD>", strSMSParamVal[1].Trim());
+                    }
+                    if (strSMSParamVal[2].Trim() == "")
+                    {
+                        if (strURLLink.IndexOf("<SENDERID>") != -1)
+                        {
+                            strURLLink = strURLLink.Replace("<SENDERID>", strSMSParamVal[2].Trim());
+                        }
+                    }
+                    else
+                    {
+                        strFromNo1 = strSMSParamVal[2].Trim();
+                        if (strFromNo1.IndexOf("|") != -1)
+                        {
+                            strFromNo2 = strFromNo1.Split('|')[1];
+                            strFromNo1 = strFromNo1.Split('|')[0];
+                        }
+                        else
+                        {
+                            strFromNo1 = Strings.Left(strFromNo1.Trim(), 10);
+                            strFromNo2 = "";
+                        }
+                        if (strURLLink.IndexOf("<SENDERID>") != -1)
+                        {
+                            strURLLink = strURLLink.Replace("<SENDERID>", strSMSParamVal[2].Trim());
+                        }
+                        else if (strURLLink.IndexOf("<SENDERID1>") != -1 || strURLLink.IndexOf("<SENDERID2>") != -1)
+                        {
+                            strURLLink = strURLLink.Replace("<SENDERID1>", strFromNo1).Replace("<SENDERID2>", strFromNo2);
+                        }
+                    }
+                    strURLLink = strURLLink.Replace("<MESSAGE>", strMsgTxt);
+
+                    if (strURLLink.IndexOf("/opted.smsapi.org/v1.0.7/") != -1)
+                    {
+                        strURLLink = strURLLink.Replace("<MESSAGE>", strMsgTxt);
+                    }
+
+                    if (strURLLink.IndexOf("/174.143.34.193/") != -1)
+                    {
+                        if (strMsgTxt.Trim().Length > 160)
+                        {
+                            strURLLink = strURLLink + "&mt=4";
+                        }
+                        else
+                        {
+                            strURLLink = strURLLink + "&mt=0";
+                        }
+                        strURLLink = strURLLink + "&typeofmessage=1";
+                    }
+
+                    string pramval = objUtility.GetSysParmSt(Strsql, Strsql);
+                    if (pramval == "Y" || strContrycd.Trim() == "Y")
+                    {
+                        if (strMobileNo.Trim().Length == 10)
+                        {
+                            strMobileNo = "91" + strMobileNo;
+                        }
+                    }
+                    else
+                    {
+                        if (strMobileNo.Trim().Length > 10)
+                        {
+                            strMobileNo = Strings.Right(strMobileNo.Trim(), 10);
+                        }
+                    }
+                    strURLLink = strURLLink.Replace("<CLIENTMOBILE>", strMobileNo.Trim());
+
+                    if (strURLLink.IndexOf("myvaluefirst.com") != -1)
+                    {
+                        string strSENDER = "";
+                        if (strSMSParamVal[2].Trim().IndexOf("|") != -1)
+                        {
+                            if (Strings.Left(strMobileNo.Trim(), 2) == "92" || Strings.Left(strMobileNo.Trim(), 2) == "93")
+                            {
+                                strSENDER = strSMSParamVal[2].Trim().Split('|')[1];
+                            }
+                            else
+                            {
+                                strSENDER = strSMSParamVal[2].Trim().Split('|')[0];
+                            }
+                        }
+                        else
+                        {
+                            strSENDER = Strings.Left(strSMSParamVal[2].Trim(), 10);
+                        }
+                        strURLLink = strURLLink.Replace("<SENDERID3>", strSENDER);
+                    }
+
+                    #region old code 
+                    //if (Request.QueryString["ViewSMSLink"] != null)
+                    //{
+                    //    string strDate = DecodeFrom64(Request.QueryString["ViewSMSLink"]);
+                    //    Strsql = "select convert(char,convert(datetime,getdate()),103) as DT";
+                    //    DataTable dt = apiObj.OpenDataTableCommon(Strsql);
+                    //    if (strDate == dt.Rows[0]["DT"].ToString().Replace("/", "").Trim())
+                    //    {
+                    //        FormsAuthentication.SetAuthCookie(TxtUserID.Text.Trim(), false);
+                    //        Response.Redirect("~/frmsmslink.aspx?SMSLink=" + Server.UrlEncode(strURLLink));
+                    //    }
+                    //    else
+                    //    {
+                    //        Response.Redirect(Request.RawUrl.Replace(Request.Url.Query, ""));
+                    //    }
+                    //    return;
+                    //}
+                    #endregion
+                    if (!string.IsNullOrEmpty(_configuration["SECURITYPROT"]))
+                    {
+                        if (_configuration["SECURITYPROT"].Trim() == "TLS12")
+                        {
+                            ServicePointManager.SecurityProtocol = (SecurityProtocolType)192 | (SecurityProtocolType)768 | (SecurityProtocolType)3072 | (SecurityProtocolType)48;
+                        }
+                    }
+                    
+                    HttpWebRequest http = (HttpWebRequest)WebRequest.Create(strURLLink);
+                    HttpWebResponse response = (HttpWebResponse)http.GetResponse();
+                    StreamReader sr = new StreamReader(response.GetResponseStream());
+                    string content = sr.ReadToEnd();
+                    string strresponse = content;
+
+                    if (response.StatusCode == HttpStatusCode.OK)
+                    {
+                        strresponse = "SMS Sent Successfully.";
+                    }
+                    else if (content.IndexOf("<ERROR>") != -1)
+                    {
+                        if (content.IndexOf("<DESC>") != -1)
+                        {
+                            strresponse = Strings.Mid(content, Strings.InStr(1, content, "<DESC>", CompareMethod.Text) + 6);
+                            strresponse = Strings.Left(content, Strings.InStr(1, content, "</DESC>", CompareMethod.Text) - 1);
+                        }
+                        else
+                        {
+                            strresponse = "SMS Sent Successfully.";
+                        }
+                    }
+                    else if (content.IndexOf("\"\"error-status\"\":\"\"Success\"\"") != -1)
+                    {
+                        strresponse = "SMS Sent Successfully.";
+                    }
+                    else if (content.IndexOf(strMobileNo.Trim()) != -1)
+                    {
+                        strresponse = "Message Send Successfully.";
+                    }
+                    else if (content.IndexOf("<sms>") != -1)
+                    {
+                        if (content.IndexOf("-1") != -1)
+                        {
+                            strresponse = "Message Sending Failed";
+                        }
+                        else if (content.ToUpper().IndexOf("INVALID USERNAME OR PASSWORD") != -1)
+                        {
+                            strresponse = "Sending Failed. Invalid Username Or Password.";
+                        }
+                        else
+                        {
+                            strresponse = "Message Send Successfully.";
+                        }
+                    }
+                    else if (content.IndexOf("Fail") != -1)
+                    {
+                        strresponse = "Message Sending Failed";
+                    }
+                    else if (content.ToUpper().IndexOf("INVALID USERNAME OR PASSWORD") != -1 || content.ToUpper().IndexOf("INVALID USERNAME AND PASSWORD") != -1)
+                    {
+                        strresponse = "Message Sending Failed. Invalid Username Or Password.";
+                    }
+                    else if (content.ToUpper().IndexOf("1701|") != -1 || content.ToUpper().IndexOf("SUCCESS") != -1)
+                    {
+                        strresponse = "Message Send Successfully.";
+                    }
+                    else if (content == "100")
+                    {
+                        strresponse = "Message Send Successfully.";
+                    }
+                    else if (content.ToUpper().IndexOf(":") != -1)
+                    {
+                        if (content.ToUpper().Split(':')[1] == "")
+                        {
+                            strresponse = content;
+                        }
+                        else
+                        {
+                            strresponse = "Message Send Successfully.";
+                        }
+                    }
+                    else if (content.ToUpper().IndexOf("GID") != -1)
+                    {
+                        strresponse = "Message Send Successfully.";
+                    }
+                    else
+                    {
+                        strresponse = content;
+                    }
+                    Strsql = "Insert into sms_Logs values(";
+                    Strsql += "'" + strUserCd + "','" + strMobileNo + "','" + strMsgTxt + "',";
+                    Strsql += "'" + strresponse.Replace("'", " ") + "','" + strUserCd + "','" + objUtility.dtos(System.DateTime.Today.Date.ToString()) + "','" + DateTime.Now.ToString("HH:mm:ss") + "')";
+                    objUtility.ExecuteSQL(Strsql);
+
+                    if (strresponse.IndexOf("Successfully") != -1)
+                    {
+                        return "Password sent to your registered mobile " + strMobile;
+                    }
+                    else
+                    {
+                        return "Error Sending SMS " + strresponse;
+                    }
+
+                }
+                catch (Exception e)
+                {
+                    return "Error Sending SMS ";
+                }
+            }
+            return "Sms sending failed";
+        }
+
+        private static string DecodeFrom64(string encodedData)
+        {
+            try
+            {
+                string returnValue = null;
+                byte[] encodedDataAsBytes = System.Convert.FromBase64String(encodedData);
+                returnValue = System.Text.ASCIIEncoding.ASCII.GetString(encodedDataAsBytes);
+                return returnValue;
+            }
+            catch (Exception ex)
+            {
+                return "";
+            }
+        }
+        #endregion
         #endregion
     }
 }

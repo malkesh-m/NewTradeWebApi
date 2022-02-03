@@ -929,7 +929,7 @@ namespace TradeWeb.API.Controllers
                     var result = _tradeWebRepository.Login_validate_USER(userId);
                     if (result != "failed")
                     {
-                        return Ok(new tokenResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = result });
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = result });
                     }
                     return Ok(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, data = result });
                 }
@@ -957,7 +957,34 @@ namespace TradeWeb.API.Controllers
                     var result = _tradeWebRepository.Login_validate_Password(userId, password);
                     if (result != "failed")
                     {
-                        return Ok(new tokenResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = result });
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = result });
+                    }
+                    return Ok(new commonResponse { status = false, message = "failed", status_code = (int)HttpStatusCode.NotFound, data = result });
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
+
+        /// <summary>
+        /// Login validate Password
+        /// </summary>
+        /// <param name="userId"></param>
+        /// <returns></returns>
+        [HttpPost("Login_GetPassword", Name = "Login_GetPassword")]
+        public IActionResult Login_GetPassword(string userId)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var result = _tradeWebRepository.Login_GetPassword(userId);
+                    if (result != "failed")
+                    {
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = result });
                     }
                     return Ok(new commonResponse { status = false, message = "failed", status_code = (int)HttpStatusCode.NotFound, data = result });
                 }
