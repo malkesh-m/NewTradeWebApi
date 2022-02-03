@@ -968,6 +968,101 @@ namespace TradeWeb.API.Controllers
         }
         #endregion
 
+        #region Margin Api
+        // TODO : Get margin grid main data
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpGet("GetMargin", Name = "GetMargin")]
+        public IActionResult GetMargin()
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var tokenS = GetToken();
+                    var compCode = tokenS.Claims.First(claim => claim.Type == "companyCode").Value;
+                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
+
+                    var getData = _tradeWebRepository.GetMarginMainData(userId, compCode);
+                    if (getData != null)
+                    {
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                    }
+                    else
+                    {
+                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
+
+        // TODO : Get dropdown data
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpGet("GetDropdownData", Name = "GetDropdownData")]
+        public IActionResult GetDropdownData()
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var tokenS = GetToken();
+                    var compCode = tokenS.Claims.First(claim => claim.Type == "companyCode").Value;
+                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
+
+                    var getData = _tradeWebRepository.GetDropdownListData(userId, compCode);
+                    if (getData != null)
+                    {
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                    }
+                    else
+                    {
+                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
+
+        // TODO : Get margin pledge data
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpGet("GetMarginPledgeData", Name = "GetMarginPledgeData")]
+        public IActionResult GetMarginPledgeData([FromQuery] string DPIDValue)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var tokenS = GetToken();
+                    var compCode = tokenS.Claims.First(claim => claim.Type == "companyCode").Value;
+                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
+
+                    var getData = _tradeWebRepository.GetMarginPledgeData(userId, userId.ToUpper(), compCode, DPIDValue);
+                    if (getData != null)
+                    {
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                    }
+                    else
+                    {
+                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
+        #endregion
+
         private JwtSecurityToken GetToken()
         {
             var handler = new JwtSecurityTokenHandler();
