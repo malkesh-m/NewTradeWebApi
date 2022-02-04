@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -12,6 +13,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.IdentityModel.Tokens.Jwt;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Security.Claims;
@@ -35,12 +37,13 @@ namespace TradeWeb.API.Controllers
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly SignInManager<AppUser> _signInManager;
         private readonly ITradeWebRepository _tradeWebRepository;
+        private readonly IWebHostEnvironment _environment;
         private string strsql = "";
         private string strConnecton = "";
         #endregion
 
         #region Constructor
-        public TradeWebController(UserManager<AppUser> userManager, IConfiguration configuration, UtilityCommon objUtility, IHttpContextAccessor httpContextAccessor, SignInManager<AppUser> signInManager, ITradeWebRepository tradeWebRepository)
+        public TradeWebController(UserManager<AppUser> userManager, IConfiguration configuration, UtilityCommon objUtility, IHttpContextAccessor httpContextAccessor, SignInManager<AppUser> signInManager, ITradeWebRepository tradeWebRepository, IWebHostEnvironment environment)
         {
             _userManager = userManager;
             _configuration = configuration;
@@ -48,6 +51,7 @@ namespace TradeWeb.API.Controllers
             _httpContextAccessor = httpContextAccessor;
             _signInManager = signInManager;
             _tradeWebRepository = tradeWebRepository;
+            _environment = environment;
         }
         #endregion
 
@@ -631,6 +635,42 @@ namespace TradeWeb.API.Controllers
                         return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = result });
                     }
                     return Ok(new commonResponse { status = false, message = "failed", status_code = (int)HttpStatusCode.NotFound, data = result });
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
+        #endregion
+
+        #region Agreement
+        // TODO : Get Family Page_Load Data
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpGet("GetAgreementPdf", Name = "GetAgreementPdf")]
+        public IActionResult GetAgreementPdf()
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var tokenS = GetToken();
+                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
+
+                    string path = Path.Combine(this._environment.WebRootPath, objUtility.GetWebParameter("KYCPDF"), userId) + ".pdf";
+
+                    var docBytes = System.IO.File.ReadAllBytes(path);
+                    string docBase64 = "data:application/pdf;base64," + Convert.ToBase64String(docBytes);
+
+                    if (docBase64 != null)
+                    {
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = docBase64 });
+                    }
+                    else
+                    {
+                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                    }
                 }
                 catch (Exception ex)
                 {
