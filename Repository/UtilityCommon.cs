@@ -648,6 +648,164 @@ namespace TradeWeb.API.Repository
         //    }
         //}
 
+        public string GetSqlTradeHolding(string rsCon, string strClient, string strdate, string strcollat, SqlConnection ObjConnectionTmp)
+        {
+            string Strsql = string.Empty;
+            Strsql = "select dm_clientcd,dm_scripcd,sum(dm_qty * (-1)) as qty,dm_isin,";
+            Strsql = Strsql + " ss_name,ss_bserate,convert(decimal(15,2),(ss_bserate*sum(dm_qty * (-1)))) as valuation ,'Beneficiary Holding' as bh_type,cast((Tmp_haricut) as decimal(15,2)) HairCut,convert(decimal(15,2), 0) as AfterHaricut ,(case dm_tmkttype  when 'X' then 'Marked For Sale against debit' else '' end)  as Remark ";
+            Strsql = Strsql + " ,'' unpledge,'' lnkUnPledge ";
+            Strsql = Strsql + " from demat with (nolock), ourdps with (nolock) ,settlements with (nolock) ,client_master with (nolock),securities with (nolock),#TmpVarMargin";
+            Strsql = Strsql + " where cm_cd = dm_clientcd and dm_stlmnt = se_stlmnt and dm_scripcd = ss_cd";
+            Strsql = Strsql + " and dm_ourdp = od_cd";
+            Strsql = Strsql + " and Tmp_scripcd = dm_scripcd and od_acttype in ('B','M') and dm_type = 'BC' and dm_locked = 'N' and dm_transfered = 'N'";
+            Strsql = Strsql + " and dm_clientcd in (" + strClient.Trim() + ") and dm_ourdp not in " + strcollat;
+            Strsql = Strsql + " group by dm_clientcd,dm_scripcd,dm_isin, ss_name,Tmp_haricut,ss_bserate,dm_tmkttype having abs(sum(dm_qty)) > 0 ";
+            Strsql = Strsql + " union all ";
+
+            Strsql = Strsql + " select dm_clientcd,dm_scripcd,sum(dm_qty * (-1)) as qty,dm_isin,ss_name,ss_bserate, convert(decimal(15,2),(ss_bserate*sum(dm_qty * (-1))))";
+            Strsql = Strsql + " as valuation ,'COLLAT Holding' as bh_type,cast((Tmp_haricut) as decimal(15,2)) HairCut,convert(decimal(15,2), 0) as AfterHaricut,(case dm_tmkttype  when 'X' then 'Marked For Sale against debit' else '' end)  as Remark ";
+            Strsql = Strsql + " ,'' unpledge,'' lnkUnPledge from demat with (nolock),ourdps with (nolock) ,settlements with (nolock) ,client_master with (nolock) ,securities with (nolock) ,#TmpVarMargin where cm_cd = dm_clientcd and dm_stlmnt = se_stlmnt and dm_scripcd = ss_cd and dm_ourdp = od_cd and Tmp_scripcd = dm_scripcd";
+            Strsql = Strsql + " and od_acttype in ('B','M') and dm_type = 'BC' and dm_locked = 'N' and dm_transfered = 'N'";
+            Strsql = Strsql + " and dm_clientcd in (" + strClient.Trim() + ") and dm_ourdp in " + strcollat;
+            Strsql = Strsql + " group by dm_clientcd,dm_scripcd,dm_isin, ss_name,Tmp_haricut,ss_bserate,dm_tmkttype";
+            Strsql = Strsql + " having abs(sum(dm_qty)) > 0 ";
+            Strsql = Strsql + " Union all  ";
+
+            Strsql = Strsql + " select dm_clientcd,dm_scripcd,sum(dm_qty * (-1)) as qty,dm_isin,ss_name,ss_bserate, convert(decimal(15,2),(ss_bserate*sum(dm_qty * (-1)))) as valuation ,'Expected Holding' as bh_type,cast((Tmp_haricut) as decimal(15,2)) HairCut,convert(decimal(15,2), 0) as AfterHaricut ,(case dm_tmkttype  when 'X' then 'Marked For Sale against debit' else '' end)  as Remark ";
+            Strsql = Strsql + " ,'' unpledge,'' lnkUnPledge from demat with (nolock), ourdps with (nolock) ,settlements with (nolock) ,client_master with (nolock) ,securities  with (nolock) ,#TmpVarMargin";
+            Strsql = Strsql + " where cm_cd = dm_clientcd and dm_stlmnt = se_stlmnt and dm_scripcd = ss_cd and dm_ourdp = od_cd and od_acttype = 'P'and dm_type = 'BC' and dm_locked = 'N' and dm_transfered <> 'S' and se_shpayoutdt > '" + strdate + "' ";
+            Strsql = Strsql + " and dm_ourdp not in " + strcollat;
+            Strsql = Strsql + " and dm_clientcd in (" + strClient.Trim() + ") and Tmp_scripcd = dm_scripcd";
+            Strsql = Strsql + " group by dm_clientcd,dm_scripcd,dm_isin, ss_name,se_stlmnt,Tmp_haricut,ss_bserate,dm_tmkttype";
+            Strsql = Strsql + " having abs(sum(dm_qty)) > 0 ";
+            Strsql = Strsql + " Union all  ";
+
+            Strsql = Strsql + " select dm_clientcd,dm_scripcd,sum(dm_qty * (-1)) as qty,dm_isin,ss_name,ss_bserate, convert(decimal(15,2),(ss_bserate*sum(dm_qty * (-1)))) as valuation ,'Pool Holding' as bh_type,cast((Tmp_haricut) as decimal(15,2)) HairCut,convert(decimal(15,2), 0) as AfterHaricut ,(case dm_tmkttype  when 'X' then 'Marked For Sale against debit' else '' end)  as Remark ";
+            Strsql = Strsql + " ,'' unpledge,'' lnkUnPledge from demat with (nolock), ourdps with (nolock) ,settlements with (nolock) ,client_master with (nolock) ,securities  with (nolock) ,#TmpVarMargin";
+            Strsql = Strsql + " where cm_cd = dm_clientcd and dm_stlmnt = se_stlmnt and dm_scripcd = ss_cd and dm_ourdp = od_cd and od_acttype = 'P'and dm_type = 'BC' and dm_locked = 'N' and dm_transfered ='N' and se_shpayoutdt <= '" + strdate + "'";
+            Strsql = Strsql + " and dm_ourdp not in " + strcollat;
+            Strsql = Strsql + " and dm_clientcd in (" + strClient.Trim() + ") and Tmp_scripcd = dm_scripcd";
+            Strsql = Strsql + " group by dm_clientcd,dm_scripcd,dm_isin, ss_name,se_stlmnt,Tmp_haricut,ss_bserate,dm_tmkttype";
+            Strsql = Strsql + " having abs(sum(dm_qty)) > 0 ";
+            Strsql = Strsql + " Union all  ";
+
+            Strsql = Strsql + " select dm_clientcd,dm_scripcd,sum(dm_qty * (-1)) as qty,dm_isin,ss_name,ss_bserate, convert(decimal(15,2),(ss_bserate*sum(dm_qty * (-1)))) as valuation ,'Undelivered Holding' as bh_type,cast((Tmp_haricut) as decimal(15,2)) HairCut,convert(decimal(15,2), 0) as AfterHaricut,(case dm_tmkttype  when 'X' then 'Marked For Sale against debit' else '' end)  as Remark";
+            Strsql = Strsql + " ,'' unpledge,'' lnkUnPledge from demat with (nolock), ourdps with (nolock),settlements with (nolock), client_master with (nolock),securities  with (nolock),#TmpVarMargin";
+            Strsql = Strsql + " where cm_cd = dm_clientcd and dm_stlmnt = se_stlmnt and dm_scripcd = ss_cd and dm_ourdp = od_cd and od_acttype = 'P' and dm_type = 'CB' and dm_locked = 'N' and dm_transfered <> 'S'";
+            Strsql = Strsql + " and dm_clientcd in (" + strClient.Trim() + ") and dm_ourdp not in " + strcollat;
+            Strsql = Strsql + " and Tmp_scripcd = dm_scripcd group by dm_clientcd,dm_scripcd,dm_isin, ss_name,Tmp_haricut,ss_bserate,dm_tmkttype having abs(sum(dm_qty)) > 0 ";
+
+            Strsql = Strsql + " union all ";
+            Strsql = Strsql + " select dm_clientcd,dm_scripcd,sum(dm_qty * (-1)) as qty,dm_isin,";
+            Strsql = Strsql + " ss_name,ss_bserate,convert(decimal(15,2),(ss_bserate*sum(dm_qty * (-1)))) as valuation ,(case od_acttype when 'T' then 'Margin Trading' when 'C' then 'MTF Collateral' else '' end ) as bh_type,cast((Tmp_haricut) as decimal(15,2)) HairCut,convert(decimal(15,2), 0) as AfterHaricut ,(case dm_tmkttype  when 'X' then 'Marked For Sale against debit' else '' end)  as Remark ";
+            Strsql = Strsql + " ,'' unpledge,'' lnkUnPledge from demat with (nolock), ourdps with (nolock) ,settlements with (nolock) ,client_master with (nolock),securities with (nolock),#TmpVarMargin";
+            Strsql = Strsql + " where cm_cd = dm_clientcd and dm_stlmnt = se_stlmnt and dm_scripcd = ss_cd";
+            Strsql = Strsql + " and dm_ourdp = od_cd";
+            Strsql = Strsql + " and Tmp_scripcd = dm_scripcd and od_acttype in ('T','C') and dm_type = 'BC' and dm_locked = 'N' and dm_transfered = 'N'";
+            Strsql = Strsql + " and dm_clientcd in (" + strClient.Trim() + ")";
+            Strsql = Strsql + " group by dm_clientcd,dm_scripcd,dm_isin, ss_name,Tmp_haricut,ss_bserate,dm_tmkttype,od_acttype ";
+            Strsql = Strsql + " having abs(sum(dm_qty)) > 0 ";
+
+            DataSet DsMPTrx = new DataSet();
+            DsMPTrx = OpenDataSet("select * from SysObjects where name= 'MrgPledge_TRX'");
+            if (DsMPTrx.Tables[0].Rows.Count > 0)
+            {
+                string strOurdp = string.Empty;
+                DataTable dt = OpenDataTable("select distinct MPT_OurDP from MrgPledge_TRX Where MPT_TRXFlag ='P'");
+                if (dt.Rows.Count > 0)
+                {
+                    for (int i = 0; i <= dt.Rows.Count - 1; i++)
+                    {
+                        strOurdp += "'" + dt.Rows[i]["MPT_OurDP"].ToString().Trim() + "',";
+                    }
+                    strOurdp = strOurdp.Remove(strOurdp.Length - 1);
+                }
+                else
+                {
+                    strOurdp = "''";
+                }
+                Strsql = Strsql + " union all ";
+                Strsql = Strsql + " select MPT_clientcd dm_clientcd,MPT_scripcd dm_scripcd,sum(case When MPT_DRCR ='C' Then MPT_Qty else -MPT_Qty  end) as qty,im_isin,ss_name,ss_bserate, ";
+                Strsql = Strsql + " (ss_bserate*sum(case When MPT_DRCR ='C' Then MPT_Qty else -MPT_Qty  end)) as valuation ,'Margin Pledge' bh_type,cast((Tmp_haricut) as decimal(15,2)) HairCut, ";
+                Strsql = Strsql + " convert(decimal(15,2), 0) as AfterHaricut ,''  ";
+                Strsql = Strsql + " ,'Un-Pledge ' unpledge,";
+                Strsql = Strsql + " MPT_clientcd +'/'+ MPT_scripcd +'/' + ss_name +'/'+ convert(varchar,sum(case When MPT_DRCR ='C' Then MPT_Qty else -MPT_Qty  end)) +'/P' lnkUnPledge ";
+                Strsql = Strsql + " from MrgPledge_TRX a,securities with (nolock),#TmpVarMargin ,Isin with (nolock) ";
+                Strsql = Strsql + " where im_scripcd = ss_cd and im_active = 'Y' and im_priority = (select min(im_priority) from Isin Where im_scripcd = MPT_scripcd and im_active = 'Y' )  ";
+                Strsql = Strsql + " and Tmp_scripcd = im_scripcd ";
+                Strsql = Strsql + " and  Tmp_scripcd = MPT_scripcd and ss_cd = MPT_scripcd ";
+                Strsql = Strsql + " and MPT_clientcd in (" + strClient.Trim() + ") ";
+                Strsql += " and MPT_OurDP in (" + strOurdp + ") ";
+                Strsql = Strsql + " group by MPT_clientcd,MPT_scripcd,im_isin,ss_name,ss_bserate,Tmp_haricut ";
+                Strsql = Strsql + " having abs(sum(case When MPT_DRCR ='C' Then MPT_Qty else -MPT_Qty  end)) > 0 ";
+                Strsql = Strsql + " union all ";
+                Strsql = Strsql + " select MPT_clientcd dm_clientcd,MPT_scripcd dm_scripcd,Sum(case MPT_DRCR when 'D' Then MPT_Qty else -MPT_Qty end) as qty,im_isin,ss_name,ss_bserate, ";
+                Strsql = Strsql + " (ss_bserate*Sum(case MPT_DRCR when 'D' Then MPT_Qty else -MPT_Qty end)) as valuation ,'Margin Re-Pledge' bh_type,cast((Tmp_haricut) as decimal(15,2)) HairCut, ";
+                Strsql = Strsql + " convert(decimal(15,2), 0) as AfterHaricut ,'' ";
+                Strsql = Strsql + " ,'Un-Re-Pledge '  unpledge,";
+                Strsql = Strsql + "  MPT_clientcd +'/'+ MPT_scripcd +'/' + ss_name +'/'+ convert(varchar,sum(case When MPT_DRCR ='C' Then MPT_Qty else -MPT_Qty  end))+'/R' lnkUnPledge ";
+                Strsql = Strsql + " from MrgPledge_TRX a,securities with (nolock),#TmpVarMargin ,Isin with (nolock) ";
+                Strsql = Strsql + " where im_scripcd = ss_cd and im_active = 'Y' and im_priority = (select min(im_priority) from Isin Where im_scripcd = MPT_scripcd and im_active = 'Y' ) ";
+                Strsql = Strsql + " and Tmp_scripcd = im_scripcd ";
+                Strsql = Strsql + " and  Tmp_scripcd = MPT_scripcd and ss_cd = MPT_scripcd ";
+                Strsql = Strsql + " and MPT_clientcd in (" + strClient.Trim() + ") and MPT_TRXFlag ='R'";
+                Strsql += " and MPT_OurDP in (" + strOurdp + ") ";
+                Strsql = Strsql + " group by MPT_clientcd,MPT_scripcd,im_isin,ss_name,ss_bserate,Tmp_haricut ";
+                Strsql = Strsql + " having abs(Sum(case MPT_DRCR when 'D' Then MPT_Qty else -MPT_Qty end)) > 0 ";
+            }
+            return Strsql;
+        }
+
+        public void GetHairCut(SqlConnection ObjConnectionTmp)
+        {
+            string Strsql = string.Empty;
+            SqlCommand ObjCommand = new SqlCommand();
+            SqlDataAdapter ObjAdapter = new SqlDataAdapter();
+            DataSet ObjDataSet = new DataSet();
+
+            try
+            {
+                Strsql = "Create Table #TmpVarMargin (Tmp_scripcd VarChar(6), Tmp_haricut money )";
+                ExecuteSQLTmp(Strsql, ObjConnectionTmp);
+            }
+            catch (Exception e)
+            {
+                Strsql = "Drop table  #TmpVarMargin";
+                ExecuteSQLTmp(Strsql, ObjConnectionTmp);
+
+                Strsql = "Create Table #TmpVarMargin (Tmp_scripcd VarChar(6), Tmp_haricut money )";
+                ExecuteSQLTmp(Strsql, ObjConnectionTmp);
+            }
+
+            Strsql = "Create index #idx_TmpVarMargin_scripcd on #TmpVarMargin (Tmp_scripcd)";
+            ExecuteSQLTmp(Strsql, ObjConnectionTmp);
+
+            Strsql = "insert into #TmpVarMargin select ss_cd , 0 From securities";
+            ExecuteSQLTmp(Strsql, ObjConnectionTmp);
+
+            //Strsql = "update #TmpVarMargin set Tmp_haricut =isnull((select Case When vm_exchange = 'N' Or vm_exchange = 'Z'";
+            //Strsql = Strsql + " then vm_applicable_var else vm_margin_rate end from VarMargin";
+            //Strsql = Strsql + " where vm_scripcd = Tmp_scripcd and vm_exchange+vm_dt =(select max(vm_exchange+vm_dt) from VarMargin Where vm_scripcd = Tmp_scripcd)),0)";
+            Strsql = " update #TmpVarMargin set Tmp_haricut = case When lv_BseDt > lv_NseDt Then lv_BseVarMargin else lv_NseVarMargin end from LVarMargin with (nolock) where lv_Scripcd = Tmp_scripcd ";
+            ExecuteSQLTmp(Strsql, ObjConnectionTmp);
+
+
+            Strsql = "Select em_name from entity_master with (nolock) where len(em_cd)=1 ";
+            DataSet ObjDataSet1 = new DataSet();
+            ObjCommand.CommandText = Strsql;
+            ObjCommand.Connection = ObjConnectionTmp;
+            ObjAdapter.SelectCommand = ObjCommand;
+            ObjAdapter.Fill(ObjDataSet1);
+            if (ObjDataSet1.Tables[0].Rows.Count > 0)
+            {
+                if (ObjDataSet1.Tables[0].Rows[0][0].ToString().Contains("BP"))
+                {
+                    Strsql = "  update #TmpVarMargin set Tmp_haricut = 25.00 where  Tmp_haricut < 25";
+                    ExecuteSQLTmp(Strsql, ObjConnectionTmp);
+                }
+            }
+        }
+
         public DataSet fnForBill(string strclientid, string strExcode, string StrFromDt, string StrToDt, string Exchange, string Segment, SqlConnection ObjConnectionTmp)
         {
             if ((Exchange != "MCX-COMM") && (Exchange != "NCDEX-COMM") && (Exchange != "ICEX-COMM") && (Exchange != "NCME-COMM") && (Exchange != "MCX") && (Exchange != "NCDEX") && (Exchange != "ICEX") && (Exchange != "NCME"))

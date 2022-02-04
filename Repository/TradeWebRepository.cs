@@ -10,11 +10,8 @@ using System.Data;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Net.Mail;
 using System.Text;
-using System.Threading.Tasks;
 using TradeWeb.API.Data;
-using static TradeWeb.API.Repository.UtilityCommon;
 
 namespace TradeWeb.API.Repository
 {
@@ -87,7 +84,14 @@ namespace TradeWeb.API.Repository
         public dynamic GetCurrentPledgeRequest(string UserId);
 
         public dynamic AddPledgeRequest(string UserId, string CmbDPID_Value, bool blnIdentityOn, string intcnt, string lblScripcd, string txtQty);
-        
+
+        public dynamic Get_Page_Load_Data(string cm_cd);
+
+        public dynamic Get_Buttons_Data(string BtnClick, string SelectedCLCode);
+
+        public dynamic Get_Transaction_Btn_Data(string BtnClick, string SelectedCLCode, string SelectedValue, string FromDate, string ToDate);
+
+        public dynamic Get_Transaction_Btn_RPJ_Detailed_Data(string Client, string Type, string FromDate, string ToDate);
     }
 
 
@@ -5686,6 +5690,660 @@ namespace TradeWeb.API.Repository
         }
 
         #endregion
+        #endregion
+
+        #region Family Handler method
+        //TODO : For Getting Page_Load Data
+        public dynamic Get_Page_Load_Data(string cm_cd)
+        {
+            var ds = Get_QueryFor_Page_Load_Data(cm_cd);
+            try
+            {
+                if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                {
+                    var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
+                    return json;
+                }
+                return new List<string>();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        //TODO : For Getting Buttons Data
+        public dynamic Get_Buttons_Data(string BtnClick, string SelectedCLCode)
+        {
+            var ds = Get_QueryFor_Buttons_Data(BtnClick, SelectedCLCode);
+            try
+            {
+                //var ds = CommonRepository.FillDataset(qury);
+                if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                {
+                    var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
+                    return json;
+                }
+                return new List<string>();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        //TODO : For Getting Transaction Button Data
+        public dynamic Get_Transaction_Btn_Data(string BtnClick, string SelectedCLCode, string SelectedValue, string FromDate, string ToDate)
+        {
+            var ds = Get_QueryFor_Transaction_Btn_Data(BtnClick, SelectedCLCode, SelectedValue, FromDate, ToDate);
+            try
+            {
+                if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                {
+                    var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
+                    return json;
+                }
+                return new List<string>();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        //TODO : For Getting Transaction Button RPJ Detailed Data
+        public dynamic Get_Transaction_Btn_RPJ_Detailed_Data(string Client, string Type, string FromDate, string ToDate)
+        {
+            var ds = Get_QueryFor_Transaction_Btn_RPJ_Detailed_Data(Client, Type, FromDate, ToDate);
+            try
+            {
+                if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                {
+                    var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
+                    return json;
+                }
+                return new List<string>();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        #region Family usefull method
+
+        public DataSet Get_QueryFor_Page_Load_Data(string cm_cd)
+        {
+            DataSet ds = new DataSet();
+            ds = ShowMasterGrid(cm_cd);
+            return ds;
+        }
+        public DataSet ShowMasterGrid(string cm_cd)
+        {
+            strsql = "select upper(case when CF_CD=CF_FamilyCd then 'MAIN' else '' end) MainCd,upper(cf_cd) cf_cd ,cm_name";
+            strsql += " from Client_Family,Client_master where cm_cd=CF_CD and CF_FamilyCd='" + cm_cd + "'  order by MainCd desc ";
+            DataSet ObjDataSet = new DataSet();
+            ObjDataSet = objUtility.OpenDataSet(strsql);
+            return ObjDataSet;
+        }
+
+        public DataSet Get_QueryFor_Buttons_Data(string BtnClick, string SelectedCLCode)
+        {
+            DataSet ds = new DataSet();
+            ds = BindGrid(BtnClick, SelectedCLCode);
+            return ds;
+        }
+        public DataSet BindGrid(string BtnClick, string SelectedCLCode)
+        {
+            DataSet ds = new DataSet();
+            if (BtnClick == "L")
+                ds = ShowLedger(BtnClick, SelectedCLCode);
+            else if (BtnClick == "H")
+                ds = ShowHolding(BtnClick, SelectedCLCode);
+            else if (BtnClick == "DP")
+                ds = ShowDPHolding(BtnClick, SelectedCLCode);
+            else if (BtnClick == "O")
+                ds = ShowOutstanding(BtnClick, SelectedCLCode);
+            return ds;
+        }
+        public DataSet ShowLedger(string BtnClick, string SelectedCLCode)
+        {
+            int CurrentYear = DateTime.Now.Year;
+            if (DateTime.Today.Month < 3)
+            {
+                CurrentYear = CurrentYear - 1;
+            }
+            string Fromdt = objUtility.dtos(new DateTime(CurrentYear, 4, 1).ToString());
+            string Todt = objUtility.dtos(new DateTime(CurrentYear + 1, 3, 31).ToString());
+            string StrDataFields = "";
+            string StrHeaderTitles = "";
+            string StrSubTotalsFor = "";
+            string StrTextAlign = "";
+            string StrTextLength = "";
+            string Strcolhide = "";
+            string StrCDC = "";
+            string StrAccC = "";
+            string StrCDM = "";
+            string StrAccM = "";
+            string StrCDL = "";
+            string StrAccL = "";
+            char[] ArrSeparters = new char[1];
+            ArrSeparters[0] = '/';
+            string[] StrClCd;
+            StrClCd = Convert.ToString(SelectedCLCode).Split(ArrSeparters);
+            int i = 0;
+            for (i = 0; i < StrClCd.Length - 1; i++)
+            {
+                string StrName = Strings.Left(StrClCd[i].Trim().Split('~')[1].Trim(), 15);
+
+                StrAccC += " cast(sum(Case When ld_clientcd = '" + StrClCd[i].Trim().Split('~')[0].Trim() + "' then ld_amount else 0 end) as decimal(15,2)) as  '" + StrClCd[i].Trim().Split('~')[0].Trim() + "_" + StrName.Trim() + "',";
+                StrCDC += "'" + StrClCd[i].Trim().Split('~')[0].Trim() + "',";
+                StrAccL += " cast(sum(Case When ld_clientcd = '" + StrClCd[i].Trim().Split('~')[0].Trim() + objUtility.GetSysParmSt("MTFP_SUFFIX", "") + "' then ld_amount else 0 end) as decimal(15,2)) as  '" + StrClCd[i].Trim().Split('~')[0].Trim() + "_" + StrName.Trim() + "',";
+                StrCDL += "'" + StrClCd[i].Trim().Split('~')[0].Trim() + objUtility.GetSysParmSt("MTFP_SUFFIX", "") + "',";
+
+                string StrMrg = objUtility.fnFireQueryTradeWeb("client_master", "distinct cm_brkggroup", "cm_cd", StrClCd[i].Trim().Split('~')[0].Trim(), true).Trim();
+                StrAccM += (StrMrg.Trim() == "" ? "0" : "cast(sum(Case When ld_clientcd = '" + StrMrg.Trim() + "' then ld_amount else 0 end) as decimal(15,2))") + " as  '" + StrClCd[i].Trim().Split('~')[0].Trim() + "_" + StrName.Trim() + "',";
+                StrCDM += "'" + StrMrg.Trim() + "',";
+                StrDataFields += StrClCd[i].Trim().Split('~')[0].Trim() + "_" + StrName.Trim() + ",";
+                StrHeaderTitles += StrClCd[i].Trim().Split('~')[0].Trim() + "_" + StrName.Trim() + ",";
+                StrSubTotalsFor += StrClCd[i].Trim().Split('~')[0].Trim() + "_" + StrName.Trim() + ",";
+                StrTextAlign += "R,";
+                StrTextLength += "15,";
+                Strcolhide += i + 1 + ",";
+            }
+            Strcolhide += i + 1;
+            //StrAccC = Strings.Left(StrAccC, StrAccC.Length - 1);
+            StrCDC = Strings.Left(StrCDC, StrCDC.Length - 1);
+            //StrAccL = Strings.Left(StrAccL, StrAccL.Length - 1);
+            StrCDL = Strings.Left(StrCDL, StrCDL.Length - 1);
+            StrCDM = Strings.Left(StrCDM, StrCDM.Length - 1);
+            //StrDataFields = Strings.Left(StrDataFields, StrDataFields.Length - 1);
+            //StrHeaderTitles = Strings.Left(StrHeaderTitles, StrHeaderTitles.Length - 1);
+            //StrSubTotalsFor = Strings.Left(StrSubTotalsFor, StrSubTotalsFor.Length - 1);
+            //StrTextAlign = Strings.Left(StrTextAlign, StrTextAlign.Length - 1);
+            //StrTextLength = Strings.Left(StrTextLength, StrTextLength.Length - 1);
+            //Strcolhide = Strings.Left(Strcolhide, Strcolhide.Length - 1);
+
+
+            strsql = "select 'C' as account, ";
+            strsql += "case substring(ld_dpid,2,1)   when 'B' then 'BSE-' when 'N' then 'NSE-' when 'M' then 'MCX-' when 'F' then 'NCDEX-' else '' end +  ";
+            strsql += " case substring(ld_dpid,3,1)   when 'C' then 'CASH'  when 'F' then 'DERIVATIVE'  when 'K' then 'FX' when 'M' then 'MF' when 'X' then 'COMM' else '' end  as heading,";
+            strsql += StrAccC;
+            strsql += " cast(sum(ld_amount) as decimal(15,2)) as  'Total' ";
+            strsql += " from Ledger ";
+            strsql += " Where ld_clientcd in (" + StrCDC + " )";
+            strsql += " Group By ld_dpid";
+
+            strsql += " Union all select 'M' as account, ";
+            strsql += " case substring(ld_dpid,2,1)   when 'B' then 'BSE-' when 'N' then 'NSE-' when 'M' then 'MCX-' when 'F' then 'NCDEX-' else '' end + ";
+            strsql += " case substring(ld_dpid,3,1)   when 'C' then 'CASH'  when 'F' then 'DERIVATIVE'  when 'K' then 'FX'  when 'X' then 'COMM' else '' end + '(M)',";
+            strsql += StrAccM;
+            strsql += " cast(sum(ld_amount) as decimal(15,2)) as  'Total' ";
+            strsql += " from Ledger ";
+            strsql += " Where ld_clientcd in (" + StrCDM + " )";
+            strsql += " Group By ld_dpid ";
+
+            //MTF ledger
+            if (Convert.ToInt32(objUtility.fnFireQueryTradeWeb("sysobjects", "count(*)", "name", "MrgTdgFin_TRX", true)) > 0)
+            {
+                strsql += " union all select 'L' as account, case substring(ld_dpid,2,1)   when 'B' then 'BSE-' when 'N' then 'NSE-' when 'M' then 'MCX-' else '' end + 'MTF' ,";
+                strsql += StrAccL;
+                strsql += " cast(sum(ld_amount) as decimal(15,2)) as  'Total' ";
+                strsql += " from ledger with (nolock),MrgTdgFin_Clients ";
+                strsql += " where ld_clientcd in (" + StrCDL + " ) and ld_dt <= '20210331' ";
+                strsql += "  and ld_clientcd =  Rtrim(MTFC_CMCD) + '" + objUtility.GetSysParmSt("MTFP_SUFFIX", "") + "' group by ld_dpid";
+            }
+
+            // NBFC
+            if (Convert.ToInt32(objUtility.fnFireQueryTradeWeb("sysobjects", "count(*)", "name", "nbfc_clients", true)) > 0)
+            {
+                strsql += " union all ";
+                strsql += "select 'N' as account, 'NBFC',";
+                strsql += StrAccC;
+                strsql += " cast(sum(ld_amount) as decimal(15,2)) as  'Total' ";
+                strsql += " from NBFC_Ledger with (nolock) where ld_clientcd in (" + StrCDC + " ) and ld_dt <= '" + Todt + "' group by ld_dpid ";
+            }
+            if (_configuration["Commex"] != null && _configuration["Commex"] != string.Empty)
+            {
+                string StrCommexConn = "";
+                StrCommexConn = objUtility.GetCommexConnection();
+                strsql += " union all select 'CM' as account, ";
+                strsql += " case substring(ld_dpid,2,1) when 'M' then 'MCX-COMM' when 'N' then 'NCDEX-COMM' when 'S' then 'NSEL-COMM' when 'D' then 'NSX-COMM' end as heading ,";
+                strsql += StrAccC;
+                strsql += " cast(sum(ld_amount) as decimal(15,2)) as  'Total' ";
+                strsql += " from   " + StrCommexConn + ".ledger";
+                strsql += " where ld_clientcd in (" + StrCDC + " ) and ld_dt <= '" + Todt + "' ";
+                strsql += " group by ld_dpid ";
+
+                strsql += " order by account";
+            }
+            DataSet ObjDataSet = new DataSet();
+            ObjDataSet = objUtility.OpenDataSet(strsql);
+            return ObjDataSet;
+        }
+        public DataSet ShowHolding(string BtnClick, string SelectedCLCode)
+        {
+            string Strsql = string.Empty;
+            DataSet ObjDataSet = new DataSet();
+
+            string strdate = DateTime.Today.Date.ToString("yyyyMMdd");
+            int i = 0;
+            string strstat = string.Empty;
+            Strsql = "select st_sysvalue from stationary where st_parmcd='DMTCOLLATDP' and st_exchange = 'B' ";
+            ObjDataSet = objUtility.OpenDataSet(Strsql);
+            if (ObjDataSet.Tables[0].Rows.Count != 0)
+                strstat = ObjDataSet.Tables[0].Rows[0][0].ToString().Trim();
+            char[] ArrSeprator = new char[1];
+            ArrSeprator[0] = ',';
+            string[] arrstat = strstat.Split(ArrSeprator);
+            string strcollat = "( ";
+            for (i = 0; i <= arrstat.Length - 1; i++)
+            {
+                strcollat = strcollat + "'" + arrstat[i] + "',";
+            }
+            strcollat = strcollat + ")";
+            strcollat = strcollat.Replace(",)", ")");
+
+            string StrSelect = "";
+            string StrCDC = "";
+            char[] ArrSeparters = new char[1];
+            ArrSeparters[0] = '/';
+            string[] StrClCd;
+            string StrDataFields = "";
+            string StrSubTotalFields = "";
+            string StrHeaderTitles = "";
+            //string StrSubTotalsFor = "";
+            string StrTextAlign = "";
+            string StrTextLength = "";
+            string Strcolhide = "";
+
+            StrClCd = Convert.ToString(SelectedCLCode).Split(ArrSeparters);
+
+            for (i = 0; i < StrClCd.Length - 1; i++)
+            {
+                StrSelect += " cast(sum(Case When dm_clientcd = '" + StrClCd[i].Trim().Split('~')[0].Trim() + "' then qty else 0 end) as decimal(15,0)) as  '" + StrClCd[i].Trim().Split('~')[0].Trim() + "_Qty',cast(sum(Case When dm_clientcd = '" + StrClCd[i].Trim().Split('~')[0].Trim() + "' then (ss_bserate*qty) else 0 end) as decimal(15,2)) as  '" + StrClCd[i].Trim().Split('~')[0].Trim() + "_Valuation',";
+                StrCDC += "'" + StrClCd[i].Trim().Split('~')[0].Trim() + "',";
+                StrDataFields += StrClCd[i].Trim().Split('~')[0].Trim() + "_Qty," + StrClCd[i].Trim().Split('~')[0].Trim() + "_Valuation,";
+                StrSubTotalFields += StrClCd[i].Trim().Split('~')[0].Trim() + "_Valuation,";
+                StrHeaderTitles += "Qty,Valuation,";
+                StrTextAlign += "R,R,";
+                StrTextLength += "15,15,";
+                //Strcolhide += i + 1 + "," + i + 2 + ",";
+            }
+
+            StrCDC = Strings.Left(StrCDC, StrCDC.Length - 1);
+            SqlConnection con;
+            using (var db = new DataContext())
+            {
+                con = new SqlConnection((db.Database.GetDbConnection()).ConnectionString);
+                con.Open();
+                objUtility.GetHairCut(con);
+                strsql = "select dm_isin,ss_name,bh_type, " + StrSelect;
+                strsql += " cast(sum(qty)  as decimal(15,0)) as  'TotalQty', ";
+                strsql += " cast(sum((ss_bserate*qty)) as decimal(15,2)) as  'TotalVal' ";
+                strsql += " from ( ";
+                strsql += objUtility.GetSqlTradeHolding(con.ConnectionString, StrCDC, strdate, strcollat, con);
+                strsql += " ) a group by dm_isin,ss_name,bh_type having abs(sum(qty)) > 0 ";
+
+                ObjDataSet = new DataSet();
+                ObjDataSet = objUtility.OpenDataSetTmp(strsql, con);
+            }
+            return ObjDataSet;
+        }
+        public DataSet ShowDPHolding(string BtnClick, string SelectedCLCode)
+        {
+            string StrSelect = "";
+            string StrCDC = "";
+            char[] ArrSeparters = new char[1];
+            ArrSeparters[0] = '/';
+            string[] StrClCd;
+            string StrDataFields = "";
+            string StrSubTotalFields = "";
+            string StrHeaderTitles = "";
+            //string StrSubTotalsFor = "";
+            string StrTextAlign = "";
+            string StrTextLength = "";
+            string Strcolhide = "";
+            StrClCd = Convert.ToString(SelectedCLCode).Split(ArrSeparters);
+            int i = 0;
+            for (i = 0; i < StrClCd.Length - 1; i++)
+            {
+                StrSelect += " cast(sum(Case When CM.cm_blsavingcd = '" + StrClCd[i].Trim().Split('~')[0].Trim() + "' then a.hld_ac_pos else 0 end) as decimal(15,0)) as  '" + StrClCd[i].Trim().Split('~')[0].Trim() + "_Qty',cast(sum(Case When CM.cm_blsavingcd = '" + StrClCd[i].Trim().Split('~')[0].Trim() + "' then (a.hld_ac_pos * sc_Rate) else 0 end) as decimal(15,2)) as  '" + StrClCd[i].Trim().Split('~')[0].Trim() + "_Valuation',";
+                StrCDC += "'" + StrClCd[i].Trim().Split('~')[0].Trim() + "',";
+                StrDataFields += StrClCd[i].Trim().Split('~')[0].Trim() + "_Qty," + StrClCd[i].Trim().Split('~')[0].Trim() + "_Valuation,";
+                StrSubTotalFields += StrClCd[i].Trim().Split('~')[0].Trim() + "_Valuation,";
+                StrHeaderTitles += "Qty,Valuation,";
+                StrTextAlign += "R,R,";
+                StrTextLength += "15,15,";
+                //Strcolhide += i + 1 + "," + i + 2 + ",";
+            }
+            StrCDC = Strings.Left(StrCDC, StrCDC.Length - 1);
+
+            if (_configuration["IsTradeWeb"] == "O")
+            {//-----------------------------------------------------------Live----------------------------------------------------------------------------------------
+                char[] ArrSeparators = new char[1];
+                ArrSeparators[0] = '/';
+                if (_configuration["Cross"] != "") // strBoid  LEft 2 <>IN
+                {
+                    string[] ArrCross = _configuration["Cross"].Split(ArrSeparators);
+                    strsql = "select a.hld_isin_code,b.sc_isinname,bt_description as BType, " + StrSelect + " cast(sum(a.hld_ac_pos) as decimal(15,0)) as  'TotalQty', cast(sum(a.hld_ac_pos * sc_Rate) as decimal(15,2)) as  'TotalVal' ";
+                    strsql += " from " + ArrCross[0].Trim() + "." + ArrCross[1].Trim() + "." + ArrCross[2].Trim() + ".Holding a,";
+                    strsql += ArrCross[0].Trim() + "." + ArrCross[1].Trim() + "." + ArrCross[2].Trim() + ".Security b ," + ArrCross[0].Trim() + "." + ArrCross[1].Trim() + "." + ArrCross[2].Trim() + ".client_master CM, ";
+                    strsql += ArrCross[0].Trim() + "." + ArrCross[1].Trim() + "." + ArrCross[2].Trim() + ".Beneficiary_type d where a.hld_isin_code = b.sc_isincode ";
+                    strsql += " and d.bt_code = a.hld_ac_type and CM.cm_cd = a.hld_ac_code and CM.cm_blsavingcd in (" + StrCDC + ") group by a.hld_isin_code,b.sc_isinname,bt_description ";
+                }
+                else
+                    if (_configuration["Estro"] != "")
+                {
+                    string[] ArrEstro = _configuration["Estro"].Split(ArrSeparators);
+                    strsql = "select a.hld_isin_code,b.sc_company_name,bt_description as BType, " + StrSelect + " cast(sum(a.hld_ac_pos) as decimal(15,0)) as  'TotalQty', cast(sum(a.hld_ac_pos * sc_Rate) as decimal(15,2)) as  'TotalVal' ";
+                    strsql += " from " + ArrEstro[0].Trim() + "." + ArrEstro[1].Trim() + "." + ArrEstro[2].Trim() + ".Holding a,";
+                    strsql += ArrEstro[0].Trim() + "." + ArrEstro[1].Trim() + "." + ArrEstro[2].Trim() + ".Security b ,";
+                    strsql += ArrEstro[0].Trim() + "." + ArrEstro[1].Trim() + "." + ArrEstro[2].Trim() + ".Beneficiary_type d, ";
+                    strsql += ArrEstro[0].Trim() + "." + ArrEstro[1].Trim() + "." + ArrEstro[2].Trim() + ".sysParameter, " + ArrEstro[0].Trim() + "." + ArrEstro[1].Trim() + "." + ArrEstro[2].Trim() + ".client_master CM  ";
+                    strsql += " where a.hld_isin_code = b.sc_isincode and sp_parmcd = 'DPID' and CM.cm_blsavingcd in (" + StrCDC + ") ";
+                    strsql += " and d.bt_code = a.hld_ac_type and CM.cm_cd = a.hld_ac_code group by a.hld_isin_code,b.sc_company_name,bt_description ";
+                }
+            }
+            DataSet ObjDataSet = new DataSet();
+            ObjDataSet = objUtility.OpenDataSet(strsql);
+            return ObjDataSet;
+
+        }
+        public DataSet ShowOutstanding(string BtnClick, string SelectedCLCode)
+        {
+            string StrSelect = "";
+            string StrCDC = "";
+            char[] ArrSeparters = new char[1];
+            ArrSeparters[0] = '/';
+            string[] StrClCd;
+            string StrDataFields = "";
+            string StrHeaderTitles = "";
+            //string StrSubTotalsFor = "";
+            string StrTextAlign = "";
+            string StrTextLength = "";
+            string Strcolhide = "";
+            StrClCd = Convert.ToString(SelectedCLCode).Split(ArrSeparters);
+            int i = 0;
+            for (i = 0; i < StrClCd.Length - 1; i++)
+            {
+                StrSelect += " sum(case when td_clientcd ='" + StrClCd[i].Trim().Split('~')[0].Trim() + "' then (td_bqty-td_sqty) else 0 end ) as '" + StrClCd[i].Trim().Split('~')[0].Trim() + "_Net',";
+                StrSelect += " convert(decimal(15,2), case sum(case when td_clientcd ='" + StrClCd[i].Trim().Split('~')[0].Trim() + "' then (td_bqty -td_sqty) else 0 end ) when 0 then 0 ";
+                StrSelect += " else abs(sum(case when td_clientcd ='" + StrClCd[i].Trim().Split('~')[0].Trim() + "' then ((td_bqty -td_sqty)*td_rate) else 0 end )/sum(case when td_clientcd='" + StrClCd[i].Trim().Split('~')[0].Trim() + "' then (td_bqty-td_sqty) else 0 end ))end) '" + StrClCd[i].Trim().Split('~')[0].Trim() + "_Avgrate', ";
+                StrCDC += "'" + StrClCd[i].Trim().Split('~')[0].Trim() + "',";
+                StrDataFields += StrClCd[i].Trim().Split('~')[0].Trim() + "_Net," + StrClCd[i].Trim().Split('~')[0].Trim() + "_Avgrate,";
+                StrHeaderTitles += "Net,AvgRate,";
+                StrTextAlign += "R,R,";
+                StrTextLength += "15,15,";
+                //Strcolhide += i + 1 + "," + i + 2 + ",";
+            }
+            StrCDC = Strings.Left(StrCDC, StrCDC.Length - 1);
+
+            string StrTradesIndex = "";
+            if (Convert.ToInt16(objUtility.fnFireQueryTradeWeb("sysobjects a, sysindexes b", "COUNT(0)", "a.id = b.id and a.name = 'trades' and b.name", "idx_trades_clientcd", true)) == 1)
+            { StrTradesIndex = "index(idx_trades_clientcd),"; }
+
+            if (_configuration["IsTradeWeb"] == "O")//Connect to Live DataBase
+            {
+                string StrCommexConn = "";
+                StrCommexConn = objUtility.GetCommexConnection();
+
+                //Query To Fecth Record From TradePlus DataBase
+                strsql = "Select ltrim(rtrim(sm_desc)) sm_desc," + StrSelect;
+                strsql += " convert(decimal(15,2), (isnull((select ms_lastprice from Market_summary with (nolock) where ms_exchange = td_exchange and ms_Segment = td_Segment and ms_seriesid = td_seriesid and ms_dt = (select max(ms_dt) from Market_summary with (nolock) where ms_exchange = td_exchange and ms_Segment = td_Segment and ms_seriesid = td_seriesid and  ms_dt <= '" + DateTime.Today.Date.ToString("yyyyMMdd") + "')),0) + case  when right(sm_prodtype,1) <> 'F' then  sm_strikeprice  else 0 end) ) ot_closeprice,  ";
+                strsql += " convert(decimal(15,2), (isnull((select ms_lastprice from Market_summary with (nolock) where ms_exchange = td_exchange and ms_Segment = td_Segment and ms_seriesid = td_seriesid  and ms_dt = (select max(ms_dt) from Market_summary with (nolock) where ms_exchange = td_exchange and ms_Segment = td_Segment and ms_seriesid = td_seriesid and  ms_dt <= '" + DateTime.Today.Date.ToString("yyyyMMdd") + "')),0)   + case when right(sm_prodtype,1) <> 'F' then sm_strikeprice  else 0 end)	 *sum(td_bqty-td_sqty) * sm_multiplier ) Closing,  ";
+                strsql += " case sm_prodtype when 'IF' then 1 when 'EF' then 2 when 'IO' then 3 when 'EO' then 4 else 5 end listorder, ";
+                strsql += " case td_Segment when 'K' then case td_exchange when 'N' then 'NSEFX' when 'M' then 'MCXFX' when 'B' then 'BSEFX' end  when 'F' then Case td_exchange when 'B' then 'BSE' when 'N' then 'NSE' when 'M' then 'MCX' when 'X' then  Case td_exchange when 'B' then 'BSE' when 'N' then 'NSE' when 'M' then 'MCX' end  end end strExchange, ";
+                strsql += " case right(sm_prodtype,1) when 'F' then 'Future' else 'Option' end+ case td_segment when 'X' then '(Commodities)' else (case sm_prodtype when 'CF' then ' (Currency)'  else ''end ) end  as tdType ";
+                strsql += " from Trades  with (" + StrTradesIndex + "nolock), Series_master with (nolock)   ";
+                strsql += " where td_seriesid=sm_seriesid and td_exchange = sm_exchange and td_Segment = sm_Segment  ";
+                strsql += " and td_clientcd in (" + StrCDC + ") and td_dt <= '" + DateTime.Today.Date.ToString("yyyyMMdd") + "' and sm_expirydt >= '" + DateTime.Today.Date.ToString("yyyyMMdd") + "'  ";
+                strsql += " group by sm_desc,td_exchange,td_Segment,td_seriesid,sm_prodtype,sm_strikeprice,sm_multiplier ";
+                strsql += " having sum(case when td_clientcd in (" + StrCDC + ")  then (td_bqty-td_sqty) else 0 end )  <> 0";
+
+                string StrComTradesIndex = "";
+                //Query To Fecth Record From Commex DataBase
+                if (_configuration["Commex"] != null && _configuration["Commex"] != string.Empty)
+                {
+                    if (Convert.ToInt16(objUtility.fnFireQueryTradeWeb(StrCommexConn + ".sysobjects a, " + StrCommexConn + ".sysindexes b", "COUNT(0)", "a.id = b.id and a.name = 'trades' and b.name", "idx_trades_clientcd", true)) == 1)
+                    { StrComTradesIndex = "index(idx_trades_clientcd),"; }
+
+                    strsql += " Union all ";
+                    strsql += " Select ltrim(rtrim(sm_desc)) sm_desc, " + StrSelect;
+                    strsql += " convert(decimal(15,2), (isnull((select ms_lastprice from " + StrCommexConn + ".Market_summary with (nolock) where ms_exchange = td_exchange and ms_seriesid = td_seriesid and ms_dt = (select max(ms_dt) from " + StrCommexConn + ".Market_summary with (nolock) where ms_exchange = td_exchange and ms_seriesid = td_seriesid and  ms_dt <= '" + DateTime.Today.Date.ToString("yyyyMMdd") + "')),0)   + case  when right(sm_prodtype,1) <> 'F' then  sm_strikeprice  else 0 end) ) ot_closeprice, ";
+                    strsql += " convert(decimal(15,2), (isnull((select ms_lastprice from " + StrCommexConn + ".Market_summary with (nolock) where ms_exchange = td_exchange and ms_seriesid = td_seriesid  and ms_dt = (select max(ms_dt) from " + StrCommexConn + ".Market_summary with (nolock) where ms_exchange = td_exchange and ms_seriesid = td_seriesid and  ms_dt <= '" + DateTime.Today.Date.ToString("yyyyMMdd") + "')),0)   + case  when right(sm_prodtype,1) <> 'F' then sm_strikeprice  else 0 end)	  *sum(td_bqty-td_sqty) * sm_multiplier ) Closing, ";
+                    strsql += " case sm_prodtype when 'CF'then 11 else 12 end listorder, ";
+                    strsql += " case td_exchange when 'M' then 'MCX' when 'N' then 'NCDEX' when 'S' then 'NSEL' when 'F' Then 'NCDEX' end strExchange ,";
+                    strsql += " case right(sm_prodtype,1)when 'F' then 'Future (Commodities)' else 'Option (Commodities)' end as tdType ";
+                    strsql += " from " + StrCommexConn + ".Trades with(nolock), " + StrCommexConn + ".Series_master with (nolock) ";
+                    strsql += " where td_seriesid=sm_seriesid and td_exchange = sm_exchange and td_clientcd  in (" + StrCDC + ") ";
+                    strsql += " and td_dt <= '" + DateTime.Today.Date.ToString("yyyyMMdd") + "' and sm_expirydt > '" + DateTime.Today.Date.ToString("yyyyMMdd") + "' ";
+                    strsql += " group by sm_desc,td_exchange,td_seriesid,sm_prodtype,sm_strikeprice,sm_multiplier ";
+                    strsql += " having sum(case when td_clientcd in (" + StrCDC + ")  then (td_bqty-td_sqty) else 0 end )  <> 0";
+                    strsql += " order by listorder,sm_desc";
+                }
+            }
+            DataSet ObjDataSet = new DataSet();
+            ObjDataSet = objUtility.OpenDataSet(strsql);
+            return ObjDataSet;
+        }
+
+        public DataSet Get_QueryFor_Transaction_Btn_Data(string BtnClick, String SelectedCLCode, string SelectedValue, string FromDate, string ToDate)
+        {
+            DataSet ds = new DataSet();
+            if (BtnClick == "T")
+            {
+                if (SelectedValue == "Trades")
+                {
+                    ds = ShowTransaction(BtnClick, SelectedCLCode, SelectedValue, FromDate, ToDate);
+                }
+
+                if (SelectedValue == "Journals" || SelectedValue == "Receipts/Payments")
+                {
+                    ds = ShowTrxReceipts(BtnClick, SelectedCLCode, SelectedValue, FromDate, ToDate);
+                }
+            }
+            return ds;
+        }
+        public DataSet ShowTransaction(string BtnClick, String SelectedCLCode, string SelectedValue, string FromDate, string ToDate)
+        {
+            string StrSelect = "";
+            string StrCDC = "";
+            char[] ArrSeparters = new char[1];
+            ArrSeparters[0] = '/';
+            string[] StrClCd;
+            string StrDataFields = "";
+            string StrHeaderTitles = "";
+            //string StrSubTotalsFor = "";
+            string StrTextAlign = "";
+            string StrTextLength = "";
+            string Strcolhide = "";
+            string StrColWidth = "";
+            StrClCd = Convert.ToString(SelectedCLCode).Split(ArrSeparters);
+            int i = 0;
+            for (i = 0; i < StrClCd.Length - 1; i++)
+            {
+                StrSelect += " SUM(Case when td_clientcd = '" + StrClCd[i].Trim().Split('~')[0].Trim() + "' then X.NQty else 0 end) as '" + StrClCd[i].Trim().Split('~')[0].Trim() + "_Qty',";
+                StrSelect += " SUM(Case when td_clientcd = '" + StrClCd[i].Trim().Split('~')[0].Trim() + "' then case  When NQty = 0 then 0 else Convert(decimal(15,2),(X.NAmt / X.NQty )) end  else 0 end) as '" + StrClCd[i].Trim().Split('~')[0].Trim() + "_Rate',";
+                //StrSelect += " SUM(Case when td_clientcd = '" + StrClCd[i].Trim().Split('~')[0].Trim() + "' then Case When X.NQty = 0 then 0 else X.NAmt end else 0 end) as '" + StrClCd[i].Trim().Split('~')[0].Trim() + "_Amount',";
+
+                StrCDC += "'" + StrClCd[i].Trim().Split('~')[0].Trim() + "',";
+                StrDataFields += StrClCd[i].Trim().Split('~')[0].Trim() + "_Qty," + StrClCd[i].Trim().Split('~')[0].Trim() + "_Rate,";
+                StrHeaderTitles += "Qty,Rate,";
+                StrTextAlign += "R,R,";
+                StrTextLength += "15,15,";
+                StrColWidth += "8,15";
+                Strcolhide += 3 + i + "," + 3 + (i + 1) + ",";
+            }
+            StrCDC = Strings.Left(StrCDC, StrCDC.Length - 1);
+            Strcolhide = Strings.Left(Strcolhide, Strcolhide.Length - 1);
+            string StrComTradesIndex = string.Empty;
+            string StrTradesIndex = "";
+            if (Convert.ToInt16(objUtility.fnFireQueryTradeWeb("sysobjects a, sysindexes b", "COUNT(0)", "a.id = b.id and a.name = 'trades' and b.name", "idx_trades_clientcd", true)) == 1)
+            { StrTradesIndex = "index(idx_trades_clientcd),"; }
+
+            string StrTRXIndex = "";
+            if (Convert.ToInt16(objUtility.fnFireQueryTradeWeb("sysobjects a, sysindexes b", "COUNT(0)", "a.id = b.id and a.name = 'Trx' and b.name", "idx_Trx_Clientcd", true)) == 1)
+            { StrTRXIndex = "index(idx_trx_clientcd),"; }
+
+            DataSet ObjDataSet = new DataSet();
+
+            strsql = " select td_scripnm, snm,Td_Type, " + StrSelect;
+            strsql += " SUM(X.NQty) as 'TotalQty',SUM(case  When NQty = 0 then 0 else Convert(decimal(15,2),(X.NAmt / X.NQty )) end) as 'TotalRate'";
+            strsql += " From ( ";
+
+            if (_configuration["IsTradeWeb"] == "O")//Live DB
+            {
+                strsql += " select td_clientcd,1 Td_order,'' as td_ac_type,'' as td_trxdate,'' as td_isin_code,'' as sc_company_name,";
+                strsql += " cast((case when sum(td_bqty-td_sqty)=0 then 0 else sum((td_bqty-td_sqty)*td_rate)/sum(td_bqty-td_sqty) end)as";
+                strsql += " decimal(15,2) )   as rate,'Equity ' Td_Type,'' as FScripNm,'' as FExDt,";
+                strsql += " rtrim(td_scripcd)td_scripnm , rtrim(ss_name) snm,";
+                strsql += " sum(td_bqty) Bqty, convert(decimal(15,2), sum(td_bqty*td_rate)) BAmt, ";
+                strsql += " sum(td_sqty) Sqty, convert(decimal(15,2), sum(td_sqty*td_rate)) SAmt, sum(td_bqty-td_sqty) NQty, convert(decimal(15,2), sum((td_bqty-td_sqty)*td_rate)) NAmt, ";
+                strsql += " '' as td_debit_credit,0 as sm_strikeprice,'' as sm_callput,'Equity|'+td_scripcd LinkCode ";
+                strsql += " from Trx with (" + StrTRXIndex + "nolock) , securities with(nolock)";
+                strsql += " where td_clientcd in (" + StrCDC + ") and td_dt between '" + FromDate + "' and '" + ToDate + "' ";
+                strsql += " and td_Scripcd = ss_cd";
+                strsql += " group by td_scripcd, ss_name ,'Equity|'+td_scripcd,td_clientcd  ";
+            }
+
+            strsql += " union all ";
+            strsql += " select td_clientcd,case left(sm_productcd,1) when 'F' then 2 else 3 end,'', '','' as td_isin_code,'' as sc_company_name, ";
+            strsql += " cast((case when  sum(td_bqty-td_sqty)=0 then 0 else sum((td_bqty-td_sqty)*td_rate)/sum(td_bqty-td_sqty) end)as decimal(15,2) ) as rate,";
+            strsql += " Case When td_segment='K' then 'Currency ' else 'Equity ' end + ";
+            strsql += " Case left(sm_productcd,1) when 'F' Then 'Future ' else 'Option ' end Td_Type,rtrim(sm_symbol), sm_expirydt,rtrim(sm_symbol), case left(sm_productcd,1) when 'F' then 'Fut ' else 'Opt ' end+ rtrim(sm_symbol)+'  Exp: '+ ltrim(rtrim(convert(char,convert(datetime,sm_expirydt),103))) + case left(sm_productcd,1) when 'F' then '' else ''+rtrim(convert(char(9),sm_strikeprice))+sm_callput+sm_optionstyle end, sum(td_bqty) Bqty, convert(decimal(15,2),sum(td_bqty*td_rate*sm_multiplier)) BAmt,  ";
+            strsql += " sum(td_sqty) Sqty, convert(decimal(15,2),sum(td_sqty*td_rate*sm_multiplier)) SAmt, sum(td_bqty-td_sqty) NQty,  ";
+            strsql += " convert(decimal(15,2),sum((td_bqty-td_sqty)*td_rate *sm_multiplier)) NAmt,'' as td_debit_credit ,sm_strikeprice, sm_callput,";
+            strsql += " Case When td_segment='K' then 'Currency' else 'Equity' end + ";
+            strsql += " Case left(sm_productcd,1) when 'F' Then 'Future' else 'Option' end + '|' + td_exchange + '|' + replace(sm_symbol,'&','-')  + '|' + left(sm_productcd,1) + '|' + sm_expirydt + '|' + Rtrim(Ltrim(Convert(char,sm_strikeprice))) + '|' +  sm_callput + '|' +  sm_optionstyle + '|' +  td_Segment LinkCode";
+            strsql += " from trades with (" + StrTradesIndex + "nolock), series_master with (nolock) ";
+            strsql += " where td_clientcd in (" + StrCDC + ") and sm_exchange=td_exchange and sm_Segment=td_Segment and td_seriesid=sm_seriesid ";
+            strsql += " and td_dt between '" + FromDate + "' and '" + ToDate + "' and td_trxflag <> 'O'  ";
+            strsql += " group by sm_symbol, sm_productcd,td_exchange,td_Segment, sm_expirydt, sm_strikeprice, sm_callput ,td_exchange,sm_optionstyle,td_clientcd";
+            strsql += " union all ";
+            strsql += " select ex_clientcd,4 ,'','' as td_trxdate,'' as td_isin_code,'' as sc_company_name,cast((case when  sum(ex_aqty-ex_eqty)=0 then 0 else sum((ex_aqty-ex_eqty)*ex_diffrate *case ex_eaflag When 'A' Then -1 else 1 end)/sum(ex_aqty-ex_eqty) end)as decimal(15,2) ) as rate , ";
+            strsql += " Case When ex_Segment='K' then 'Currency ' else 'Equity ' end + case ex_eaflag when 'E' then 'Exercise ' else 'Assignment ' end Td_Type, '','', rtrim(sm_symbol), case left(sm_productcd,1) when 'F' then 'Fut ' else 'Opt ' end+ rtrim(sm_symbol)+'  Exp: '+ ltrim(rtrim(convert(char,convert(datetime,sm_expirydt),103))) + case left(sm_productcd,1) when 'F' then '' else ''+rtrim(convert(char(9),sm_strikeprice))+sm_callput+sm_optionstyle end, sum(ex_aqty) Bqty, ";
+            strsql += " convert(decimal(15,2),sum(ex_aqty*ex_diffrate *case ex_eaflag When 'A' Then -1 else 1 end *sm_multiplier)) BAmt, sum(ex_eqty) Sqty, convert(decimal(15,2),sum(ex_eqty*ex_diffrate *case ex_eaflag When 'A' Then -1 else 1 end  *sm_multiplier)) SAmt, ";
+            strsql += " sum(ex_aqty-ex_eqty) NQty, convert(decimal(15,2),sum((ex_aqty-ex_eqty)*ex_diffrate *case ex_eaflag When 'A' Then -1 else 1 end    *sm_multiplier)) NAmt,'' as td_debit_credit,0,'', ";
+            strsql += " Case When ex_segment='K' then 'Currency' else 'Equity' end + ";
+            strsql += " case ex_eaflag when 'E' then 'Exercise' else 'Assignment' end + '|' + ex_exchange + '|' + replace(sm_symbol,'&','-')  + '|' + left(sm_productcd,1) + '|' + sm_expirydt + '|' + Rtrim(Ltrim(Convert(char,sm_strikeprice))) + '|' +  sm_callput + '|' +  sm_optionstyle + '|' +  ex_Segment LinkCode";
+            strsql += " from exercise with (nolock), series_master with (nolock) where ex_clientcd in (" + StrCDC + ")";
+            strsql += " and ex_exchange=sm_exchange and ex_Segment=sm_Segment and ex_seriesid=sm_seriesid ";
+            strsql += " and ex_dt between '" + FromDate + "' and '" + ToDate + "' group by ex_eaflag, sm_symbol,ex_exchange,ex_Segment,sm_productcd,sm_expirydt, sm_strikeprice, sm_callput ,sm_optionstyle,ex_clientcd ";
+
+
+            if (_configuration["IsTradeWeb"] == "O")//Live
+            {
+                if (_configuration["Commex"] != null && _configuration["Commex"] != string.Empty)
+                {
+
+                    string StrCommexConn = "";
+                    StrCommexConn = objUtility.GetCommexConnection();
+                    if (Convert.ToInt16(objUtility.fnFireQueryTradeWeb(StrCommexConn + ".sysobjects a, " + StrCommexConn + ".sysindexes b", "COUNT(0)", "a.id = b.id and a.name = 'trades' and b.name", "idx_trades_clientcd", true)) == 1)
+                    { StrComTradesIndex = "index(idx_trades_clientcd),"; }
+
+                    strsql += " union all ";
+                    strsql += " select td_clientcd,case left(sm_productcd,1) when 'F' then 5 else 6 end,'', '','' as td_isin_code,";
+                    strsql += " '' as sc_company_name,   cast((case when  sum(td_bqty-td_sqty)=0 then 0 else ";
+                    strsql += " sum((td_bqty-td_sqty)*td_rate)/sum(td_bqty-td_sqty) end)as decimal(15,2) ) as rate,";
+                    strsql += " case left(sm_productcd,1) when 'F' then ";
+                    strsql += " 'Future (Commodities)' else 'Option (Commodities)' end Td_Type,rtrim(sm_symbol), sm_expirydt,rtrim(sm_symbol), case left(sm_productcd,1) ";
+                    strsql += " when 'F' then 'Fut ' else 'Opt ' end+ rtrim(sm_symbol)+'  Exp: '+ ";
+                    strsql += " ltrim(rtrim(convert(char,convert(datetime,sm_expirydt),103))) + ";
+                    strsql += " case left(sm_productcd,1) when 'F' then '' else ''+rtrim(convert(char(9),sm_strikeprice))+sm_callput end, ";
+                    strsql += " sum(td_bqty) Bqty, convert(decimal(15,2), sum(td_bqty*td_rate *sm_multiplier)) BAmt,  sum(td_sqty) Sqty, convert(decimal(15,2), sum(td_sqty*td_rate*sm_multiplier)) SAmt, ";
+                    strsql += " sum(td_bqty-td_sqty) NQty, convert(decimal(15,2),sum((td_bqty-td_sqty)*td_rate*sm_multiplier)) NAmt,'' as td_debit_credit ,sm_strikeprice, sm_callput,'Commodities' + '|' + td_exchange + '|' + replace(sm_symbol,'&','-')  + '|' + sm_expirydt LinkCode ";
+                    strsql += " from " + StrCommexConn + ".trades with(" + StrComTradesIndex + "nolock), " + StrCommexConn + ".series_master with (nolock) ";
+                    strsql += " where td_clientcd in (" + StrCDC + ") and sm_exchange=td_exchange and td_seriesid=sm_seriesid and td_dt ";
+                    strsql += " between '" + FromDate + "' and '" + ToDate + "' and td_trxflag <> 'O'  ";
+                    strsql += " group by sm_symbol, sm_productcd,td_exchange, sm_expirydt, sm_strikeprice, sm_callput,td_clientcd  ";
+                }
+            }
+
+            strsql += "  ) X ";
+            strsql += " Group BY Td_Type,td_scripnm,snm";
+            strsql += " Order by Td_Type,snm,td_scripnm";
+
+            ObjDataSet = new DataSet();
+            ObjDataSet = objUtility.OpenDataSet(strsql);
+            return ObjDataSet;
+        }
+        public DataSet ShowTrxReceipts(string BtnClick, String SelectedCLCode, string SelectedValue, string FromDate, string ToDate)
+        {
+            string StrCDC = "";
+            char[] ArrSeparters = new char[1];
+            ArrSeparters[0] = '/';
+            string[] StrClCd;
+            StrClCd = Convert.ToString(SelectedCLCode).Split(ArrSeparters);
+            int i = 0;
+            for (i = 0; i < StrClCd.Length - 1; i++)
+            {
+                StrCDC += "'" + StrClCd[i].Trim().Split('~')[0].Trim() + "',";
+            }
+            StrCDC = Strings.Left(StrCDC, StrCDC.Length - 1);
+
+            if (SelectedValue == "Receipts/Payments")
+            {
+                strsql = " select ltrim(rtrim(ld_clientcd)) ld_clientcd,cm_name,";
+                strsql += " convert(decimal(15,2),sum(case ld_documenttype When 'R' Then Abs(ld_amount) else 0 end))  RAmt, ";
+                strsql += " convert(decimal(15,2),sum(case ld_documenttype When 'P' Then (ld_amount) else 0 end))  PAmt ";
+                strsql += " from ledger with (nolock),Client_master with (nolock)";
+                strsql += " where cm_cd = ld_clientcd and ld_documenttype in ('R','P')";
+                strsql += " and ld_clientcd in (" + StrCDC + ") and ld_dt between '" + FromDate + "' and '" + ToDate + "'";
+                strsql += " group by  ld_clientcd,cm_name ";
+                strsql += " order by cm_name ";
+
+                DataSet ObjDataSet = objUtility.OpenDataSet(strsql);
+                return ObjDataSet;
+            }
+            else
+            {
+                strsql = " select ld_clientcd,cm_name, ";
+                strsql += " sum(case ld_debitflag when 'D' then convert(decimal(15,2),ld_amount)else 0 end)  Dr, ";
+                strsql += " sum(case ld_debitflag when 'D' then 0 else convert(decimal(15,2),-ld_amount) end ) Cr ";
+                strsql += " from ledger with (nolock),Client_master with (nolock) where cm_cd = ld_clientcd and ld_documenttype='J' ";
+                strsql += " and ld_clientcd in (" + StrCDC + ")";
+                strsql += "  and ld_dt between '" + FromDate + "' and '" + ToDate + "'";
+                strsql += " group by cm_name,ld_clientcd order by cm_name";
+
+                DataSet ObjDataSet = objUtility.OpenDataSet(strsql);
+                return ObjDataSet;
+            }
+        }
+
+        public DataSet Get_QueryFor_Transaction_Btn_RPJ_Detailed_Data(string Client, string Type, string FromDate, string ToDate)
+        {
+            //Un-Comment below two lines when running API Seperately
+            #region
+            //FromDate = objUtility.dtos(FromDate.ToString());
+            //ToDate = objUtility.dtos(ToDate.ToString());
+            #endregion
+            string StrNm = objUtility.fnFireQueryTradeWeb(" Client_master ", "cm_name", "cm_cd", Client.Trim(), true);
+            if (Type.Trim() == "R" || Type.Trim() == "P")
+            {
+                strsql = " select 'DP Transaction' Td_Type,ld_documentno , ltrim(rtrim(convert(char,convert(datetime,ld_dt),103))) Date , ld_Particular , ld_Chequeno,";
+                strsql += "convert(decimal(15,2),case ld_documenttype When 'R' Then (-1) else 1 end*ld_amount)  Amount from ledger with (nolock)";
+                strsql += "where ld_documenttype = '" + Type.Trim() + "'";
+                strsql += "and ld_clientcd='" + Client.Trim() + "' and ld_dt between '" + FromDate + "' and '" + ToDate + "'";
+                strsql += "order by ld_dt desc ";
+            }
+            else
+            {
+                strsql = "select 'DP Transaction' Td_Type,ld_documentno , ltrim(rtrim(convert(char,convert(datetime,ld_dt),103))) Date , ";
+                strsql = strsql + " ld_Particular  , case ld_debitflag when 'D' then convert(decimal(15,2),ld_amount) else 0 end  Debit,";
+                strsql = strsql + " case ld_debitflag when 'D' then 0 else convert(decimal(15,2),-ld_amount) end  Credit";
+                strsql = strsql + " from ledger with (nolock) where ld_documenttype= 'J'";
+                strsql = strsql + " and ld_clientcd='" + Client.Trim() + "'";
+                strsql = strsql + " and ld_dt between '" + FromDate + "' and '" + ToDate + "'";
+                strsql = strsql + " order by ld_dt desc";
+            }
+            DataSet ObjDataSet = new DataSet();
+            ObjDataSet = objUtility.OpenDataSet(strsql);
+            return ObjDataSet;
+        }
+
+        #endregion
+
         #endregion
         #endregion
     }
