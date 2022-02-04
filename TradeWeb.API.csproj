@@ -14,6 +14,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="wwwroot\AggreementFile\mg040.pdf" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.AspNet.Identity.EntityFramework" Version="2.2.3" />
     <PackageReference Include="Microsoft.AspNet.Mvc" Version="5.2.7" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.AzureAD.UI" Version="3.1.17" />
