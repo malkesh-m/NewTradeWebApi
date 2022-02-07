@@ -121,6 +121,7 @@ namespace TradeWeb.API.Controllers
             }
             return BadRequest();
         }
+
         /// <summary>
         /// 
         /// </summary>
@@ -128,9 +129,9 @@ namespace TradeWeb.API.Controllers
         /// <param name="toDate"></param>
         /// <param name="type_cesCd"></param>
         /// <returns></returns>
-        [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("Ledger_Detail", Name = "Ledger_Detail")]
-        public IActionResult Ledger_Detail(string fromDate, string toDate, string type_cesCd)
+        //[Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpPost("Ledger_Detail", Name = "Ledger_Detail")]
+        public IActionResult Ledger_Detail( LedgerDetailsModel model /*string fromDate, string toDate, string type_cesCd*/)
         {
             if (ModelState.IsValid)
             {
@@ -141,7 +142,7 @@ namespace TradeWeb.API.Controllers
                     var tokenS = GetToken();
                     var userName = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.Ledger_Detail(userName, fromDate, toDate, type_cesCd);
+                    var getData = _tradeWebRepository.Ledger_Detail(userName, model, model.fromDate, model.toDate);
                     if (getData != null)
                     {
                         return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });

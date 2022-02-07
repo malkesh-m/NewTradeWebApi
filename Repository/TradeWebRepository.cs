@@ -12,6 +12,7 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using TradeWeb.API.Data;
+using TradeWeb.API.Models;
 
 namespace TradeWeb.API.Repository
 {
@@ -39,7 +40,7 @@ namespace TradeWeb.API.Repository
 
         public dynamic Ledger_Summary(string userId, string type, string fromdate, string toDate);
 
-        public dynamic Ledger_Detail(string userId, string fromDate, string toDate, string type_cesCd);
+        public dynamic Ledger_Detail(string userId, LedgerDetailsModel model, string fromDate, string toDate);
 
         public dynamic OutStandingPosition(string userId, string AsOnDt);
 
@@ -1448,13 +1449,14 @@ namespace TradeWeb.API.Repository
             }
         }
 
-        public dynamic Ledger_Detail(string userId, string fromDate, string toDate, string type_cesCd)
+        public dynamic Ledger_Detail(string userId, LedgerDetailsModel model, string fromDate, string toDate)
         {
 
             string strTable = " Ledger ";
             string strsql = "";
             string strCommTable = string.Empty;
             string strCommClientMaster = string.Empty;
+            string type_cesCd = "";
 
             if (_configuration["Commex"] != null && _configuration["Commex"] != string.Empty)
             {
@@ -1464,6 +1466,22 @@ namespace TradeWeb.API.Repository
                 strCommClientMaster = StrCommexConn + ".Client_master";
             }
 
+            foreach(var segmentModel in model.segmentModel)
+            {
+                foreach(var exSeg in segmentModel.exchangeSegment)
+                {
+                    if (!string.IsNullOrEmpty(type_cesCd))
+                    {
+                        type_cesCd = type_cesCd + "|" + segmentModel.type + "," + exSeg;
+                    }
+                    else
+                    {
+                        type_cesCd = type_cesCd + segmentModel.type + "," + exSeg;
+                    }
+                    
+                }
+                
+            }
 
             strsql = string.Empty;
 
@@ -1474,7 +1492,7 @@ namespace TradeWeb.API.Repository
                     strsql = strsql + " union all ";
                 }
 
-                if (type_cesCd.Split("|")[i].Split(",")[0].ToUpper() == "1")
+                if (type_cesCd.Split("|")[i].Split(",")[0].ToUpper() == "TRADING")
                 {
                     strsql = strsql + " select 'Trading' as [Type],ld_clientcd,convert(char,convert(datetime,'" + fromDate + "'),103) ld_dt,Rtrim(CES_Exchange) + '-' + CES_Segment [ExchSeg],";
                     strsql = strsql + " cast(sum(case sign(datediff(d,'" + fromDate + "',ld_dt)) when -1 then ld_amount else 0 end)as decimal(15,2)) as ld_amount,'Opening Balance' ld_particular, case sign(sum(ld_amount)) when 1 then 'D' else 'C' end as ";
@@ -1491,7 +1509,7 @@ namespace TradeWeb.API.Repository
                     strsql = strsql + "  and ld_dt between '" + fromDate + "' and '" + toDate + "' and ld_dpid = '" + type_cesCd.Split("|")[i].Split(",")[1] + "'";
                 }
 
-                if (type_cesCd.Split("|")[i].Split(",")[0].ToUpper() == "2")
+                if (type_cesCd.Split("|")[i].Split(",")[0].ToUpper() == "TRADING-MARGIN")
                 {
                     strsql = strsql + " select 'Trading-Margin' as [Type],ld_clientcd,convert(char,convert(datetime,'" + fromDate + "'),103) ld_dt,Rtrim(CES_Exchange) + '-' + CES_Segment [ExchSeg],";
                     strsql = strsql + " cast(sum(case sign(datediff(d,'" + fromDate + "',ld_dt)) when -1 then ld_amount else 0 end)as decimal(15,2)) as ld_amount,'Opening Balance' ld_particular, case sign(sum(ld_amount)) when 1 then 'D' else 'C' end as ";
@@ -1509,7 +1527,7 @@ namespace TradeWeb.API.Repository
                 }
 
 
-                if (type_cesCd.Split("|")[i].Split(",")[0].ToUpper() == "3")
+                if (type_cesCd.Split("|")[i].Split(",")[0].ToUpper() == "COMMODITY")
                 {
                     strsql = strsql + " select 'Trading' as [Type],ld_clientcd,convert(char,convert(datetime,'" + fromDate + "'),103) ld_dt,Rtrim(CES_Exchange) + '-Comm' [ExchSeg],";
                     strsql = strsql + " cast(sum(case sign(datediff(d,'" + fromDate + "',ld_dt)) when -1 then ld_amount else 0 end)as decimal(15,2)) as ld_amount,'Opening Balance' ld_particular, case sign(sum(ld_amount)) when 1 then 'D' else 'C' end as ";
@@ -1526,7 +1544,7 @@ namespace TradeWeb.API.Repository
                     strsql = strsql + "  and ld_dt between '" + fromDate + "' and '" + toDate + "' and ld_dpid = '" + type_cesCd.Split("|")[i].Split(",")[1] + "'";
                 }
 
-                if (type_cesCd.Split("|")[i].Split(",")[0].ToUpper() == "4")
+                if (type_cesCd.Split("|")[i].Split(",")[0].ToUpper() == "COMMODITY-MARGIN")
                 {
                     strsql = strsql + " select 'Commodity-Margin' as [Type],ld_clientcd,convert(char,convert(datetime,'" + fromDate + "'),103) ld_dt,Rtrim(CES_Exchange) + '-Comm' [ExchSeg],";
                     strsql = strsql + " cast(sum(case sign(datediff(d,'" + fromDate + "',ld_dt)) when -1 then ld_amount else 0 end)as decimal(15,2)) as ld_amount,'Opening Balance' ld_particular, case sign(sum(ld_amount)) when 1 then 'D' else 'C' end as ";
@@ -1543,7 +1561,7 @@ namespace TradeWeb.API.Repository
                     strsql = strsql + "  and ld_dt between '" + fromDate + "' and '" + toDate + "' and ld_dpid = '" + type_cesCd.Split("|")[i].Split(",")[1] + "'";
                 }
 
-                if (type_cesCd.Split("|")[i].Split(",")[0].ToUpper() == "5")
+                if (type_cesCd.Split("|")[i].Split(",")[0].ToUpper() == "MTF")
                 {
                     strsql = strsql + " select 'MTF' as [Type],ld_clientcd,convert(char,convert(datetime,'" + fromDate + "'),103) ld_dt,Rtrim(CES_Exchange) + '-MTF' [ExchSeg],";
                     strsql = strsql + " cast(sum(case sign(datediff(d,'" + fromDate + "',ld_dt)) when -1 then ld_amount else 0 end)as decimal(15,2)) as ld_amount,'Opening Balance' ld_particular, case sign(sum(ld_amount)) when 1 then 'D' else 'C' end as ";
@@ -1561,7 +1579,7 @@ namespace TradeWeb.API.Repository
 
                 }
 
-                if (type_cesCd.Split("|")[i].Split(",")[0].ToUpper() == "6")
+                if (type_cesCd.Split("|")[i].Split(",")[0].ToUpper() == "NBFC")
                 {
                     strsql = strsql + " select 'Trading-Margin' as [Type],ld_clientcd,convert(char,convert(datetime,'" + fromDate + "'),103) ld_dt,'NBFC' [ExchSeg],";
                     strsql = strsql + " cast(sum(case sign(datediff(d,'" + fromDate + "',ld_dt)) when -1 then ld_amount else 0 end)as decimal(15,2)) as ld_amount,'Opening Balance' ld_particular, case sign(sum(ld_amount)) when 1 then 'D' else 'C' end as ";
@@ -1586,8 +1604,6 @@ namespace TradeWeb.API.Repository
                 var ds = CommonRepository.FillDataset(strsql);
                 if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
                 {
-                    //DataTable dt = new DataTable();
-                    //EntityList = ConvertData.ConvertDataTable<LedgerDetailsEntity>(ds.Tables[0]);
                     var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
                     return json;
                 }
