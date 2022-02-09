@@ -1484,9 +1484,9 @@ namespace TradeWeb.API.Repository
                 strCommClientMaster = StrCommexConn + ".Client_master";
             }
 
-            foreach (var segmentModel in model.segmentModel)
+            foreach(var segmentModel in model.type_exchseg)
             {
-                foreach (var exSeg in segmentModel.exchangeSegment)
+                foreach(var exSeg in segmentModel.exchseg)
                 {
                     if (!string.IsNullOrEmpty(type_cesCd))
                     {

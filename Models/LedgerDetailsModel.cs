@@ -10,13 +10,13 @@ namespace TradeWeb.API.Models
         public string fromDate { get; set; }
         public string toDate { get; set; }
 
-        public List<SegmentModel> segmentModel { get; set; }
+        public List<SegmentModel> type_exchseg { get; set; }
     }
 
     public class SegmentModel
     {
         public string type { get; set; }
 
-        public List<string> exchangeSegment { get; set; }
+        public List<string> exchseg { get; set; }
     }
 }
