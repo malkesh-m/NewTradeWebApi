@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc.RazorPages;
+﻿using INVPLService;
+using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -13,6 +14,7 @@ using System.Net;
 using System.Text;
 using TradeWeb.API.Data;
 using TradeWeb.API.Models;
+using static INVPLService.NVPLSoapClient;
 
 namespace TradeWeb.API.Repository
 {
@@ -93,6 +95,18 @@ namespace TradeWeb.API.Repository
         public dynamic Get_Transaction_Btn_Data(string BtnClick, string SelectedCLCode, string SelectedValue, string FromDate, string ToDate);
 
         public dynamic Get_Transaction_Btn_RPJ_Detailed_Data(string Client, string Type, string FromDate, string ToDate);
+
+        public dynamic GetINVPLDivListing(string userId, string FromDate, string ToDate);
+
+        public dynamic GetINVPLGainLoss(string userId, string FromDate, string ToDate, Boolean chkjobing, Boolean chkdelivery, Boolean chkIgnoreSection);
+
+        public dynamic GetINVPLTradeListing(string userId, string FromDate, string ToDate);
+
+        public dynamic GetINVPLGainLossDetails(string userId, string FromDate, string ToDate, string reportFor, string ignore112A, string scripCd);
+
+        public dynamic GeTINVPLTradeListingDetails(string userId, string fromDate, string toDate, string sccdPostBack);
+
+        public dynamic GetINVPLTradeListingDelete(string userId, string srNo);
     }
 
 
@@ -103,6 +117,7 @@ namespace TradeWeb.API.Repository
         private readonly UtilityCommon objUtility;
         private string strsql = "";
         private string strConnecton = "";
+        NVPLSoapClient nVPLSoapClient = new NVPLSoapClient(EndpointConfiguration.INVPLSoap);
         #endregion
 
         #region Constructor
@@ -1466,9 +1481,9 @@ namespace TradeWeb.API.Repository
                 strCommClientMaster = StrCommexConn + ".Client_master";
             }
 
-            foreach(var segmentModel in model.segmentModel)
+            foreach (var segmentModel in model.segmentModel)
             {
-                foreach(var exSeg in segmentModel.exchangeSegment)
+                foreach (var exSeg in segmentModel.exchangeSegment)
                 {
                     if (!string.IsNullOrEmpty(type_cesCd))
                     {
@@ -1478,9 +1493,9 @@ namespace TradeWeb.API.Repository
                     {
                         type_cesCd = type_cesCd + segmentModel.type + "," + exSeg;
                     }
-                    
+
                 }
-                
+
             }
 
             strsql = string.Empty;
@@ -4864,7 +4879,7 @@ namespace TradeWeb.API.Repository
                             ServicePointManager.SecurityProtocol = (SecurityProtocolType)192 | (SecurityProtocolType)768 | (SecurityProtocolType)3072 | (SecurityProtocolType)48;
                         }
                     }
-                    
+
                     HttpWebRequest http = (HttpWebRequest)WebRequest.Create(strURLLink);
                     HttpWebResponse response = (HttpWebResponse)http.GetResponse();
                     StreamReader sr = new StreamReader(response.GetResponseStream());
@@ -5016,7 +5031,7 @@ namespace TradeWeb.API.Repository
                     var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
                     return json;
                 }
-                return new List<string> ();
+                return new List<string>();
             }
             catch (Exception ex)
             {
@@ -6358,6 +6373,349 @@ namespace TradeWeb.API.Repository
             return ObjDataSet;
         }
 
+        #endregion
+
+        #endregion
+
+        #region NVPL Handler method
+
+        public dynamic GetINVPLDivListing(string userId, string FromDate, string ToDate)
+        {
+            try
+            {
+                //_nVPLSoapClient.Timeout = 300000;
+                string strurl = objUtility.GetWebParameter("TNetInvplUrl");
+                DataSet ds = new DataSet();
+
+                if (strurl != "" || strurl != null)
+                {
+                    if (objUtility.WebRequestTest(strurl) == false)
+                    {
+                        return "Service not available at the moment try after some time.";
+                    }
+                }
+                //ObjInvpl.Url = strurl;
+
+                string jsondata = nVPLSoapClient.DividendAsync(userId, FromDate, ToDate).Result;
+                string strdecimalcol = "SQty,SAmount,BQty,BAmount,Trading,ShortTerm,LongTerm,UnRealGainShort,UnRealGainLong,UnRealGain,NetQty,StockAtCost,MarketRate,StockAtMkt";
+                if (!jsondata.Contains("No Record Found") && jsondata != "")
+                {
+                    ds = objUtility.ConvertJsonToDatatable(jsondata, strdecimalcol);
+                }
+                else
+                {
+                    return "No Data";
+                }
+
+                if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                {
+                    var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
+                    return json;
+                }
+                return new List<string>();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        public dynamic GetINVPLGainLoss(string userId, string FromDate, string ToDate, Boolean chkjobing, Boolean chkdelivery, Boolean chkIgnoreSection)
+        {
+            try
+            {
+                DataSet ds = new DataSet();
+                string TrxType = "";
+                string strwhere = "";
+                string jsondata = string.Empty;
+                //ObjInvpl.Timeout = 300000;
+                string strurl = objUtility.GetWebParameter("TNetInvplUrl");
+                bool blnIncSttDel;
+                bool blnIncSttTrd;
+                blnIncSttDel = (objUtility.fnFireQueryTradeWeb("Sysparameter", "sp_sysvalue", "sp_parmcd", "GAINLOSSTTDL", true) == "Y");
+                blnIncSttTrd = (objUtility.fnFireQueryTradeWeb("Sysparameter", "sp_sysvalue", "sp_parmcd", "GAINLOSSTTTR", true) == "Y");
+
+                if (strurl != "" || strurl != null)
+                {
+                    if (objUtility.WebRequestTest(strurl) == false)
+                    {
+                        return "Service not available at the moment try after some time.";
+                    }
+                }
+                //ObjInvpl.Url = strurl;
+                try
+                { string strtemp = nVPLSoapClient.ITACT112AAsync().Result; }
+                catch
+                {
+                    return "Using older version of Tradenet";
+                }
+
+                string strdecimalcol = "SQty,SAmount,BQty,BAmount,Trading,ShortTerm,LongTerm,UnRealGainShort,UnRealGainLong,UnRealGain,NetQty,StockAtCost,MarketRate,StockAtMkt,STT";
+                bool blnISIN = false;
+                if (TrxType == "B")
+                {
+                    if (chkjobing == true && chkdelivery == true)
+                    {
+                        jsondata = nVPLSoapClient.ActualPLSummaryAsync(userId, FromDate, ToDate, "B", chkIgnoreSection == true ? "Y" : "N").Result;
+                        blnISIN = GetISINColumn(jsondata, ds, strdecimalcol);
+
+                        strwhere = " Tmp_Flag in ('T','X') and Tmp_SDt between '" + FromDate + "' and '" + ToDate + "'";
+                    }
+                    else if (chkjobing == true)
+                    {
+                        jsondata = nVPLSoapClient.ActualPLSummaryAsync(userId, FromDate, ToDate, "T", chkIgnoreSection == true ? "Y" : "N").Result;
+                        blnISIN = GetISINColumn(jsondata, ds, strdecimalcol);
+
+                        strwhere = " Tmp_Flag in ('T') and Tmp_SDt between '" + FromDate + "' and '" + ToDate + "' ";
+                    }
+                    else if (chkdelivery == true)
+                    {
+                        jsondata = nVPLSoapClient.ActualPLSummaryAsync(userId, FromDate, ToDate, "D", chkIgnoreSection == true ? "Y" : "N").Result;
+                        blnISIN = GetISINColumn(jsondata, ds, strdecimalcol);
+
+                        strwhere = " Tmp_Flag in ('X') and Tmp_SDt between '" + FromDate + "' and '" + ToDate + "' ";
+                    }
+                }
+                else
+                {
+                    FromDate = objUtility.dtos(DateTime.Today.ToString("dd/MM/yyyy"));
+                    jsondata = nVPLSoapClient.NotionalSummaryAsync(userId, FromDate, chkIgnoreSection == true ? "Y" : "N").Result;
+                    blnISIN = GetISINColumn(jsondata, ds, strdecimalcol);
+
+                    strwhere = " Tmp_Flag in ('B','S')";
+                }
+
+                if (!jsondata.Contains("No Record Found") && jsondata != "")
+                {
+                    ds = objUtility.ConvertJsonToDatatable(jsondata, strdecimalcol);
+                }
+                else
+                {
+                    return "No Records Found";
+                }
+
+                if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                {
+                    var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
+                    return json;
+                }
+                return new List<string>();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        public dynamic GetINVPLTradeListing(string userId, string FromDate, string ToDate)
+        {
+            DataSet ds = new DataSet();
+            string jsondata = string.Empty;
+            //ObjInvpl.Timeout = 300000;
+            string strurl = objUtility.GetWebParameter("TNetInvplUrl");
+            if (strurl != "" || strurl != null)
+            {
+                if (objUtility.WebRequestTest(strurl) == false)
+                {
+                    return "alert('Service not available at the moment try after some time.";
+                }
+            }
+            //ObjInvpl.Url = strurl;
+            jsondata = nVPLSoapClient.TradeListingSummaryAsync(userId, FromDate, ToDate).Result;
+            string strdecimalcol = "Bqty,BRate,BAmt,sqty,SRate,SAmt,NetQty,NAmt";
+            if (!jsondata.Contains("No Record Found") && jsondata != "")
+            {
+                ds = objUtility.ConvertJsonToDatatable(jsondata, strdecimalcol);
+            }
+            else
+            {
+                return "No Records Found";
+            }
+
+            if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+            {
+                var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
+                return json;
+            }
+            return new List<string>();
+        }
+
+        public dynamic GetINVPLGainLossDetails(string userId, string FromDate, string ToDate, string reportFor, string ignore112A, string scripCd)
+        {
+            try
+            {
+
+                DataSet ObjDataSetDetail = new DataSet();
+                string strwhere = "";
+                //ObjInvpl.Timeout = 300000;
+                string strurl = objUtility.GetWebParameter("TNetInvplUrl");
+
+                if (strurl == "" || strurl == null)
+                {
+                    if (objUtility.WebRequestTest(strurl) == false)
+                    {
+                        return "Service not available at the moment try after some time.";
+                    }
+                }
+
+                //ObjInvpl.Url = strurl;
+                string jsondata = string.Empty;
+
+                strwhere += "'" + reportFor[0] + "'";
+                if (reportFor == "TX")
+                {
+                    jsondata = nVPLSoapClient.ActualPLDetailAsync(userId, FromDate, ToDate, "B", scripCd, ignore112A).Result;
+                }
+                else if (reportFor == "T")
+                {
+                    jsondata = nVPLSoapClient.ActualPLDetailAsync(userId, FromDate, ToDate, "T", scripCd, ignore112A).Result;
+                }
+                else if (reportFor == "X")
+                {
+                    jsondata = nVPLSoapClient.ActualPLDetailAsync(userId, FromDate, ToDate, "D", scripCd, ignore112A).Result;
+                }
+                else if (reportFor == "BS")
+                {
+                    jsondata = nVPLSoapClient.NotionalDetailAsync(userId, FromDate, scripCd, ignore112A).Result;
+                }
+
+                jsondata = jsondata.Replace("{\"Data\" : ", "");
+                string strdecimalcol = "Tmp_Qty,Trading,LongTerm,ShortTerm,StockAtCost,StockAtMkt,UnRealGainShort,UnRealGainLong";
+                if (!jsondata.Contains("No Record Found") && jsondata != "")
+                {
+                    ObjDataSetDetail = objUtility.ConvertJsonToDatatable(jsondata, strdecimalcol);
+                    int i = 0;
+                    if (ObjDataSetDetail.Tables[0].Rows.Count > 0)
+                    {
+                        for (i = 0; i < ObjDataSetDetail.Tables[0].Rows.Count; i++)
+                        {
+                            if (ObjDataSetDetail.Tables[0].Rows[i]["Tmp_LTCG"].ToString().Trim() == "*")
+                            {
+                                if (reportFor == "BS")
+                                    ObjDataSetDetail.Tables[0].Rows[i]["Avgrate"] = Convert.ToString(ObjDataSetDetail.Tables[0].Rows[i]["Avgrate"]) + Convert.ToString(ObjDataSetDetail.Tables[0].Rows[i]["Tmp_LTCG"]);
+                                else
+                                    ObjDataSetDetail.Tables[0].Rows[i]["Tmp_BRate"] = Convert.ToString(ObjDataSetDetail.Tables[0].Rows[i]["Tmp_BRate"]) + Convert.ToString(ObjDataSetDetail.Tables[0].Rows[i]["Tmp_LTCG"]);
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    //lbl.Text = "No Records Found";
+                    return "No Records Found";
+                }
+                if (ObjDataSetDetail?.Tables?.Count > 0 && ObjDataSetDetail?.Tables[0]?.Rows?.Count > 0)
+                {
+                    var json = JsonConvert.SerializeObject(ObjDataSetDetail.Tables[0], Formatting.Indented);
+                    return json;
+                }
+                return new List<string>();
+            }
+            catch (Exception e)
+            {
+                throw e;
+            }
+        }
+
+        public dynamic GeTINVPLTradeListingDetails(string userId, string fromDate, string toDate, string sccdPostBack)
+        {
+            try
+            {
+                string strurl = objUtility.GetWebParameter("TNetInvplUrl");
+                string jsondata = string.Empty;
+                DataSet ObjDataSet = new DataSet();
+               // ObjInvpl.Timeout = 300000;
+                if (strurl != "" || strurl != null)
+                {
+                    if (objUtility.WebRequestTest(strurl) == false)
+                    {
+                        return "Service not available at the moment try after some time.";
+                    }
+                }
+                //ObjInvpl.Url = strurl;
+                if (objUtility.stod(Convert.ToString(fromDate)) > objUtility.stod(fromDate))
+                { jsondata = nVPLSoapClient.TradeListingDetailAsync(userId, fromDate, toDate, sccdPostBack).Result; }
+                else
+                { jsondata = nVPLSoapClient.TradeListingDetailAsync(userId, fromDate, toDate, sccdPostBack).Result; }
+
+                string strdecimalcol = "Qty,td_Rate,Value,td_ServiceTax,td_STT,td_OtherChrgs1,td_OtherChrgs2";
+                if (!jsondata.Contains("No Record Found") && jsondata != "")
+                {
+                    ObjDataSet = objUtility.ConvertJsonToDatatable(jsondata, strdecimalcol);
+                }
+                else
+                {
+                    return "No Record Found";
+                }
+
+                if (ObjDataSet?.Tables?.Count > 0 && ObjDataSet?.Tables[0]?.Rows?.Count > 0)
+                {
+                    var json = JsonConvert.SerializeObject(ObjDataSet.Tables[0], Formatting.Indented);
+                    return json;
+                }
+                return new List<string>();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        public dynamic GetINVPLTradeListingDelete(string userId, string srNo)
+        {
+            try
+            {
+                DataSet ObjDataSet = new DataSet();
+                string strmsg = string.Empty;
+                //ObjInvpl.Timeout = 300000;
+                string strurl = objUtility.GetWebParameter("TNetInvplUrl");
+                if (strurl != "" || strurl != null)
+                {
+                    if (objUtility.WebRequestTest(strurl) == false)
+                    {
+                        return "Service not available at the moment try after some time.";
+                    }
+                }
+                //ObjInvpl.Url = strurl;
+                strmsg = nVPLSoapClient.TradeDeleteAsync(userId, srNo).Result;
+
+                ObjDataSet = objUtility.ConvertJsonToDatatable(strmsg, "");
+                if (ObjDataSet.Tables[0].Rows.Count > 0)
+                {
+                    if (ObjDataSet.Tables[0].Rows[0]["Status"].ToString().Trim() == "Y")
+                    {
+                        return "Deleted";
+
+                    }
+                    else
+                    { return ObjDataSet.Tables[0].Rows[0]["Remarks"].ToString(); }
+
+                }
+                return null;
+            }
+            catch (Exception Ex)
+            {
+                throw Ex;
+            }
+        }
+        #region NVPL Usefull method
+
+        private bool GetISINColumn(string jsondata, DataSet ds, string strdecimalcol)
+        {
+            bool blnISIN = false;
+            if (!jsondata.Contains("No Record Found"))
+            {
+                ds = objUtility.ConvertJsonToDatatable(jsondata, strdecimalcol);
+                if (ds.Tables[0].Rows.Count > 0)
+                {
+                    for (int i = 0; i < ds.Tables[0].Columns.Count; i++)
+                    {
+                        blnISIN = (ds.Tables[0].Columns[i].ColumnName == "Tmp_ISIN" ? true : false);
+                    }
+                }
+            }
+            return blnISIN;
+        }
         #endregion
 
         #endregion

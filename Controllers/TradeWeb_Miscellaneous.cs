@@ -9,6 +9,7 @@ using System.Net;
 using System.Threading.Tasks;
 using TradeWeb.API.Entity;
 using TradeWeb.API.Repository;
+using INVPLService;
 
 namespace TradeWeb.API.Controllers
 {
@@ -17,10 +18,13 @@ namespace TradeWeb.API.Controllers
     public class TradeWeb_Miscellaneous : ControllerBase
     {
         private readonly ITradeWebRepository _tradeWebRepository;
+        private readonly UtilityCommon objUtility;
+        
 
-        public TradeWeb_Miscellaneous(ITradeWebRepository tradeWebRepository)
+        public TradeWeb_Miscellaneous(ITradeWebRepository tradeWebRepository, UtilityCommon objUtility)
         {
             _tradeWebRepository = tradeWebRepository;
+            this.objUtility = objUtility;
         }
 
         #region Margin Api
@@ -377,5 +381,7 @@ namespace TradeWeb.API.Controllers
             var token = handler.ReadToken(authHeader) as JwtSecurityToken;
             return token;
         }
+
+
     }
 }
