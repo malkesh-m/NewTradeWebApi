@@ -682,152 +682,12 @@ namespace TradeWeb.API.Controllers
 
         #region INVPL Api
 
-        [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("GetINVPLDivListing", Name = "GetINVPLDivListing")]
-        public IActionResult GetINVPLDivListing(string fromDate, string toDate)
-        {
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    var tokenS = GetToken();
-                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
-
-                    var getData = _tradeWebRepository.GetINVPLDivListing(userId, fromDate, toDate);
-                    if (getData != null)
-                    {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
-                    }
-                    else
-                    {
-                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
-                    }
-                }
-                catch (Exception ex)
-                {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
-                }
-            }
-            return BadRequest();
-        }
-
-        [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("GetINVPLGainLoss", Name = "GetINVPLGainLoss")]
-        public IActionResult GetINVPLGainLoss(string fromDate, string toDate, Boolean chkJobing, Boolean chkDelivery, Boolean chkIgnoreSection, string trxType)
-        {
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    var tokenS = GetToken();
-                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
-
-                    var getData = _tradeWebRepository.GetINVPLGainLoss(userId, fromDate, toDate, chkJobing, chkDelivery, chkIgnoreSection, trxType);
-                    if (getData != null)
-                    {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
-                    }
-                    else
-                    {
-                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
-                    }
-                }
-                catch (Exception ex)
-                {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
-                }
-            }
-            return BadRequest();
-        }
-
-        [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("GetINVPLGainLossDetails", Name = "GetINVPLGainLossDetails")]
-        public IActionResult GetINVPLGainLossDetails(string fromDate, string toDate, string reportFor, string ignore112A, string scripCd)
-        {
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    var tokenS = GetToken();
-                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
-
-                    var getData = _tradeWebRepository.GetINVPLGainLossDetails(userId, fromDate, toDate, reportFor, ignore112A, scripCd);
-                    if (getData != null)
-                    {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
-                    }
-                    else
-                    {
-                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
-                    }
-                }
-                catch (Exception ex)
-                {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
-                }
-            }
-            return BadRequest();
-        }
-
+       
         #region Trade Listing
 
-        [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("GetINVPLTradeListing", Name = "GetINVPLTradeListing")]
-        public IActionResult GetINVPLTradeListing(string fromDate, string toDate)
-        {
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    var tokenS = GetToken();
-                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
+        
 
-                    var getData = _tradeWebRepository.GetINVPLTradeListing(userId, fromDate, toDate);
-                    if (getData != null)
-                    {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
-                    }
-                    else
-                    {
-                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
-                    }
-                }
-                catch (Exception ex)
-                {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
-                }
-            }
-            return BadRequest();
-        }
-
-        [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("GeTINVPLTradeListingDetails", Name = "GeTINVPLTradeListingDetails")]
-        public IActionResult GeTINVPLTradeListingDetails(string fromDate, string toDate, string sccdPostBack)
-        {
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    var tokenS = GetToken();
-                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
-
-                    var getData = _tradeWebRepository.GeTINVPLTradeListingDetails(userId, fromDate, toDate, sccdPostBack);
-                    if (getData != null)
-                    {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
-                    }
-                    else
-                    {
-                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
-                    }
-                }
-                catch (Exception ex)
-                {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
-                }
-            }
-            return BadRequest();
-        }
+        
 
         //[Authorize(AuthenticationSchemes = "Bearer")]
         //[HttpGet("GetINVPLTradeListingDelete", Name = "GetINVPLTradeListingDelete")]
@@ -858,35 +718,7 @@ namespace TradeWeb.API.Controllers
         //    return BadRequest();
         //}
 
-        [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("GetINVPLTradeListingSave", Name = "GetINVPLTradeListingSave")]
-        public IActionResult GetINVPLTradeListingSave(string date, string settelment, string bsFlag, string tradeType, double quantity, double netRate, double serviceTax, double STT, double otherCharge1, double otherCharge2, string sccdPostBack)
-        {
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    var tokenS = GetToken();
-                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
-
-                    var getData = _tradeWebRepository.GetINVPLTradeListingSave(userId, date, settelment, bsFlag, tradeType, quantity, netRate, serviceTax, STT, otherCharge1, otherCharge2, sccdPostBack);
-                    if (getData != null)
-                    {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
-                    }
-                    else
-                    {
-                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
-                    }
-                }
-                catch (Exception ex)
-                {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
-                }
-            }
-            return BadRequest();
-        }
-
+        
         #endregion
         #endregion
 
