@@ -12,6 +12,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Text.RegularExpressions;
 using TradeWeb.API.Data;
 using TradeWeb.API.Models;
 using static INVPLService.NVPLSoapClient;
@@ -98,7 +99,7 @@ namespace TradeWeb.API.Repository
 
         public dynamic GetINVPLDivListing(string userId, string FromDate, string ToDate);
 
-        public dynamic GetINVPLGainLoss(string userId, string FromDate, string ToDate, Boolean chkjobing, Boolean chkdelivery, Boolean chkIgnoreSection);
+        public dynamic GetINVPLGainLoss(string userId, string FromDate, string ToDate, Boolean chkjobing, Boolean chkdelivery, Boolean chkIgnoreSection, string TrxType);
 
         public dynamic GetINVPLTradeListing(string userId, string FromDate, string ToDate);
 
@@ -107,6 +108,8 @@ namespace TradeWeb.API.Repository
         public dynamic GeTINVPLTradeListingDetails(string userId, string fromDate, string toDate, string sccdPostBack);
 
         public dynamic GetINVPLTradeListingDelete(string userId, string srNo);
+
+        public dynamic GetINVPLTradeListingSave(string userId, string date, string settelment, string bsFlag, string tradeType, double quantity, double netRate, double serviceTax, double STT, double otherCharge1, double otherCharge2, string sccdPostBack);
     }
 
 
@@ -6420,12 +6423,11 @@ namespace TradeWeb.API.Repository
             }
         }
 
-        public dynamic GetINVPLGainLoss(string userId, string FromDate, string ToDate, Boolean chkjobing, Boolean chkdelivery, Boolean chkIgnoreSection)
+        public dynamic GetINVPLGainLoss(string userId, string FromDate, string ToDate, Boolean chkjobing, Boolean chkdelivery, Boolean chkIgnoreSection,string TrxType)
         {
             try
             {
                 DataSet ds = new DataSet();
-                string TrxType = "";
                 string strwhere = "";
                 string jsondata = string.Empty;
                 //ObjInvpl.Timeout = 300000;
@@ -6698,6 +6700,84 @@ namespace TradeWeb.API.Repository
                 throw Ex;
             }
         }
+
+        public dynamic GetINVPLTradeListingSave(string userId, string date, string settelment, string bsFlag, string tradeType, double quantity, double netRate, double serviceTax, double STT, double otherCharge1, double otherCharge2, string sccdPostBack)
+        {
+            try
+            {
+                DataSet ObjDataSet = new DataSet();
+                double MarketRate = netRate;
+                date = objUtility.stod(date).ToString("dd/MM/yyyy").Replace('-','/');
+                if (date.ToString() != "")
+                {
+                    if (InvalidDateCheck(date.ToString()) == false)
+                    {
+                        return "Invalid Date";
+                    }
+                }
+                else
+                {
+                    return "Date Cannot Be Blank";
+                }
+                if (quantity.ToString() == "" || Conversion.Val(quantity.ToString()) <= 0)
+                {
+                    return "Quantity Cannot Be Blank !";
+                }
+
+                double dblservicetax, dblstt, dblchrg1, dblchrg2;
+                dblservicetax = Math.Round((serviceTax / quantity), 4);
+                dblstt = Math.Round((STT / quantity), 4);
+                dblchrg1 = Math.Round((otherCharge1 / quantity), 4);
+                dblchrg2 = Math.Round((otherCharge2 / quantity), 4);
+
+                StringBuilder SbInsert = new StringBuilder();
+                SbInsert.Append("<Trade>");
+                SbInsert.Append("<srno>0</srno>");
+                SbInsert.Append("<Trxflag>M</Trxflag>");
+                SbInsert.Append("<Date>" + objUtility.dtos(date) + "</Date>");
+                SbInsert.Append("<stlmnt> " + settelment + " </stlmnt>");
+                SbInsert.Append("<TRDType>" + tradeType + "</TRDType>");
+                SbInsert.Append("<bsflag> " + bsFlag.ToString() + "</bsflag>");
+                SbInsert.Append("<qty>  " + Conversion.Val(quantity) + "</qty>");
+                SbInsert.Append("<Rate>" + netRate + "</Rate>");
+                SbInsert.Append("<ServiceTax>" + dblservicetax + "</ServiceTax>");
+                SbInsert.Append("<STT> " + dblstt + "</STT>");
+                SbInsert.Append("<OtherChrgs1>" + dblchrg1 + "</OtherChrgs1>");
+                SbInsert.Append("<OtherChrgs2>" + dblchrg2 + "</OtherChrgs2>");
+                SbInsert.Append("<mkrid>" + userId + "</mkrid>");
+                SbInsert.Append("<mkrdt>" + DateTime.Today.Date.ToString("yyyyMMdd") + "</mkrdt>");
+                SbInsert.Append("</Trade>");
+
+                string strmsg = string.Empty;
+                //ObjInvpl.Timeout = 300000;
+                string strurl = objUtility.GetWebParameter("TNetInvplUrl");
+                if (strurl != "" || strurl != null)
+                {
+                    if (objUtility.WebRequestTest(strurl) == false)
+                    {
+                        return "Service not available at the moment try after some time.";
+                    }
+                }
+                //ObjInvpl.Url = strurl;
+                strmsg = nVPLSoapClient.TradeInsertAsync(userId, sccdPostBack.Trim(), SbInsert.ToString()).Result;
+
+                ObjDataSet = objUtility.ConvertJsonToDatatable(strmsg, "");
+                if (ObjDataSet.Tables[0].Rows.Count > 0)
+                {
+                    if (ObjDataSet.Tables[0].Rows[0]["Status"].ToString().Trim() == "Y")
+                    {
+                        return "Saved";
+                    }
+                    else
+                    { return ObjDataSet.Tables[0].Rows[0]["Remarks"].ToString(); }
+                }
+                return null;
+            }
+            catch (Exception ex)
+            {
+                return ex;
+            }
+        }
         #region NVPL Usefull method
 
         private bool GetISINColumn(string jsondata, DataSet ds, string strdecimalcol)
@@ -6715,6 +6795,18 @@ namespace TradeWeb.API.Repository
                 }
             }
             return blnISIN;
+        }
+
+        public static bool InvalidDateCheck(string obj)
+        {
+            if (Regex.IsMatch(obj.ToString(), (@"(((0[1-9]|[12][0-9]|3[01])([/])(0[13578]|10|12)([/])(\d{4}))|(([0][1-9]|[12][0-9]|30)([/])(0[469]|11)([/])(\d{4}))|((0[1-9]|1[0-9]|2[0-8])([/])(02)([/])(\d{4}))|((29)(\.|-|\/)(02)([/])([02468][048]00))|((29)([/])(02)([/])([13579][26]00))|((29)([/])(02)([/])([0-9][0-9][0][48]))|((29)([/])(02)([/])([0-9][0-9][2468][048]))|((29)([/])(02)([/])([0-9][0-9][13579][26])))")))
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
         }
         #endregion
 
