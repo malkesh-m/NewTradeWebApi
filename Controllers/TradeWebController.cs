@@ -10,6 +10,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.VisualBasic;
 using Newtonsoft.Json;
 using System;
+using System.Data;
 using System.IdentityModel.Tokens.Jwt;
 using System.IO;
 using System.Linq;
@@ -681,7 +682,7 @@ namespace TradeWeb.API.Controllers
         #region DigitalDocument Api
 
         // get dropdown Exchange list
-        //[Authorize(AuthenticationSchemes = "Bearer")]
+        [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpGet("GetDdlExchangeList", Name = "GetDdlExchangeList")]
         public IActionResult GetDdlExchangeList([FromQuery] string productType, string documentType)
         {
@@ -707,8 +708,86 @@ namespace TradeWeb.API.Controllers
             return BadRequest();
         }
 
+        // Download digital document pdf
+        [HttpGet("DownloadDigitalDocument", Name = "DownloadDigitalDocument")]
+        public IActionResult DownloadDigitalDocument(string docType, string date, string srNo)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    Boolean IsCommex = false;
+                    strsql = "select dd_filename from ";
+                    if (docType == "Tplus")
+                    {
+                        strsql += " digital_details ";
+                    }
+                    else if (docType == "Commex")
+                    {
+                        IsCommex = true;
+                        char[] ArrSeparators = new char[1];
+                        ArrSeparators[0] = '/';
+                        string[] ArrCommex = _configuration["CommexES"].Split(ArrSeparators);
+                        strsql = strsql + ArrCommex[0].Trim() + "." + ArrCommex[1].Trim() + "." + ArrCommex[2].Trim() + ".digital_details";
+                    }
+                    strsql += " where dd_srno = '" + srNo + "'";
+                    DataSet DataSet = new DataSet();
+                    SqlConnection ObjConnection = new SqlConnection(objUtility.EsignConnectionString(IsCommex, date.Trim()));
+                    SqlCommand cmd1 = new SqlCommand(strsql, ObjConnection);
+                    SqlDataAdapter adp = new SqlDataAdapter();
+                    adp.SelectCommand = cmd1;
+                    adp.Fill(DataSet);
+                    if (DataSet.Tables[0].Rows.Count > 0)
+                    {
+                        strsql = "select dd_document from ";
+                        if (docType == "Tplus")
+                        {
+                            strsql += " digital_details ";
+                        }
+                        else if (docType == "Commex")
+                        {
+                            char[] ArrSeparators = new char[1];
+                            ArrSeparators[0] = '/';
+                            string[] ArrCommex = _configuration["CommexES"].Split(ArrSeparators);
+                            strsql = strsql + ArrCommex[0].Trim() + "." + ArrCommex[1].Trim() + "." + ArrCommex[2].Trim() + ".digital_details";
+                        }
+                        strsql += " where dd_srno = '" + srNo + "'";
+                        if (ObjConnection.State == ConnectionState.Closed)
+                        {
+                            ObjConnection.Open();
+                        }
+                        SqlCommand cmd = new SqlCommand(strsql, ObjConnection);
+
+                        SqlDataReader ObjReader = cmd.ExecuteReader(CommandBehavior.CloseConnection);
+                        if (ObjReader.HasRows == true)
+                        {
+                            //Response.Clear();
+                            ObjReader.Read();
+                            //Response.AddHeader("content-disposition", "attachment;filename=" + DataSet.Tables[0].Rows[0]["dd_filename"].ToString().Trim() + "");
+                            //Response.ContentType = "application/download";
+                            //Response.BinaryWrite((byte[])ObjReader["dd_document"]);
+                            //Response.End();
+                            return File((byte[])ObjReader["dd_document"], "application/pdf", DataSet.Tables[0].Rows[0]["dd_filename"].ToString().Trim());
+                        }
+                        ObjReader.Close();
+                    }
+                    else
+                    {
+                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                    }
+                    return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+
+            return BadRequest();
+        }
+
         // get dropdown Exchange list
-        //[Authorize(AuthenticationSchemes = "Bearer")]
+        [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpGet("GetDigitalDocumentData", Name = "GetDigitalDocumentData")]
         public IActionResult GetDigitalDocumentData([FromQuery] string productType, string documentType, string exchangeType, string fromDate, string toDate)
         {
@@ -738,7 +817,7 @@ namespace TradeWeb.API.Controllers
         }
 
         // Add new item comodity in dropdown product list
-        //[Authorize(AuthenticationSchemes = "Bearer")]
+        [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpGet("AddDdlProductListItem", Name = "AddDdlProductListItem")]
         public IActionResult AddDdlProductListItem()
         {
