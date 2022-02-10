@@ -150,59 +150,6 @@ namespace TradeWeb.API.Controllers
             return BadRequest();
         }
 
-        //[Authorize(AuthenticationSchemes = "Bearer")]
-        //[HttpGet("GetprSecurityListRptCommon", Name = "GetprSecurityListRptCommon")]
-        //public IActionResult GetprSecurityListRptData(Boolean blnBSE, Boolean blnNSE)
-        //{
-        //    if (ModelState.IsValid)
-        //    {
-        //        try
-        //        {
-        //            var dataList = _tradeWebRepository.GetprSecurityListRptHandler(blnBSE, blnNSE);
-        //            if (dataList != null)
-        //            {
-        //                return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = dataList });
-        //            }
-        //            return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.NotFound, data = null });
-        //        }
-        //        catch (Exception ex)
-        //        {
-        //            return BadRequest(new { response = ex.Message.ToString() });
-        //        }
-        //    }
-        //    return BadRequest();
-        //}
-
-
-        ////Get margin trading finance shortfall main grid data
-        //[Authorize(AuthenticationSchemes = "Bearer")]
-        //[HttpGet("GetFinanceShortFallMainGridData", Name = "GetFinanceShortFallMainGridData")]
-        //public IActionResult GetFinanceShortFallMainGridData([FromQuery] int days)
-        //{
-        //    if (ModelState.IsValid)
-        //    {
-        //        try
-        //        {
-        //            var tokenS = GetToken();
-        //            var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
-
-        //            var getData = _tradeWebRepository.GetShortFallMainGridData(userId, days);
-        //            if (getData != null)
-        //            {
-        //                return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
-        //            }
-        //            else
-        //            {
-        //                return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
-        //            }
-        //        }
-        //        catch (Exception ex)
-        //        {
-        //            return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
-        //        }
-        //    }
-        //    return BadRequest();
-        //}
 
         private JwtSecurityToken GetToken()
         {

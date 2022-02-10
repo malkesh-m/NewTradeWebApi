@@ -678,6 +678,95 @@ namespace TradeWeb.API.Controllers
         }
         #endregion
 
+        #region DigitalDocument Api
+
+        // get dropdown Exchange list
+        //[Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpGet("GetDdlExchangeList", Name = "GetDdlExchangeList")]
+        public IActionResult GetDdlExchangeList([FromQuery] string productType, string documentType)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var getData = _tradeWebRepository.GetDdlExchangeList(productType, documentType);
+                    if (getData != null)
+                    {
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                    }
+                    else
+                    {
+                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
+
+        // get dropdown Exchange list
+        //[Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpGet("GetDigitalDocumentData", Name = "GetDigitalDocumentData")]
+        public IActionResult GetDigitalDocumentData([FromQuery] string productType, string documentType, string exchangeType, string fromDate, string toDate)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var tokenS = GetToken();
+                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
+
+                    var getData = _tradeWebRepository.GetDigitalDocumentData(userId, productType, documentType, exchangeType, fromDate, toDate);
+                    if (getData != null)
+                    {
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                    }
+                    else
+                    {
+                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
+
+        // Add new item comodity in dropdown product list
+        //[Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpGet("AddDdlProductListItem", Name = "AddDdlProductListItem")]
+        public IActionResult AddDdlProductListItem()
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var getData = _tradeWebRepository.AddDdlProductListItem();
+                    if (getData != null)
+                    {
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                    }
+                    else
+                    {
+                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
+
+
+        #endregion
+
         //[Authorize(AuthenticationSchemes = "Bearer")]
         //[HttpGet("GetINVPLTradeListingDelete", Name = "GetINVPLTradeListingDelete")]
         //public IActionResult GetINVPLTradeListingDelete(string srNo)

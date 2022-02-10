@@ -132,6 +132,12 @@ namespace TradeWeb.API.Repository
         public dynamic GetprSecurityListRptHandler(Boolean blnBSE, Boolean blnNSE);
 
         public dynamic GetShortFallMainGridData(string cm_cd, int IntNtxtDays);
+
+        public dynamic GetDdlExchangeList(string cmbProductValue, string cmbDocumentTypeValue);
+
+        public dynamic GetDigitalDocumentData(string userId, string cmbProductValue, string cmbDocumentTypeValue, string cmbExchangeValue, string fromDate, string toDate);
+
+        public dynamic AddDdlProductListItem();
     }
 
     public class TradeWebRepository : ITradeWebRepository
@@ -7163,6 +7169,424 @@ namespace TradeWeb.API.Repository
         #endregion
         #endregion
 
+        #region Digital Document Handler Method
+        // get dropdown Exchange list
+        public dynamic GetDdlExchangeList(string cmbProductValue, string cmbDocumentTypeValue)
+        {
+            try
+            {
+                var ds = GetQueryDdlExchangeList(cmbProductValue, cmbDocumentTypeValue);
+
+                if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                {
+                    var json = JsonConvert.SerializeObject(ds, Formatting.Indented);
+                    return json;
+                }
+                return new List<string>();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        // get digital document main data
+        public dynamic GetDigitalDocumentData(string userId, string cmbProductValue, string cmbDocumentTypeValue, string cmbExchangeValue, string fromDate, string toDate)
+        {
+            try
+            {
+                var ds = GetQueryDigitalDocumentData(userId, cmbProductValue, cmbDocumentTypeValue, cmbExchangeValue, fromDate, toDate);
+                if (ds != null)
+                {
+                    if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                    {
+                        var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
+                        return json;
+                    }
+                }
+                return new List<string>();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        // Add new item comodity in dropdown product list
+        public dynamic AddDdlProductListItem()
+        {
+            try
+            {
+                var ds = AddQueryDdlProductListItem();
+                if (ds != null && ds != "")
+                {
+                    var json = JsonConvert.SerializeObject(ds);
+                    return json;
+                }
+                return new List<string>();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+
+
+        #region DigitalDocument usefull method
+
+        public DataSet GetQueryDdlExchangeList(string cmbProductValue, string cmbDocumentTypeValue)
+        {
+            string strsql = "";
+            DataSet CommonDataSet = new DataSet();
+            if (cmbProductValue == "X")
+            {
+                strsql = "select rtrim(ltrim(CES_Exchange)) exch ";
+                strsql += "from " + objUtility.GetCommexConnection() + ".CompanyExchangeSegments where left(ces_cd,1) = (select min(em_cd) from Entity_master Where Len(Ltrim(Rtrim(em_cd))) = 1) ";
+            }
+            else
+            {
+                strsql = "select rtrim(ltrim(CES_Exchange)) +  case substring(rtrim(ltrim(ces_cd)),3,1) when 'F' then 'DERV' when 'K' then rtrim(ltrim(CES_Segment)) else + ' ' + rtrim(ltrim(CES_Segment))  end exch ";
+                strsql += "from CompanyExchangeSegments where RIGHT(ces_cd,1) <> 'X'  and left(ces_cd,1) = (select min(em_cd) from Entity_master Where Len(Ltrim(Rtrim(em_cd))) = 1) ";
+            }
+
+            CommonDataSet.Tables.Add(objUtility.OpenNewDataTable(strsql));
+
+            if (cmbDocumentTypeValue == "Combine Contract" || cmbDocumentTypeValue == "Combine Margin Statement")
+            {
+                if (cmbProductValue == "X")
+                {
+                    strsql = "select rtrim(ltrim(CES_Exchange)) + case when substring(rtrim(ltrim(ces_cd)),2,1) in ('B','N') then + ' ' + rtrim(ltrim(CES_Segment)) else '' end exch ";
+                    strsql += "from CompanyExchangeSegments where RIGHT(ces_cd,1) = 'X' and left(ces_cd,1) = (select min(em_cd) from Entity_master Where Len(Ltrim(Rtrim(em_cd))) = 1) ";
+
+                    CommonDataSet.Tables.Add(objUtility.OpenNewDataTable(strsql));
+                }
+            }
+            return CommonDataSet;
+        }
+
+
+        public DataSet GetQueryDigitalDocumentData(string userId, string cmbProductValue, string cmbDocumentTypeValue, string cmbExchangeValue, string fromDate, string toDate)
+        {
+            Boolean IsCommexES = false;
+            string strsql = "";
+            if (cmbProductValue == "X")
+            {
+                if (_configuration["CommexES"] != null && _configuration["CommexES"] != string.Empty)
+                {
+                    IsCommexES = true;
+                    strsql = "select 'Commex' doctype,'DownLoad'as download,dd_srno,do_desc,ltrim(rtrim(convert(char,convert(datetime,dd_dt),103))) as dd_dt,dd_stlmnt,dd_document,dd_contractno,'' DT ";
+                    char[] ArrSeparators = new char[1];
+                    ArrSeparators[0] = '/';
+                    string[] ArrCommex = _configuration["CommexES"].Split(ArrSeparators);
+                    strsql = strsql + " from   " + ArrCommex[0].Trim() + "." + ArrCommex[1].Trim() + "." + ArrCommex[2].Trim() + ".digital_details,";
+                    strsql = strsql + ArrCommex[0].Trim() + "." + ArrCommex[1].Trim() + "." + ArrCommex[2].Trim() + ".DocumentType_master";
+                    strsql = strsql + " where dd_clientcd = '" + userId + "'";
+                    if (cmbDocumentTypeValue == "Combine Contract" || cmbDocumentTypeValue == "Periodic Settlement")
+                    {
+                        strsql = strsql + " and dd_dt between '" + fromDate + "' and '" + toDate + "'"; ;
+                    }
+                    else
+                    {
+                        strsql = strsql + " and dd_dt='" + fromDate + "'";
+                    }
+                    strsql = strsql + "and dd_filetype = do_cd ";
+                    strsql = strsql + " and dd_filetype='" + getdoc(cmbDocumentTypeValue, cmbExchangeValue) + "' ";
+                    strsql = strsql + " order by dd_dt desc ";
+                }
+            }
+            else
+            {
+                strsql = "select 'Tplus' doctype,'Download'as download,dd_srno,do_desc,ltrim(rtrim(convert(char,convert(datetime,dd_dt),103))) as dd_dt,dd_stlmnt,dd_document,dd_contractno,'" + fromDate + "' DT ";
+                strsql = strsql + "from digital_details ,DocumentType_master ";
+                strsql = strsql + "where dd_clientcd = '" + userId + "'";
+                if (cmbDocumentTypeValue == "Combine Contract" || cmbDocumentTypeValue == "Periodic Settlement" || cmbDocumentTypeValue == "Combine Margin Statement")
+                {
+                    strsql = strsql + " and dd_dt between '" + fromDate + "' and '" + toDate + "'"; ;
+                }
+                else
+                {
+                    strsql = strsql + " and dd_dt='" + fromDate + "'";
+                }
+                strsql = strsql + " and dd_filetype = do_cd ";
+                strsql = strsql + " and dd_filetype='" + getdoc(cmbDocumentTypeValue, cmbExchangeValue) + "' ";
+                strsql = strsql + " order by dd_dt desc ";
+            }
+
+            DataSet ObjDataSet1 = new DataSet();
+            if (strsql != null && strsql != "")
+            {
+                SqlConnection ObjConnection = new SqlConnection(objUtility.EsignConnectionString(IsCommexES, fromDate));
+                if (ObjConnection.State == ConnectionState.Closed)
+                { ObjConnection.Open(); }
+
+                SqlDataAdapter ObjAdpater = new SqlDataAdapter();
+                SqlCommand sqlCommand = new SqlCommand(strsql, ObjConnection);
+                ObjAdpater.SelectCommand = sqlCommand;
+                ObjAdpater.Fill(ObjDataSet1);
+                ObjAdpater.Dispose();
+            }
+            return ObjDataSet1;
+        }
+
+        // Add new item comodity in dropdown product list
+        public string AddQueryDdlProductListItem()
+        {
+            var result = (Convert.ToInt16(objUtility.fnFireQueryTradeWeb(objUtility.GetCommexConnection() + ".CompanyExchangeSegments ", "count(0)", "left(ces_cd,1) = (select min(em_cd) from Entity_master Where Len(Ltrim(Rtrim(em_cd))) = 1) and 1", "1", true)) > 0) && _configuration["Commex"] != null && _configuration["Commex"] != string.Empty;
+
+            return result.ToString();
+        }
+
+        public string getdoc(string cmbDocumentTypeValue, string cmbExchangeValue)
+        {
+            string getdoctype = string.Empty;
+            if (cmbDocumentTypeValue == "Digital Ledger")
+            {
+                getdoctype = "LGR";
+            }
+            else if (cmbDocumentTypeValue == "Digital Security Ledger")
+            {
+                getdoctype = "SECLED";
+            }
+            else if (cmbDocumentTypeValue == "Digital Collateral Ledger")
+            {
+                getdoctype = "COLLED";
+            }
+            else if (cmbDocumentTypeValue == "Combine Contract")
+            {
+                getdoctype = cmbExchangeValue == "MCX" ? "CNOTE" : "CNOTE" + objUtility.GetCommExch(cmbExchangeValue);
+                if (_configuration["IsTradeWeb"] == "O")
+                {
+                    if (cmbExchangeValue == "NCDEX")
+                    {
+                        getdoctype = (objUtility.GetSysParmStComm("CHGNCDEXCD", "") == "Y" ? "CNOTEF" : "CNOTEN");
+                    }
+                }
+                if (cmbExchangeValue == "BSE/NSE Comm" || cmbExchangeValue == "BSE Comm" || cmbExchangeValue == "NSE Comm")
+                {
+                    getdoctype = "XNOTE";
+                }
+            }
+            else if (cmbDocumentTypeValue == "Periodic Settlement")
+            {
+                getdoctype = "QTR";
+            }
+            else if (cmbDocumentTypeValue == "Combine Margin Statement")
+            {
+                getdoctype = "CMRG";
+            }
+            else
+            {
+                if (cmbExchangeValue == "BSE Cash")
+                {
+                    if (cmbDocumentTypeValue == "Contract")
+                    {
+                        getdoctype = "CBSE";
+                    }
+                    else if (cmbDocumentTypeValue == "Margin")
+                    {
+                        getdoctype = "MBC";
+                    }
+                    else if (cmbDocumentTypeValue == "STT")
+                    {
+                        getdoctype = "SCB";
+                    }
+                }
+                else if (cmbExchangeValue == "NSE Cash")
+                {
+                    if (cmbDocumentTypeValue == "Contract")
+                    {
+                        getdoctype = "CNSE";
+                    }
+                    else if (cmbDocumentTypeValue == "Margin")
+                    {
+                        getdoctype = "MNC";
+                    }
+                    else if (cmbDocumentTypeValue == "STT")
+                    {
+                        getdoctype = "SCN";
+                    }
+                }
+                else if (cmbExchangeValue == "MCX Cash")
+                {
+                    if (cmbDocumentTypeValue == "Contract")
+                    {
+                        getdoctype = "CMCX";
+                    }
+                    else if (cmbDocumentTypeValue == "Margin")
+                    {
+                        getdoctype = "MMC";
+                    }
+                }
+                else if (cmbExchangeValue == "NSEDERV")
+                {
+                    if (cmbDocumentTypeValue == "Contract")
+                    {
+                        getdoctype = "FNSE";
+                    }
+                    else if (cmbDocumentTypeValue == "Margin")
+                    {
+                        getdoctype = "MNF";
+                    }
+                    else if (cmbDocumentTypeValue == "STT")
+                    {
+                        getdoctype = "SFN";
+                    }
+                    else if (cmbDocumentTypeValue == "Bill")
+                    {
+                        getdoctype = "FNSEB";
+                    }
+                }
+                else if (cmbExchangeValue == "BSEDERV")
+                {
+                    if (cmbDocumentTypeValue == "Contract")
+                    {
+                        getdoctype = "FBSE";
+                    }
+                    else if (cmbDocumentTypeValue == "Margin")
+                    {
+                        getdoctype = "MBF";
+                    }
+                    else if (cmbDocumentTypeValue == "STT")
+                    {
+                        getdoctype = "SFB";
+                    }
+                    else if (cmbDocumentTypeValue == "Bill")
+                    {
+                        getdoctype = "FBSEB";
+                    }
+                }
+                else if (cmbExchangeValue == "MCXDERV")
+                {
+                    if (cmbDocumentTypeValue == "Contract")
+                    {
+                        getdoctype = "FMCX";
+                    }
+                    else if (cmbDocumentTypeValue == "Margin")
+                    {
+                        getdoctype = "MMF";
+                    }
+                    else if (cmbDocumentTypeValue == "Bill")
+                    {
+                        getdoctype = "FMCXB";
+                    }
+                }
+                else if (cmbExchangeValue == "BSEFX")
+                {
+                    if (cmbDocumentTypeValue == "Contract")
+                    {
+                        getdoctype = "BSEFX";
+                    }
+                    else if (cmbDocumentTypeValue == "Margin")
+                    {
+                        getdoctype = "MBFX";
+                    }
+                    else if (cmbDocumentTypeValue == "Bill")
+                    {
+                        getdoctype = "BSEFXB";
+                    }
+                }
+                else if (cmbExchangeValue == "NSEFX")
+                {
+                    if (cmbDocumentTypeValue == "Contract")
+                    {
+                        getdoctype = "NSEFX";
+                    }
+                    else if (cmbDocumentTypeValue == "Margin")
+                    {
+                        getdoctype = "MNFX";
+                    }
+                    else if (cmbDocumentTypeValue == "STT")
+                    {
+                        getdoctype = "SFN";
+                    }
+                    else if (cmbDocumentTypeValue == "Bill")
+                    {
+                        getdoctype = "NSEFXB";
+                    }
+                }
+                else if (cmbExchangeValue == "MCXFX")
+                {
+                    if (cmbDocumentTypeValue == "Contract")
+                    {
+                        getdoctype = "MCXFX";
+                    }
+                    else if (cmbDocumentTypeValue == "Margin")
+                    {
+                        getdoctype = "MMFX";
+                    }
+                    else if (cmbDocumentTypeValue == "STT")
+                    {
+                        getdoctype = "SFN";
+                    }
+                    else if (cmbDocumentTypeValue == "Bill")
+                    {
+                        getdoctype = "MCXFXB";
+                    }
+                }
+                else if (cmbExchangeValue == "MCX")
+                {
+                    if (cmbDocumentTypeValue == "Contract")
+                    {
+                        getdoctype = "MCX";
+                    }
+                    else if (cmbDocumentTypeValue == "Margin")
+                    {
+                        getdoctype = "MARMCX";
+                    }
+                }
+                else if (cmbExchangeValue == "NCDEX")
+                {
+                    if (cmbDocumentTypeValue == "Contract")
+                    {
+                        getdoctype = "NCDEX";
+                    }
+                    else if (cmbDocumentTypeValue == "Margin")
+                    {
+                        getdoctype = "MARNCX";
+                    }
+                }
+                else if (cmbExchangeValue == "ICEX")
+                {
+                    if (cmbDocumentTypeValue == "Contract")
+                    {
+                        getdoctype = "MCX";
+                    }
+                    else if (cmbDocumentTypeValue == "Margin")
+                    {
+                        getdoctype = "MARMCX";
+                    }
+                }
+                else if (cmbExchangeValue == "NCME")
+                {
+                    if (cmbDocumentTypeValue == "Contract")
+                    {
+                        getdoctype = "MCX";
+                    }
+                    else if (cmbDocumentTypeValue == "Margin")
+                    {
+                        getdoctype = "MARMCX";
+                    }
+                }
+                else if (cmbExchangeValue == "NSEL")
+                {
+                    if (cmbDocumentTypeValue == "Contract")
+                    {
+                        getdoctype = "NSEL";
+                    }
+                    else if (cmbDocumentTypeValue == "Margin")
+                    {
+                        getdoctype = "MARNSEL";
+                    }
+                }
+            }
+            return getdoctype;
+        }
+
+        #endregion
+
+        #endregion
+
         #region Marging Finance Handler method
 
         // Get Trades Data
@@ -7619,6 +8043,7 @@ namespace TradeWeb.API.Repository
         }
         #endregion
         #endregion
+
         #endregion
     }
 }
