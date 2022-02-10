@@ -231,8 +231,6 @@ namespace TradeWeb.API.Controllers
         }
         #endregion
 
-        
-
         #region Holding Api
 
         [Authorize(AuthenticationSchemes = "Bearer")]
@@ -680,15 +678,6 @@ namespace TradeWeb.API.Controllers
         }
         #endregion
 
-        #region INVPL Api
-
-       
-        #region Trade Listing
-
-        
-
-        
-
         //[Authorize(AuthenticationSchemes = "Bearer")]
         //[HttpGet("GetINVPLTradeListingDelete", Name = "GetINVPLTradeListingDelete")]
         //public IActionResult GetINVPLTradeListingDelete(string srNo)
@@ -717,10 +706,6 @@ namespace TradeWeb.API.Controllers
         //    }
         //    return BadRequest();
         //}
-
-        
-        #endregion
-        #endregion
 
         private JwtSecurityToken GetToken()
         {

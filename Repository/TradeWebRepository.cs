@@ -120,8 +120,19 @@ namespace TradeWeb.API.Repository
         public dynamic ExecuteRequestReportPageLoad(bool isPostBack);
 
         public dynamic InsertRequestValues(string userId, string strLstSeg, string cmbRequest, string strFromDt, string strToDt);
-    }
 
+        public dynamic GetTradesData(string cm_cd, string FromDate, string ToDate, string SelectedIndex);
+
+        public dynamic GetTempRMSSummaryData(string cm_cd, string strCompanyCode);
+
+        public dynamic GetStatusFundData(string cm_cd, string strCompanyCode);
+
+        public dynamic GetStatusCollateralData(string cm_cd, string strCompanyCode);
+
+        public dynamic GetprSecurityListRptHandler(Boolean blnBSE, Boolean blnNSE);
+
+        public dynamic GetShortFallMainGridData(string cm_cd, int IntNtxtDays);
+    }
 
     public class TradeWebRepository : ITradeWebRepository
     {
@@ -7149,6 +7160,463 @@ namespace TradeWeb.API.Repository
         }
 
         #endregion
+        #endregion
+        #endregion
+
+        #region Marging Finance Handler method
+
+        // Get Trades Data
+        public dynamic GetTradesData(string cm_cd, string FromDate, string ToDate, string SelectedIndex)
+        {
+            var ds = GetQueryTradesData(cm_cd, FromDate, ToDate, SelectedIndex);
+            try
+            {
+                if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                {
+                    var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
+                    return json;
+                }
+                return new List<string>();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+        // get Temp table RmsSummary Data for status module.
+        public dynamic GetTempRMSSummaryData(string cm_cd, string strCompanyCode)
+        {
+            try
+            {
+                var ds = GetQueryTempRMSSummaryData(cm_cd, strCompanyCode);
+                if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                {
+                    var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
+                    return json;
+                }
+                return new List<string>();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+        // Get fund data of status module
+        public dynamic GetStatusFundData(string cm_cd, string strCompanyCode)
+        {
+            try
+            {
+                var ds = GetQueryStatusFundData(cm_cd, strCompanyCode);
+                if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                {
+                    var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
+                    return json;
+                }
+                return new List<string>();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+        // Get collateral data of status module
+        public dynamic GetStatusCollateralData(string cm_cd, string strCompanyCode)
+        {
+            try
+            {
+                var ds = GetQueryStatusCollateralData(cm_cd, strCompanyCode);
+                if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                {
+                    var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
+                    return json;
+                }
+                return new List<string>();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+        //TODO : Get prSecurityListRpt Data
+        public dynamic GetprSecurityListRptHandler(Boolean blnBSE, Boolean blnNSE)
+        {
+            var ds = GetQueryprSecurityListRptData(blnBSE, blnNSE);
+            try
+            {
+                if (ds != null)
+                {
+                    var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
+                    return json;
+                }
+                return new List<string>();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        public dynamic GetShortFallMainGridData(string cm_cd, int IntNtxtDays)
+        {
+            try
+            {
+                var ds = GetQueryShortFallMainGridData(cm_cd, IntNtxtDays);
+                if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                {
+                    var json = JsonConvert.SerializeObject(ds, Formatting.Indented);
+                    return json;
+                }
+                return new List<string>();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        #region Margin Finance usefull method
+
+        // Get Trades Data
+        public DataSet GetQueryTradesData(string cm_cd, string FromDate, string ToDate, string SelectedIndex)
+        {
+            DataSet ds = new DataSet();
+            if (Conversion.Val(FromDate) <= Conversion.Val(ToDate))
+            {
+                ds = BindGrid(cm_cd, FromDate, ToDate, SelectedIndex);
+            }
+            return ds;
+        }
+        public DataSet BindGrid(string cm_cd, string FromDate, string ToDate, string SelectedIndex)
+        {
+            DataSet ds = new DataSet();
+            if (SelectedIndex == "0")
+            {
+                ds = ShowMasterGridItemWise(cm_cd, FromDate, ToDate);
+            }
+            else
+            {
+                ds = ShowMasterGridDateWise(cm_cd, FromDate, ToDate);
+            }
+            return ds;
+        }
+        // Get ItemWise Data
+        public DataSet ShowMasterGridItemWise(string cm_cd, string FromDate, string ToDate)
+        {
+            string StrMTFTRXIndex = "";
+            if (Convert.ToInt16(objUtility.fnFireQueryTradeWeb("sysobjects a, sysindexes b", "COUNT(0)", "a.id = b.id and a.name = 'MrgTdgFin_TRX' and b.name", "idx_MrgTdgFin_TRX_Clientcd", true)) == 1)
+            { StrMTFTRXIndex = "index(idx_MrgTdgFin_TRX_clientcd),"; }
+
+            DataSet ObjDataSet = new DataSet();
+            if (_configuration["IsTradeWeb"] == "O")//Live DB
+            {
+                strsql = " select 1 Td_order,'' as td_ac_type,'' as td_trxdate,'' as td_isin_code,'' as sc_company_name, cast((case when sum(MTtd_bqty-MTtd_sqty)=0 then 0  ";
+                strsql = strsql + " else sum((MTtd_bqty-Mttd_sqty)*MTtd_rate)/sum(MTtd_bqty-MTtd_sqty) end)as decimal(15,2) )   as rate,'MTF' Td_Type,'' as FScripNm,'' as FExDt,";
+                strsql = strsql + " rtrim(MTtd_scripcd)td_scripnm , rtrim(ss_name) snm, sum(MTtd_bqty) Bqty, convert(decimal(15,2), sum(MTtd_bqty*MTtd_rate)) BAmt,  sum(MTtd_sqty) ";
+                strsql = strsql + " Sqty, convert(decimal(15,2), sum(MTtd_sqty*MTtd_rate)) SAmt, sum(MTtd_bqty-MTtd_sqty) NQty, convert(decimal(15,2), sum((MTtd_bqty-MTtd_sqty)*";
+                strsql = strsql + "  MTtd_rate)) NAmt,  '' as td_debit_credit,0 as sm_strikeprice,'' as sm_callput, 'MTF|' + MTtd_scripcd LinkCode ";
+                strsql = strsql + "  from MrgTdgFin_TRX(" + StrMTFTRXIndex + "nolock), securities with(nolock) ";
+                strsql = strsql + " where MTtd_clientcd='" + cm_cd + "' and MTtd_dt between '" + FromDate + "' and '" + ToDate + "' ";
+                strsql = strsql + " and MTtd_Scripcd = ss_cd";
+                strsql = strsql + " group by MTtd_scripcd, ss_name ";
+            }
+            else//TradeWeb-pragya
+            {
+                strsql = " select 1 Td_order,'' as td_ac_type,'' as td_trxdate,'' as td_isin_code,'' as sc_company_name, cast((case when sum(MTtd_bqty-MTtd_sqty)=0 then 0  ";
+                strsql = strsql + " else sum((MTtd_bqty-Mttd_sqty)*MTtd_rate)/sum(MTtd_bqty-MTtd_sqty) end)as decimal(15,2) )   as rate,'MTF' Td_Type,'' as FScripNm,'' as FExDt,";
+                strsql = strsql + " rtrim(MTtd_scripcd)td_scripnm , rtrim(ss_name) snm, sum(MTtd_bqty) Bqty, convert(decimal(15,2), sum(MTtd_bqty*MTtd_rate)) BAmt,  sum(MTtd_sqty) ";
+                strsql = strsql + " Sqty, convert(decimal(15,2), sum(MTtd_sqty*MTtd_rate)) SAmt, sum(MTtd_bqty-MTtd_sqty) NQty, convert(decimal(15,2), sum((MTtd_bqty-MTtd_sqty)*";
+                strsql = strsql + "  MTtd_rate)) NAmt,  '' as td_debit_credit,0 as sm_strikeprice,'' as sm_callput, 'MTF|' + MTtd_scripcd LinkCode ";
+                strsql = strsql + "  from MrgTdgFin_TRX(" + StrMTFTRXIndex + "nolock), TPSecurities with(nolock) ";
+                strsql = strsql + " where MTtd_clientcd='" + cm_cd + "' and MTtd_dt between '" + FromDate + "' and '" + ToDate + "' ";
+                strsql = strsql + " and MTtd_Scripcd = ss_cd";
+                strsql = strsql + " group by MTtd_scripcd, ss_name ";
+            }
+
+            ObjDataSet = objUtility.OpenDataSet(strsql);
+            return ObjDataSet;
+        }
+        // Get DateWise Data
+        public DataSet ShowMasterGridDateWise(string cm_cd, string FromDate, string ToDate)
+        {
+            string StrMTFTRXIndex = "";
+            if (Convert.ToInt16(objUtility.fnFireQueryTradeWeb("sysobjects a, sysindexes b", "COUNT(0)", "a.id = b.id and a.name = 'MrgTdgFin_TRX' and b.name", "idx_MrgTdgFin_TRX_Clientcd", true)) == 1)
+            { StrMTFTRXIndex = "index(idx_MrgTdgFin_TRX_clientcd),"; }
+
+            char[] ArrSeparators = new char[1];
+            ArrSeparators[0] = '/';
+            DataSet ObjDataSet = new DataSet();
+            strsql = "select 1 Td_order,'MTF' Td_Type,ltrim(rtrim(convert(char,convert(datetime,MTtd_dt),103))) Dt, rtrim(MTtd_Stlmnt) MTtd_Stlmnt, ";
+            strsql = strsql + "sum(MTtd_bqty) Bqty, convert(decimal(15,2),sum(MTtd_bqty*MTtd_rate)) BAmt, sum(MTtd_sqty) Sqty, convert(decimal(15,2),sum(MTtd_sqty*MTtd_rate)) SAmt, ";
+            strsql = strsql + "sum(MTtd_bqty-MTtd_sqty) NQty, ";
+            strsql = strsql + "convert(decimal(15,2),sum((MTtd_bqty-MTtd_sqty)*MTtd_rate)) NAmt, MTtd_dt Dt1, 'MTF|'+ MTtd_Stlmnt  LinkCode from MrgTdgFin_TRX with (" + StrMTFTRXIndex + "nolock) where MTtd_clientcd ='" + cm_cd + "' and ";
+            strsql = strsql + "MTtd_dt between '" + FromDate + "' and '" + ToDate + "' group by  MTtd_Stlmnt,MTtd_dt  ";
+
+
+            ObjDataSet = objUtility.OpenDataSet(strsql);
+            return ObjDataSet;
+        }
+
+        // Get TempRMSS Summary Data
+        public DataSet GetQueryTempRMSSummaryData(string cm_cd, string strCompanyCode)
+        {
+            DataSet DsRMS = new DataSet();
+            string strSql = "";
+
+            SqlConnection ObjConnectionTmp;
+            using (var db = new DataContext())
+            {
+                ObjConnectionTmp = new SqlConnection((db.Database.GetDbConnection()).ConnectionString);
+                ObjConnectionTmp.Open();
+
+                CreateTempTable(cm_cd, ObjConnectionTmp, strCompanyCode);
+
+                strSql = "select  " + UtilityCommon.strTempRMSSummary + ".*,cm_name from " + UtilityCommon.strTempRMSSummary + ", Client_master WHERE cm_cd= TMP_CLIENTCD and TMP_CLIENTCD='" + cm_cd + "'";
+                strSql += " order by  cm_name";
+
+                DsRMS = objUtility.OpenDataSetTmp(strSql, ObjConnectionTmp);
+            }
+            return DsRMS;
+        }
+        //Create temp table for process data
+        private void CreateTempTable(string cm_cd, SqlConnection con, string strCompanyCode)
+        {
+            string StrAsOnDt = objUtility.dtos(DateTime.Today.ToString("dd/MM/yyyy"));
+            if (Conversion.Val("20201101") < Conversion.Val(objUtility.dtos(DateTime.Today.ToString("dd/MM/yyyy"))))
+                objUtility.prPledgeProcess(StrAsOnDt, "", " and cm_cd = '" + cm_cd + "'", false, false, false, con, strCompanyCode);
+            else
+                objUtility.prProcess(StrAsOnDt, "", " and cm_cd = '" + cm_cd + "'", false, false, false, con);
+        }
+
+        // Get fund data of status module
+        public DataSet GetQueryStatusFundData(string cm_cd, string strCompanyCode)
+        {
+            string strSql = "";
+            DataSet DsFunded = new DataSet();
+            SqlConnection ObjConnectionTmp;
+            using (var db = new DataContext())
+            {
+                ObjConnectionTmp = new SqlConnection((db.Database.GetDbConnection()).ConnectionString);
+                ObjConnectionTmp.Open();
+
+                CreateTempTable(cm_cd, ObjConnectionTmp, strCompanyCode);
+
+                strSql = "select Tmp_Scripcd,ss_name, SUM(Tmp_Qty) Qty,";
+                strSql += " cast(SUM(Tmp_Value) as decimal(15,2))  ActualCost,cast(SUM(Tmp_Qty * Tmp_MarketRate ) as decimal(15,2)) ClosePrice,cast(((SUM(Tmp_Qty * Tmp_MarketRate ))-(SUM(Tmp_Value))) as decimal(15,2)) Value, ";
+                strSql += " cast(SUM(Tmp_Qty * Tmp_MarketRate ) - SUM(Tmp_Value) as decimal(15,2)) MTM,cast(SUM(Tmp_NetValue) as decimal(15,2)) MarginReq, cast(Tmp_MrgHairCut as decimal(15,2)) Tmp_MrgHairCut ,";
+                strSql += " case when Tmp_Exchange='B' then 'BSE' when Tmp_Exchange='N' then 'NSE' else '' end Exch from " + UtilityCommon.strTempRMSDetail + ",Client_master,securities ";
+                strSql += " where cm_cd=Tmp_Clientcd and Tmp_Scripcd=ss_cd and Tmp_Type='M' ";
+                strSql += " and Tmp_Clientcd= '" + cm_cd + "'";
+                strSql += " Group By  Tmp_Exchange,Tmp_Clientcd,cm_name,Tmp_MrgHairCut,Tmp_Scripcd,ss_name,Tmp_MrgHairCut";
+                strSql += " Order By ss_name,Tmp_Clientcd";
+                DsFunded = objUtility.OpenDataSetTmp(strSql, ObjConnectionTmp);
+            }
+            return DsFunded;
+        }
+
+        // Get collateral data of status module
+        public DataSet GetQueryStatusCollateralData(string cm_cd, string strCompanyCode)
+        {
+            string strSql = "";
+            DataSet DsCollateral = new DataSet();
+            SqlConnection ObjConnectionTmp;
+            using (var db = new DataContext())
+            {
+                ObjConnectionTmp = new SqlConnection((db.Database.GetDbConnection()).ConnectionString);
+                ObjConnectionTmp.Open();
+
+                CreateTempTable(cm_cd, ObjConnectionTmp, strCompanyCode);
+
+                strSql = "select Tmp_Scripcd,ss_name, SUM(Tmp_Qty) Qty,";
+                strSql += " Tmp_MarketRate as Rate, cast(sum(Tmp_Value) as decimal(15,2))  Value, cast(Tmp_MrgHairCut as decimal(15,2)) HairCut,";
+                strSql += "  cast(sum(Tmp_NetValue) as decimal(15,2)) NetValue,case when Tmp_Exchange='B' then 'BSE' when Tmp_Exchange='N' then 'NSE' else '' end Exch ";
+                strSql += " from " + UtilityCommon.strTempRMSDetail + ",Client_master,securities ";
+                strSql += " where cm_cd=Tmp_Clientcd and Tmp_Scripcd=ss_cd and Tmp_Type='C' ";
+                strSql += " and Tmp_Clientcd= '" + cm_cd + "'";
+                strSql += " Group By  Tmp_Exchange,Tmp_Clientcd,cm_name,Tmp_MrgHairCut,Tmp_MarketRate,Tmp_Scripcd,ss_name";
+                strSql += " Order By ss_name,Tmp_Clientcd";
+
+                DsCollateral = objUtility.OpenDataSetTmp(strSql, ObjConnectionTmp);
+            }
+            return DsCollateral;
+        }
+
+        // Get Status Approved Security Data
+        public DataSet GetQueryprSecurityListRptData(Boolean blnBSE, Boolean blnNSE)
+        {
+            return objUtility.prSecurityListRpt(DateTime.Today.ToString("yyyyMMdd"), blnBSE, blnNSE);
+        }
+
+        //Get margin trading finance shortfall main grid data
+        public DataSet GetQueryShortFallMainGridData(string cm_cd, int IntNtxtDays)
+        {
+            DataSet dsMainDataSet = new DataSet();
+            string strdate = DateTime.Today.ToString("dd/MM/yyyy").Replace("-", "/");
+            string strSql = "";
+            SqlConnection con;
+            using (var db = new DataContext())
+            {
+                con = new SqlConnection((db.Database.GetDbConnection()).ConnectionString);
+                con.Open();
+                DataSet dsDates = new DataSet();
+                Temptable(con);
+
+                for (int i = 0; i < IntNtxtDays; i++)
+                {
+                AgainT2:
+                    strSql = "select * from Tholiday_master where  ";
+
+                    if (objUtility.GetSysParmSt("MTFP_LICBSE", "") == "Y")
+                        strSql += "  hm_exchange in ('B')";
+                    else if (objUtility.GetSysParmSt("MTFP_LICNSE", "") == "Y")
+                        strSql += "  hm_exchange in ('N')";
+                    else if (objUtility.GetSysParmSt("MTFP_LICBSE", "") == "Y" && objUtility.GetSysParmSt("MTFP_LICNSE", "") == "Y")
+                        strSql += " hm_exchange in ('B','N')";
+
+                    strSql += " and hm_Segment = 'C' and hm_dt = '" + objUtility.dtos(strdate) + "'";
+                    dsDates = objUtility.OpenDataSet(strSql);
+                    //var abc = objUtility.OpenDataSet(strSql).Tables[0];
+
+                    if (dsDates.Tables[0].Rows.Count > 0)
+                    {
+                        strdate = ConvertDT(objUtility.dtos(strdate)).AddDays(-1).ToString();
+                        goto AgainT2;
+                    }
+                    else
+                    {
+                        objUtility.prProcess(objUtility.dtos(strdate), "", " and cm_cd = '" + cm_cd + "'", false, false, false, con);
+                        strSql = " insert into #TmpDebitClient ";
+                        strSql += "select Tmp_Clientcd,'" + DateTime.Today.ToString("dd/MM/yyyy") + "',Tmp_Limit,Tmp_TplusBal,Tmp_LoanBal,Tmp_FundedAmount,Tmp_FundedMrgReq,Tmp_CollateralFund,Tmp_CollateralValue,Tmp_ShortFallExcess,Tmp_TradeValue,Tmp_M2MLoss";
+                        strSql += " From " + UtilityCommon.strTempRMSSummary + ", Client_master WHERE cm_cd= TMP_CLIENTCD order by cm_name";
+                        objUtility.ExecuteSQLTmp(strSql, con);
+                        if (strdate == DateTime.Today.ToString("dd/MM/yyyy").Replace("-", "/"))
+                        {
+                            strSql = " insert into #TmpDebitClntDetail ";
+                            strSql += " select Tmp_Type,'" + objUtility.dtos(strdate) + "',Tmp_Exchange,Tmp_Clientcd,Tmp_Scripcd,Tmp_RegForFO,Tmp_Qty,Tmp_Rate,Tmp_MarketRate,Tmp_Value,Tmp_MrgHairCut,Tmp_NetValue";
+                            strSql += " From " + UtilityCommon.strTempRMSDetail + ", Client_master WHERE cm_cd= Tmp_Clientcd and Tmp_Type = 'M' order by cm_name";
+                            objUtility.ExecuteSQLTmp(strSql, con);
+                        }
+                    }
+                    strdate = ConvertDT(objUtility.dtos(strdate)).AddDays(-1).ToString();
+
+
+                    strSql = " delete from #TmpDebitClient where Td_Clientcd in ( Select Td_Clientcd from #TmpDebitClient where Td_ShortFallExcess >= 0  )  ";
+                    objUtility.ExecuteSQLTmp(strSql, con);
+                    strSql = " delete from #TmpDebitClntDetail where Tcd_Clientcd not in ( Select Distinct Td_Clientcd from #TmpDebitClient )  ";
+                    objUtility.ExecuteSQLTmp(strSql, con);
+
+                    strSql = "select #TmpDebitClient.*,cm_name,bm_email,cm_email,bm_branchcd,cm_panno,cm_pincode, cm_dob";
+                    strSql += " from #TmpDebitClient, Client_master ,Branch_master";
+                    strSql += " WHERE cm_cd= Td_Clientcd and cm_brboffcode = bm_branchcd and Td_dt = '" + DateTime.Today.ToString("dd/MM/yyyy") + "'";
+
+                    //DataSet DsDrClient = new DataSet();
+                    //DataSet dsDetails = new DataSet();
+                    //DsDrClient = objUtility.OpenDataSetTmp(strSql, con);
+
+                    //var abc = DsDrClient.Tables[0];
+                    dsMainDataSet.Tables.Add(objUtility.OpenNewDataTableTmp(strSql, con));
+
+                    strSql = "select (case when Tcd_Exchange='D' then 'BSE' when Tcd_Exchange='F' then'NSE' when Tcd_Exchange='M' then'MCX' else Tcd_Exchange +'SE' end) Tcd_Exchange,Tcd_Scripcd,ss_name, SUM(Tcd_Qty) Qty,  cast(SUM(Tcd_Value) as decimal(15,2))  ActualCost,";
+                    strSql += "  cast(SUM(Tcd_Qty * Tcd_MarketRate)  as decimal(15,2)) ClosePrice, cast(((SUM(Tcd_Qty * Tcd_MarketRate))-(SUM(Tcd_Value))) as decimal(15,2)) MTM, cast(SUM(Tcd_NetValue) as decimal(15,2)) MarginReq,cast(Tcd_MrgHairCut as decimal(15,2)) Tcd_MrgHairCut ,0.00 MTM  ,Tcd_Clientcd";
+                    strSql += " from #TmpDebitClntDetail,Client_master,securities";
+                    strSql += " where cm_cd=Tcd_Clientcd and Tcd_Scripcd=ss_cd ";
+                    strSql += " Group By Tcd_Exchange,Tcd_Clientcd,cm_name,Tcd_MrgHairCut,Tcd_Scripcd,ss_name ";
+                    strSql += " Order By ss_name,Tcd_Clientcd";
+                    //dsDetails = objUtility.OpenDataSetTmp(strSql, con);
+                    dsMainDataSet.Tables.Add(objUtility.OpenNewDataTableTmp(strSql, con));
+                }
+            }
+            return dsMainDataSet;
+        }
+
+
+        //Method for convert date
+        public DateTime ConvertDT(string Date)
+        {
+            int Year = int.Parse(Date.Substring(0, 4));
+            int Month = int.Parse(Date.Substring(4, 2));
+            int Day = int.Parse(Date.Substring(6, 2));
+            return new DateTime(Year, Month, Day);
+        }
+
+        //Create temp table for ShortFall Webform
+        protected void Temptable(SqlConnection con)
+        {
+            string strSql = "";
+            try
+            {
+                strSql = " Drop Table #TmpDebitClient";
+                objUtility.ExecuteSQLTmp(strSql, con);
+
+                strSql = "Create Table #TmpDebitClient (";
+                strSql += " Td_Clientcd VarChar(8),";
+                strSql += " Td_dt VarChar(10),";
+                strSql += " Td_Limit Money,";
+                strSql += " Td_TplusBal Money,";
+                strSql += " Td_LoanBal Money,";
+                strSql += " Td_FundedAmount Money,";
+                strSql += " Td_FundedMrgReq Money,";
+                strSql += " Td_CollateralFund Money,";
+                strSql += " Td_CollateralValue Money,";
+                strSql += " Td_ShortFallExcess Money,";
+                strSql += " Td_TradeValue Money,";
+                strSql += " Td_M2MLoss Money)";
+                objUtility.ExecuteSQLTmp(strSql, con);
+            }
+            catch (Exception ex)
+            {
+                strSql = "Create Table #TmpDebitClient (";
+                strSql += " Td_Clientcd VarChar(8),";
+                strSql += " Td_dt VarChar(10),";
+                strSql += " Td_Limit Money,";
+                strSql += " Td_TplusBal Money,";
+                strSql += " Td_LoanBal Money,";
+                strSql += " Td_FundedAmount Money,";
+                strSql += " Td_FundedMrgReq Money,";
+                strSql += " Td_CollateralFund Money,";
+                strSql += " Td_CollateralValue Money,";
+                strSql += " Td_ShortFallExcess Money,";
+                strSql += " Td_TradeValue Money,";
+                strSql += " Td_M2MLoss Money)";
+                objUtility.ExecuteSQLTmp(strSql, con);
+            }
+            try
+            {
+                strSql = "Drop Table #TmpDebitClntDetail";
+                objUtility.ExecuteSQLTmp(strSql, con);
+
+                strSql = "Create Table #TmpDebitClntDetail (";
+                strSql += " Tcd_Type Char(1),";
+                strSql += " Tcd_dt VarChar(10),";
+                strSql += " Tcd_Exchange Char(1),";
+                strSql += " Tcd_Clientcd VarChar(8),";
+                strSql += " Tcd_Scripcd VarChar(6),";
+                strSql += " Tcd_RegForFO VarChar(1),";
+                strSql += " Tcd_Qty Numeric,";
+                strSql += " Tcd_Rate Money,";
+                strSql += " Tcd_MarketRate Money,";
+                strSql += " Tcd_Value Money,";
+                strSql += " Tcd_MrgHairCut Money,";
+                strSql += " Tcd_NetValue Money)";
+                objUtility.ExecuteSQLTmp(strSql, con);
+            }
+            catch (Exception ex)
+            {
+                strSql = "Create Table #TmpDebitClntDetail (";
+                strSql += " Tcd_Type Char(1),";
+                strSql += " Tcd_dt VarChar(10),";
+                strSql += " Tcd_Exchange Char(1),";
+                strSql += " Tcd_Clientcd VarChar(8),";
+                strSql += " Tcd_Scripcd VarChar(6),";
+                strSql += " Tcd_RegForFO VarChar(1),";
+                strSql += " Tcd_Qty Numeric,";
+                strSql += " Tcd_Rate Money,";
+                strSql += " Tcd_MarketRate Money,";
+                strSql += " Tcd_Value Money,";
+                strSql += " Tcd_MrgHairCut Money,";
+                strSql += " Tcd_NetValue Money)";
+                objUtility.ExecuteSQLTmp(strSql, con);
+            }
+        }
         #endregion
         #endregion
         #endregion
