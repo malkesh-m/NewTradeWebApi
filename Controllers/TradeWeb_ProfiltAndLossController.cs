@@ -9,191 +9,100 @@ using System.Net;
 using System.Threading.Tasks;
 using TradeWeb.API.Entity;
 using TradeWeb.API.Repository;
-using INVPLService;
 
 namespace TradeWeb.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class TradeWeb_Miscellaneous : ControllerBase
+    public class TradeWeb_ProfiltAndLossController : ControllerBase
     {
         private readonly ITradeWebRepository _tradeWebRepository;
-        private readonly UtilityCommon objUtility;
-        
 
-        public TradeWeb_Miscellaneous(ITradeWebRepository tradeWebRepository, UtilityCommon objUtility)
+        public TradeWeb_ProfiltAndLossController(ITradeWebRepository tradeWebRepository)
         {
             _tradeWebRepository = tradeWebRepository;
-            this.objUtility = objUtility;
         }
 
-        #region Margin Api
-        // TODO : Get margin grid main data
-        [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("GetMargin", Name = "GetMargin")]
-        public IActionResult GetMargin()
-        {
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    var tokenS = GetToken();
-                    var compCode = tokenS.Claims.First(claim => claim.Type == "companyCode").Value;
-                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
+        #region ProfitLoss Api
 
-                    var getData = _tradeWebRepository.GetMarginMainData(userId, compCode);
-                    if (getData != null)
-                    {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
-                    }
-                    else
-                    {
-                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
-                    }
-                }
-                catch (Exception ex)
-                {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
-                }
-            }
-            return BadRequest();
-        }
-
-        // TODO : Get dropdown data
-        [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("GetDropdownData", Name = "GetDropdownData")]
-        public IActionResult GetDropdownData()
-        {
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    var tokenS = GetToken();
-                    var compCode = tokenS.Claims.First(claim => claim.Type == "companyCode").Value;
-                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
-
-                    var getData = _tradeWebRepository.GetDropdownListData(userId, compCode);
-                    if (getData != null)
-                    {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
-                    }
-                    else
-                    {
-                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
-                    }
-                }
-                catch (Exception ex)
-                {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
-                }
-            }
-            return BadRequest();
-        }
-
-        // TODO : Get margin pledge data
-        [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("GetMarginPledgeData", Name = "GetMarginPledgeData")]
-        public IActionResult GetMarginPledgeData([FromQuery] string DPIDValue)
-        {
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    var tokenS = GetToken();
-                    var compCode = tokenS.Claims.First(claim => claim.Type == "companyCode").Value;
-                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
-
-                    var getData = _tradeWebRepository.GetMarginPledgeData(userId, userId.ToUpper(), compCode, DPIDValue);
-                    if (getData != null)
-                    {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
-                    }
-                    else
-                    {
-                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
-                    }
-                }
-                catch (Exception ex)
-                {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
-                }
-            }
-            return BadRequest();
-        }
-
-        // TODO : Get margin pledge request
-        [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("GetCurrentPledgeRequest", Name = "GetCurrentPledgeRequest")]
-        public IActionResult GetCurrentPledgeRequest()
-        {
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    var tokenS = GetToken();
-                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
-
-                    var getData = _tradeWebRepository.GetCurrentPledgeRequest(userId.ToUpper());
-                    if (getData != null)
-                    {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
-                    }
-                    else
-                    {
-                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
-                    }
-                }
-                catch (Exception ex)
-                {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
-                }
-            }
-            return BadRequest();
-        }
-
-        // TODO : Add margin pledge request
-        [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("AddPledgeRequest", Name = "AddPledgeRequest")]
-        public IActionResult AddPledgeRequest([FromQuery] string DPIDValue, bool isIdentityOn, string intcnt, string scripcd, string quantity)
-        {
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    var tokenS = GetToken();
-                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
-
-                    var getData = _tradeWebRepository.AddPledgeRequest(userId.ToUpper(), DPIDValue, isIdentityOn, intcnt, scripcd, quantity);
-                    if (getData != null)
-                    {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
-                    }
-                    else
-                    {
-                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
-                    }
-                }
-                catch (Exception ex)
-                {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
-                }
-            }
-            return BadRequest();
-        }
-
-        #endregion
-
-        #region Transaction Api
         /// <summary>
-        ///   Transaction API  
+        /// Get ProfitLoss Main Data
         /// </summary>
-        /// <param name="type"></param>
         /// <param name="fromDate"></param>
         /// <param name="toDate"></param>
-        // TODO : For getting Transaction main form data
+        /// <returns></returns>
         [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("Transaction_Summary", Name = "Transaction_Summary")]
-        public IActionResult Transaction_Summary([FromQuery] string type, string fromDate, string toDate)
+        [HttpGet("ProfitLoss_Cash_Summary", Name = "ProfitLoss_Cash_Summary")]
+        public IActionResult ProfitLoss_Cash_Summary([FromQuery] string fromDate, string toDate)
+        {
+            if (ModelState.IsValid)
+            {
+                #region
+                try
+                {
+                    var tokenS = GetToken();
+                    var companyCode = tokenS.Claims.First(claim => claim.Type == "companyCode").Value;
+                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
+
+                    var getData = _tradeWebRepository.ProfitLoss_Cash_Summary(userId, fromDate, toDate);
+                    if (getData != null)
+                    {
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                    }
+                    else
+                    {
+                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+                #endregion
+            }
+            return BadRequest();
+        }
+
+
+        /// <summary>
+        /// Get Portfolio Detail Data
+        /// </summary>
+        /// <param name="fromDate"></param>
+        /// <param name="toDate"></param>
+        /// <param name="scripcd"></param>
+        /// <returns></returns>
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpGet("ProfitLoss_Cash_Detail", Name = "ProfitLoss_Cash_Detail")]
+        public IActionResult ProfitLoss_Cash_Detail([FromQuery] string fromDate, string toDate, string scripcd)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var tokenS = GetToken();
+                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
+
+                    var getData = _tradeWebRepository.ProfitLoss_Cash_Detail(userId, fromDate, toDate, scripcd);
+                    if (getData != null)
+                    {
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                    }
+                    else
+                    {
+                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
+
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpGet("ProfitLoss_FO_Summary", Name = "ProfitLoss_FO_Summary")]
+        public IActionResult ProfitLoss_FO_Summary([FromQuery] string exchange, string segment, string fromDate, string toDate)
         {
             if (ModelState.IsValid)
             {
@@ -203,9 +112,7 @@ namespace TradeWeb.API.Controllers
                     var companyCode = tokenS.Claims.First(claim => claim.Type == "companyCode").Value;
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    //TransactionHandler _handler = new TransactionHandler();
-                    var getData = _tradeWebRepository.Transaction_Summary(userId, type, fromDate, toDate);
-
+                    var getData = _tradeWebRepository.ProfitLoss_FO_Summary(userId, exchange, segment, fromDate, toDate);
                     if (getData != null)
                     {
                         return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
@@ -214,7 +121,6 @@ namespace TradeWeb.API.Controllers
                     {
                         return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
                     }
-
                 }
                 catch (Exception ex)
                 {
@@ -225,8 +131,8 @@ namespace TradeWeb.API.Controllers
         }
 
         [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("Transaction_Accounts", Name = "Transaction_Accounts")]
-        public IActionResult Transaction_Accounts([FromQuery] string type, string fromDate, string toDate)
+        [HttpGet("ProfitLoss_Commodity_Summary", Name = "ProfitLoss_Commodity_Summary")]
+        public IActionResult ProfitLoss_Commodity_Summary([FromQuery] string exchange, string fromDate, string toDate)
         {
             if (ModelState.IsValid)
             {
@@ -236,9 +142,7 @@ namespace TradeWeb.API.Controllers
                     var companyCode = tokenS.Claims.First(claim => claim.Type == "companyCode").Value;
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    //TransactionHandler _handler = new TransactionHandler();
-                    var getData = _tradeWebRepository.Transaction_Accounts(userId, type, fromDate, toDate);
-
+                    var getData = _tradeWebRepository.ProfitLoss_Commodity_Summary(userId, exchange, fromDate, toDate);
                     if (getData != null)
                     {
                         return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
@@ -247,7 +151,6 @@ namespace TradeWeb.API.Controllers
                     {
                         return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
                     }
-
                 }
                 catch (Exception ex)
                 {
@@ -257,120 +160,6 @@ namespace TradeWeb.API.Controllers
             return BadRequest();
         }
 
-        [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("Transaction_AGTS", Name = "Transaction_AGTS")]
-        public IActionResult Transaction_AGTS([FromQuery] string seg, string fromDate, string toDate)
-        {
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    var tokenS = GetToken();
-                    var companyCode = tokenS.Claims.First(claim => claim.Type == "companyCode").Value;
-                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
-
-                    //TransactionHandler _handler = new TransactionHandler();
-                    var getData = _tradeWebRepository.Transaction_AGTS(userId, seg, fromDate, toDate);
-
-                    if (getData != null)
-                    {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
-                    }
-                    else
-                    {
-                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
-                    }
-
-                }
-                catch (Exception ex)
-                {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
-                }
-            }
-            return BadRequest();
-        }
-
-        /// <summary>
-        ///   Transaction API  
-        /// </summary>
-        /// <param name="transactionType"></param>
-        /// <param name="linkCode"></param>
-        /// <param name="tradeScripnm"></param>
-        /// <param name="fromDate"></param>
-        /// <param name="toDate"></param>
-        // TODO : For getting Itemwise transaction details data
-        [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("GetItemWiseTransactionDetails", Name = "GetItemWiseTransactionDetails")]
-        public IActionResult GetItemWiseTransactionDetails([FromQuery] string transactionType, string linkCode, string tradeScripnm, string fromDate, string toDate)
-        {
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    var tokenS = GetToken();
-                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
-
-                    var getData = _tradeWebRepository.ItemWiseDetails(userId, transactionType, linkCode, tradeScripnm, fromDate, toDate);
-
-                    if (getData != null)
-                    {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
-                    }
-                    else
-                    {
-                        return NotFound(new commonResponse { status = true, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
-                    }
-                }
-                catch (Exception ex)
-                {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
-                }
-            }
-            return BadRequest();
-        }
-
-
-        /// <summary>
-        ///   Transaction API  
-        /// </summary>
-        /// <param name="tradeType"></param>
-        /// <param name="linkCode"></param>
-        /// <param name="settelment"></param>
-        /// <param name="date"></param>
-        /// <param name="fromDate"></param>
-        /// <param name="toDate"></param>
-        /// <param name="header"></param>
-        // TODO : For getting Itemwise transaction details data
-        [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("GetDateWiseTransactionDetails", Name = "GetDateWiseTransactionDetails")]
-        public IActionResult GetDateWiseTransactionDetails([FromQuery] string tradeType, string linkCode, string settelment, string date, string fromDate, string toDate, string header)
-        {
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    var tokenS = GetToken();
-                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
-
-                    var getData = _tradeWebRepository.DateWiseDetails(userId, tradeType, linkCode, settelment, date, fromDate, toDate, header);
-
-                    if (getData != null)
-                    {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
-                    }
-                    else
-                    {
-                        return NotFound(new commonResponse { status = true, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
-                    }
-                }
-                catch (Exception ex)
-                {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
-                }
-            }
-            return BadRequest();
-        }
-        #endregion
 
         private JwtSecurityToken GetToken()
         {
@@ -382,6 +171,185 @@ namespace TradeWeb.API.Controllers
             return token;
         }
 
+        #endregion
 
+        #region CapitalGainLoss Api
+
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpGet("CapitalGainLoss_Dividend", Name = "CapitalGainLoss_Dividend")]
+        public IActionResult CapitalGainLoss_Dividend(string fromDate, string toDate)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var tokenS = GetToken();
+                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
+
+                    var getData = _tradeWebRepository.GetINVPLDivListing(userId, fromDate, toDate);
+                    if (getData != null)
+                    {
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                    }
+                    else
+                    {
+                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
+
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpGet("CapitalGainLoss_ActualPLSummary", Name = "CapitalGainLoss_ActualPLSummary")]
+        public IActionResult CapitalGainLoss_ActualPLSummary(string fromDate, string toDate, Boolean chkJobing, Boolean chkDelivery, Boolean chkIgnoreSection, string trxType)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var tokenS = GetToken();
+                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
+
+                    var getData = _tradeWebRepository.GetINVPLGainLoss(userId, fromDate, toDate, chkJobing, chkDelivery, chkIgnoreSection, trxType);
+                    if (getData != null)
+                    {
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                    }
+                    else
+                    {
+                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
+
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpGet("CapitalGainLoss_ActualPLDetail", Name = "CapitalGainLoss_ActualPLDetail")]
+        public IActionResult CapitalGainLoss_ActualPLDetail(string fromDate, string toDate, string reportFor, string ignore112A, string scripCd)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var tokenS = GetToken();
+                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
+
+                    var getData = _tradeWebRepository.GetINVPLGainLossDetails(userId, fromDate, toDate, reportFor, ignore112A, scripCd);
+                    if (getData != null)
+                    {
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                    }
+                    else
+                    {
+                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
+
+
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpGet("CapitalGainLoss_TradeListingSummary", Name = "CapitalGainLoss_TradeListingSummary")]
+        public IActionResult CapitalGainLoss_TradeListingSummary(string fromDate, string toDate)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var tokenS = GetToken();
+                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
+
+                    var getData = _tradeWebRepository.GetINVPLTradeListing(userId, fromDate, toDate);
+                    if (getData != null)
+                    {
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                    }
+                    else
+                    {
+                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
+
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpGet("CapitalGainLoss_TradeListingDetail", Name = "CapitalGainLoss_TradeListingDetail")]
+        public IActionResult CapitalGainLoss_TradeListingDetail(string fromDate, string toDate, string sccdPostBack)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var tokenS = GetToken();
+                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
+
+                    var getData = _tradeWebRepository.GeTINVPLTradeListingDetails(userId, fromDate, toDate, sccdPostBack);
+                    if (getData != null)
+                    {
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                    }
+                    else
+                    {
+                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
+
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpGet("CapitalGainLoss_TradeInsert", Name = "CapitalGainLoss_TradeInsert")]
+        public IActionResult CapitalGainLoss_TradeInsert(string date, string settelment, string bsFlag, string tradeType, double quantity, double netRate, double serviceTax, double STT, double otherCharge1, double otherCharge2, string sccdPostBack)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var tokenS = GetToken();
+                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
+
+                    var getData = _tradeWebRepository.GetINVPLTradeListingSave(userId, date, settelment, bsFlag, tradeType, quantity, netRate, serviceTax, STT, otherCharge1, otherCharge2, sccdPostBack);
+                    if (getData != null)
+                    {
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                    }
+                    else
+                    {
+                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
+
+        #endregion
     }
 }
