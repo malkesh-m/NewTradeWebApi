@@ -110,6 +110,16 @@ namespace TradeWeb.API.Repository
         public dynamic GetINVPLTradeListingDelete(string userId, string srNo);
 
         public dynamic GetINVPLTradeListingSave(string userId, string date, string settelment, string bsFlag, string tradeType, double quantity, double netRate, double serviceTax, double STT, double otherCharge1, double otherCharge2, string sccdPostBack);
+
+        public dynamic UpdateFundAndSharesRequest(bool isPostBack);
+
+        public dynamic RdButtonSharesChecked(string cm_cd);
+
+        public dynamic GetRmsRequest(string cm_cd);
+
+        public dynamic ExecuteRequestReportPageLoad(bool isPostBack);
+
+        public dynamic InsertRequestValues(string userId, string strLstSeg, string cmbRequest, string strFromDt, string strToDt);
     }
 
 
@@ -6810,6 +6820,336 @@ namespace TradeWeb.API.Repository
         }
         #endregion
 
+        #endregion
+
+        #region Request Handler method
+
+        //// update fund request or share requrest
+        public dynamic UpdateFundAndSharesRequest(bool isPostBack)
+        {
+            try
+            {
+                UpdateFundAndSharesRequestQuery(isPostBack);
+                var json = JsonConvert.SerializeObject("success");
+                return json;
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        //// Radio button shares checked
+        public dynamic RdButtonSharesChecked(string cm_cd)
+        {
+            try
+            {
+                var ds = RdButtonSharesCheckedQuery(cm_cd);
+                if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                {
+                    var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
+                    return json;
+                }
+                return new List<string>();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        //// Get rms request
+        public dynamic GetRmsRequest(string cm_cd)
+        {
+            try
+            {
+                var ds = GetRmsRequestQuery(cm_cd);
+                if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                {
+                    var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
+                    return json;
+                }
+                return new List<string>();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        //// Execute page request report page load query
+        public dynamic ExecuteRequestReportPageLoad(bool isPostBack)
+        {
+            try
+            {
+                ExecuteRequestReportPageLoadQuery(isPostBack);
+                var json = JsonConvert.SerializeObject("success");
+                return json;
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        //// Insert Request value after button click
+        public dynamic InsertRequestValues(string userId, string strLstSeg, string cmbRequest, string strFromDt, string strToDt)
+        {
+            try
+            {
+                var result = InsertRequestValuesQuery(userId, strLstSeg, cmbRequest, strFromDt, strToDt);
+                var json = JsonConvert.SerializeObject(result);
+                return json;
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        #region Request usefull method
+
+        //// create table for fund request or share requrest.
+        private void CreateTableForRequest()
+        {
+            DataSet DsReqF = new DataSet();
+            DsReqF = objUtility.OpenDataSet("select * from SysObjects where name= 'FundsRequest'");
+            if (DsReqF.Tables[0].Rows.Count == 0)
+            {
+                prCreateRequestTable();
+            }
+            DataSet DsReqS = new DataSet();
+            DsReqS = objUtility.OpenDataSet("select * from SysObjects where name= 'SharesRequest'");
+            if (DsReqS.Tables[0].Rows.Count == 0)
+            {
+                prCreateRequest();
+            }
+        }
+
+        private void prCreateRequest()
+        {
+            strsql = "Create table SharesRequest  ( ";
+            strsql += " Rq_SrNo Numeric Identity(1,1) not null,";
+            strsql += " Rq_Clientcd varchar(8) not null,";
+            strsql += " Rq_Scripcd varchar(6) not null,";
+            strsql += " Rq_Qty numeric not null,";
+            strsql += " Rq_IpAddress varchar(50) not null,";
+            strsql += " Rq_Date char(8) not null,";
+            strsql += " Rq_Time char(8) not null,";
+            strsql += " Rq_Satus1 char(1) not null,";
+            strsql += " Rq_Satus2 char(1) not null,";
+            strsql += " Rq_Satus3 char(1) not null,";
+            strsql += " Rq_Satus4 char(1) not null,";
+            strsql += " Rq_Note varchar(50) not null)";
+            objUtility.ExecuteSQL(strsql);
+
+        }
+        private void prCreateRequestTable()
+        {
+            strsql = "Create table FundsRequest  ( ";
+            strsql += " Rq_SrNo Numeric Identity(1,1) not null,";
+            strsql += " Rq_Clientcd varchar(8) not null,";
+            strsql += " Rq_Type Char(1) not null,";
+            strsql += " Rq_Amount Money not null,";
+            strsql += " Rq_IpAddress varchar(50) not null,";
+            strsql += " Rq_Date char(8) not null,";
+            strsql += " Rq_Time char(8) not null,";
+            strsql += " Rq_Satus1 char(1) not null,";
+            strsql += " Rq_Satus2 char(1) not null,";
+            strsql += " Rq_Satus3 char(1) not null,";
+            strsql += " Rq_Satus4 char(1) not null,";
+            strsql += " Rq_Note varchar(50) not null)";
+            objUtility.ExecuteSQL(strsql);
+        }
+
+        //// update fund request or share requrest
+        private void UpdateFundAndSharesRequestQuery(bool isPostBack)
+        {
+            if (isPostBack == false)
+            {
+                CreateTableForRequest();
+            }
+
+            if (Convert.ToInt32(objUtility.fnFireQueryTradeWeb("sysobjects a , syscolumns b", " b.length ", "a.id = b.id  and a.name = 'FundsRequest' and b.name", "Rq_Satus4", true)) < 8)
+            {
+                strsql = "alter table FundsRequest alter column Rq_Satus4 Varchar(8) not null";
+                objUtility.ExecuteSQL(strsql);
+
+                DataSet dsStatus = objUtility.OpenDataSet("Select * from FundsRequest where Rq_Satus1 = 'P'");
+                for (int i = 0; i <= dsStatus.Tables[0].Rows.Count - 1; i++)
+                {
+                    strsql = "update FundsRequest Set Rq_Satus4 = '" + objUtility.Encrypt(dsStatus.Tables[0].Rows[i]["Rq_Date"].ToString()) + "' where rq_srno = " + dsStatus.Tables[0].Rows[i]["rq_srno"] + "";
+                    objUtility.ExecuteSQL(strsql);
+                }
+            }
+
+            if (Convert.ToInt32(objUtility.fnFireQueryTradeWeb("sysobjects a , syscolumns b", " b.length ", "a.id = b.id  and a.name = 'SharesRequest' and b.name", "Rq_Satus4", true)) < 8)
+            {
+                strsql = "alter table SharesRequest alter column Rq_Satus4 Varchar(8) not null";
+                objUtility.ExecuteSQL(strsql);
+
+                DataSet dsStatus = objUtility.OpenDataSet("Select * from SharesRequest where Rq_Satus1 = 'P'");
+                for (int i = 0; i <= dsStatus.Tables[0].Rows.Count - 1; i++)
+                {
+                    strsql = "update SharesRequest Set Rq_Satus4 = '" + objUtility.Encrypt(dsStatus.Tables[0].Rows[i]["Rq_Date"].ToString()) + "' where rq_srno = " + dsStatus.Tables[0].Rows[i]["rq_srno"] + "";
+                    objUtility.ExecuteSQL(strsql);
+                }
+            }
+        }
+
+        //// Radio button shares checked
+        private DataSet RdButtonSharesCheckedQuery(string cm_cd)
+        {
+            if (_configuration["IsTradeWeb"] == "O")//live
+            {
+                strsql = "select dm_scripcd bh_scripcd,isNull(IM_ISIN,'') bh_isin,ss_Name bh_Scripname,sum(-dm_qty) bh_qty,";
+                strsql += "  CAST(sum(-dm_qty *(case when ss_bseratedt > ss_nseratedt then ss_bserate else ss_nserate end)) as decimal(15,2)) bh_valuation,";
+                strsql += " isNull((select sum(Rq_Qty) From SharesRequest Where Rq_Clientcd = '" + cm_cd + "' and Rq_Scripcd=dm_scripcd and Rq_Satus1 = 'P'),0) ReqQty, ";
+                strsql += " (case when ss_bseratedt > ss_nseratedt then ss_bserate else ss_nserate end) Rate";
+                strsql += " From Demat left outer join ISIN on dm_scripcd = im_scripcd  ,settlements,ourdps,SECURITIES";
+                strsql += " Where dm_type = 'BC' and dm_locked = 'N' and dm_transfered = 'N'and dm_stlmnt = se_stlmnt and dm_ourdp = od_cd and dm_Scripcd = ss_cd";
+                strsql += " and dm_clientcd = '" + cm_cd + "' and im_active = 'Y' ";
+                strsql += " and im_priority =(select min(im_priority) from ISIN  Where im_active = 'Y'  and im_scripcd = dm_Scripcd)";
+                strsql += " and od_acttype  in ('B','M') and se_shpayoutdt <= CONVERT(CHAR,getdaTE(),112)Group by dm_scripcd ,ss_Name,IM_ISIN,ss_bseratedt,ss_nseratedt,ss_bserate,ss_nserate  having (sum(-dm_qty)) >0order by ss_Name ";
+            }
+            else
+            {
+                strsql = " select bh_scripcd,bh_isin,bh_Scripname,(bh_qty*-1)bh_qty, cast((bh_valuation*-1 )as decimal(15,0))bh_valuation ,";
+                strsql += " isNull((select sum(Rq_Qty) From SharesRequest Where Rq_Clientcd = bh_clientcd and Rq_Scripcd=bh_scripcd and Rq_Satus1 = 'P'),0) ReqQty, 0 Rate ";
+                strsql += " from benholding where bh_clientcd='" + cm_cd + "' and bh_Type not in ('UNDEL')";
+            }
+
+            return objUtility.OpenDataSet(strsql);
+        }
+
+        //// Get rms request
+        private DataSet GetRmsRequestQuery(string cm_cd)
+        {
+            StringBuilder strsql = new StringBuilder();
+            strsql.Append("select  (ltrim(rtrim(ces_exchange)) + '/' + ltrim(rtrim(ces_segment)))Exch ,cm_cd ,cm_name,ld_dpid,  cast((-1*sum(ld_amount)) as decimal(15,2)) amt, ");
+            strsql.Append(" isNull((select CAST(Sum(Rq_Amount) as decimal(15,2)) from FundsRequest Where rq_clientcd = ld_clientcd and Rq_Note = ld_dpid and Rq_Satus1 = 'P' ),0) rq_amt ");
+            strsql.Append(" from  Client_Master, companyexchangesegments, Ledger ");
+            strsql.Append(" where ld_clientcd = cm_cd and CES_Cd=ld_dpid  and ld_clientcd = '" + cm_cd + "'  ");
+            strsql.Append("group by  ld_clientcd ,cm_brkggroup,cm_cd,cm_name,ld_dpid,ltrim(rtrim(ces_exchange)) + '/' + ltrim(rtrim(ces_segment)),ld_dpid,ld_clientcd having abs(sum(ld_amount)) > 0");
+
+            return objUtility.OpenDataSet(strsql.ToString());
+
+        }
+
+        #region Request Report module
+
+        //// Execute page request report page load query.
+        private void ExecuteRequestReportPageLoadQuery(bool isPostBack)
+        {
+            if (isPostBack == false)
+            {
+                CreateTableRequestReport();
+            }
+            SqlCommand ObjCommand = new SqlCommand();
+            SqlConnection ObjConnection;
+            using (var db = new DataContext())
+            {
+                ObjConnection = new SqlConnection((db.Database.GetDbConnection()).ConnectionString);
+                ObjConnection.Open();
+                if (Convert.ToInt32(objUtility.fnFireQueryTradeWeb("sysobjects a , syscolumns b", " b.length ", "a.id = b.id  and a.name = 'requests' and b.name", "Rq_Satus4", true)) < 8)
+                {
+                    strsql = "alter table Requests alter column Rq_Satus4 Varchar(8) not null";
+                    ObjCommand.CommandText = strsql;
+                    ObjCommand.Connection = ObjConnection;
+                    ObjCommand.ExecuteNonQuery();
+
+                    DataSet dsStatus = objUtility.OpenDataSet("Select * from Requests where Rq_Satus1 = 'P'");
+                    for (int i = 0; i <= dsStatus.Tables[0].Rows.Count - 1; i++)
+                    {
+                        strsql = "update Requests Set Rq_Satus4 = '" + objUtility.Encrypt(dsStatus.Tables[0].Rows[i]["Rq_Date"].ToString()) + "' where rq_srno = " + dsStatus.Tables[0].Rows[i]["rq_srno"] + "";
+                        ObjCommand.CommandText = strsql;
+                        ObjCommand.Connection = ObjConnection;
+                        ObjCommand.ExecuteNonQuery();
+                    }
+                }
+            }
+        }
+
+        //// Create table for Request report.
+        private void CreateTableRequestReport()
+        {
+            DataSet DsReq = new DataSet();
+            DsReq = objUtility.OpenDataSet("select * from SysObjects where name= 'Requests'");
+            if (DsReq.Tables[0].Rows.Count == 0)
+            {
+                strsql = "Create table Requests  (";
+                strsql += " Rq_SrNo Numeric Identity(1,1) not null,";
+                strsql += " Rq_Clientcd varchar(8) not null,";
+                strsql += " Rq_Type varchar(35) not null,";
+                strsql += " Rq_DateFrom char(8) not null,";
+                strsql += " Rq_DateTo char(9) not null,";
+                strsql += " Rq_IpAddress varchar(50) not null,";
+                strsql += " Rq_Date char(8) not null,";
+                strsql += " Rq_Time char(8) not null,";
+                strsql += " Rq_Satus1 char(1) not null,";
+                strsql += " Rq_Satus2 char(1) not null,";
+                strsql += " Rq_Satus3 char(1) not null,";
+                strsql += " Rq_Satus4 char(1) not null,";
+                strsql += " Rq_Note varchar(50) not null)";
+                objUtility.ExecuteSQL(strsql);
+            }
+
+            DsReq = new DataSet();
+            DsReq = objUtility.OpenDataSet("select b.Name from sysobjects a, syscolumns b with (nolock) where a.id=b.id and a.name='Requests' and b.name = 'Rq_Segment'");
+            if (DsReq.Tables[0].Rows.Count == 0)
+            {
+                strsql = "Alter table Requests add Rq_Segment Char(10)";
+                objUtility.ExecuteSQL(strsql);
+
+                strsql = "Update Requests set Rq_Segment= ''";
+                objUtility.ExecuteSQL(strsql);
+
+                strsql = "Alter table Requests alter Column Rq_Segment Char(10) not null";
+                objUtility.ExecuteSQL(strsql);
+            }
+        }
+
+        //// Insert Request value after button click
+        private string InsertRequestValuesQuery(string userId, string strLstSeg, string cmbRequest, string strFromDt, string strToDt)
+        {
+            string gstrToday = DateTime.Today.ToString("yyyyMMdd");
+            string strHostAdd = Dns.GetHostName();
+            bool blnIdentityOn = false;
+            DataSet Dstemp = new DataSet();
+            Dstemp = objUtility.OpenDataSet("SELECT isnull (IDENT_CURRENT('Requests'),0)");
+            long intcnt = 0;
+            if (Convert.ToInt64(Dstemp.Tables[0].Rows[0][0]) > 0)
+            {
+                blnIdentityOn = true;
+                DataSet DsReqId = new DataSet();
+                DsReqId = objUtility.OpenDataSet("SELECT IDENT_CURRENT('Requests')");
+                intcnt = Convert.ToInt64(DsReqId.Tables[0].Rows[0][0]);
+            }
+            else
+            {
+                blnIdentityOn = false;
+                DataSet Dsmax = new DataSet();
+                Dsmax = objUtility.OpenDataSet("SELECT isNull(Max(Rq_srNo),0) from Requests");
+                intcnt = Convert.ToInt64(Dsmax.Tables[0].Rows[0][0]) + 1;
+            }
+
+            if (blnIdentityOn)
+                strsql = "insert into Requests values ( ";
+            else
+                strsql = "insert into Requests values ( " + intcnt + ",";
+
+            strsql += " '" + userId + "','" + cmbRequest + "','" + strFromDt + "','" + strToDt + "','" + strHostAdd + "',";
+            strsql += " '" + gstrToday + "',";
+            strsql += " convert(char(8),getdate(),108),";
+            strsql += " 'P','P','P','" + objUtility.Encrypt((gstrToday).ToString().Trim()) + "','',";
+            strsql += " '" + strLstSeg + "')";
+            objUtility.ExecuteSQL(strsql);
+
+            return intcnt.ToString();
+        }
+
+        #endregion
+        #endregion
         #endregion
         #endregion
     }
