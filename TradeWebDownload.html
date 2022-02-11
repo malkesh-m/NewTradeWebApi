@@ -1,0 +1,31 @@
+<!doctype Html>
+<html>
+<head>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"> </script>
+<script>
+$(document).ready(function(){
+	$("#download").click(function(){
+		
+		$.ajax({
+            type: "Get",
+			
+            url:"https://localhost:5001/api/TradeWeb/DownloadDigitalDocument?docType=Tplus&date=20210101&srNo=50.0",
+            <!-- contentType : "application/json; charset=utf-8", -->
+			dataType: "text",
+            success: function (result) {
+			alert("success");
+				window.loaction="https://localhost:5001/api/TradeWeb/DownloadDigitalDocument?docType=Tplus&date=20210101&srNo=50.0";
+            },
+            error: function (result) {
+            }
+		});
+	});
+});
+</script>
+</head>
+<body>
+<h1>The button Element</h1>
+
+<button id="download" type="button">Download</button>
+</body>
+</html>

@@ -709,7 +709,7 @@ namespace TradeWeb.API.Controllers
         }
 
         // Download digital document pdf
-        [Authorize(AuthenticationSchemes = "Bearer")]
+        //[Authorize(AuthenticationSchemes = "Bearer")]
         [HttpGet("DownloadDigitalDocument", Name = "DownloadDigitalDocument")]
         public IActionResult DownloadDigitalDocument(string docType, string date, string srNo)
         {

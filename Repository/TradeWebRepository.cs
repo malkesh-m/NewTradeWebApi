@@ -7275,7 +7275,7 @@ namespace TradeWeb.API.Repository
                 if (_configuration["CommexES"] != null && _configuration["CommexES"] != string.Empty)
                 {
                     IsCommexES = true;
-                    strsql = "select 'Commex' doctype,'DownLoad'as download,dd_srno,do_desc,ltrim(rtrim(convert(char,convert(datetime,dd_dt),103))) as dd_dt,dd_stlmnt,dd_document,dd_contractno,'' DT ";
+                    strsql = "select 'Commex' doctype,'DownLoad'as download,dd_srno,do_desc,ltrim(rtrim(convert(char,convert(datetime,dd_dt),103))) as dd_dt,dd_stlmnt,dd_contractno,'' DT ";
                     char[] ArrSeparators = new char[1];
                     ArrSeparators[0] = '/';
                     string[] ArrCommex = _configuration["CommexES"].Split(ArrSeparators);
@@ -7297,7 +7297,7 @@ namespace TradeWeb.API.Repository
             }
             else
             {
-                strsql = "select 'Tplus' doctype,'Download'as download,dd_srno,do_desc,ltrim(rtrim(convert(char,convert(datetime,dd_dt),103))) as dd_dt,dd_stlmnt,dd_document,dd_contractno,'" + fromDate + "' DT ";
+                strsql = "select 'Tplus' doctype,'Download'as download,dd_srno,do_desc,ltrim(rtrim(convert(char,convert(datetime,dd_dt),103))) as dd_dt,dd_stlmnt,dd_contractno,'" + fromDate + "' DT ";
                 strsql = strsql + "from digital_details ,DocumentType_master ";
                 strsql = strsql + "where dd_clientcd = '" + userId + "'";
                 if (cmbDocumentTypeValue == "Combine Contract" || cmbDocumentTypeValue == "Periodic Settlement" || cmbDocumentTypeValue == "Combine Margin Statement")
