@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Net;
+using System.Threading.Tasks;
 using TradeWeb.API.Entity;
 using TradeWeb.API.Repository;
 
@@ -13,48 +14,21 @@ namespace TradeWeb.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class TradeWeb_RequestController : ControllerBase
+    public class TradeWeb_MargingFinanceController : ControllerBase
     {
         private readonly ITradeWebRepository _tradeWebRepository;
 
-        public TradeWeb_RequestController(ITradeWebRepository tradeWebRepository)
+        public TradeWeb_MargingFinanceController(ITradeWebRepository tradeWebRepository)
         {
             _tradeWebRepository = tradeWebRepository;
         }
 
-        #region Request Api
+        #region Marging Finance Api
 
-        // update fund request or share requrest
+        // Get Trades Data
         [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("UpdateFundAndSharesRequest", Name = "UpdateFundAndSharesRequest")]
-        public IActionResult UpdateFundAndSharesRequest(bool isPostBack)
-        {
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    var getData = _tradeWebRepository.UpdateFundAndSharesRequest(isPostBack);
-                    if (getData != null)
-                    {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
-                    }
-                    else
-                    {
-                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
-                    }
-                }
-                catch (Exception ex)
-                {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
-                }
-            }
-            return BadRequest();
-        }
-
-        // Radio button shares checked
-        [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("RdButtonSharesChecked", Name = "RdButtonSharesChecked")]
-        public IActionResult RdButtonSharesChecked()
+        [HttpGet("GetTradesData", Name = "GetTradesData")]
+        public IActionResult GetTradesData([FromQuery] string fromDate, string toDate, string selectedIndex)
         {
             if (ModelState.IsValid)
             {
@@ -63,7 +37,7 @@ namespace TradeWeb.API.Controllers
                     var tokenS = GetToken();
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.RdButtonSharesChecked(userId);
+                    var getData = _tradeWebRepository.GetTradesData(userId, fromDate, toDate, selectedIndex);
                     if (getData != null)
                     {
                         return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
@@ -81,46 +55,20 @@ namespace TradeWeb.API.Controllers
             return BadRequest();
         }
 
-        // Get Rms Request
+        // get Temp table RmsSummary Data for status module.
         [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("GetRmsRequest", Name = "GetRmsRequest")]
-        public IActionResult GetRmsRequest()
+        [HttpGet("GetTempRMSSummaryData", Name = "GetTempRMSSummaryData")]
+        public IActionResult GetTempRMSSummaryData()
         {
             if (ModelState.IsValid)
             {
                 try
                 {
                     var tokenS = GetToken();
+                    var compCode = tokenS.Claims.First(claim => claim.Type == "companyCode").Value;
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.GetRmsRequest(userId);
-                    if (getData != null)
-                    {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
-                    }
-                    else
-                    {
-                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
-                    }
-                }
-                catch (Exception ex)
-                {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
-                }
-            }
-            return BadRequest();
-        }
-
-        //// Execute page request report page load query
-        [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("ExecuteRequestReportPageLoad", Name = "ExecuteRequestReportPageLoad")]
-        public IActionResult ExecuteRequestReportPageLoad(bool isPostBack)
-        {
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    var getData = _tradeWebRepository.ExecuteRequestReportPageLoad(isPostBack);
+                    var getData = _tradeWebRepository.GetTempRMSSummaryData(userId, compCode);
                     if (getData != null)
                     {
                         return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
@@ -139,19 +87,20 @@ namespace TradeWeb.API.Controllers
         }
 
 
-        //// Insert Request value after button click
+        // Get fund data of status module.
         [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("InsertRequestValues", Name = "InsertRequestValues")]
-        public IActionResult InsertRequestValues([FromQuery] string lstSegment, string request, string fromDate, string toDate)
+        [HttpGet("GetStatusFundData", Name = "GetStatusFundData")]
+        public IActionResult GetStatusFundData()
         {
             if (ModelState.IsValid)
             {
                 try
                 {
                     var tokenS = GetToken();
+                    var compCode = tokenS.Claims.First(claim => claim.Type == "companyCode").Value;
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.InsertRequestValues(userId, lstSegment, request, fromDate, toDate);
+                    var getData = _tradeWebRepository.GetStatusFundData(userId, compCode);
                     if (getData != null)
                     {
                         return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
@@ -169,7 +118,38 @@ namespace TradeWeb.API.Controllers
             return BadRequest();
         }
 
-        #endregion
+
+        // Get collateral data of status module.
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpGet("GetStatusCollateralData", Name = "GetStatusCollateralData")]
+        public IActionResult GetStatusCollateralData()
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var tokenS = GetToken();
+                    var compCode = tokenS.Claims.First(claim => claim.Type == "companyCode").Value;
+                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
+
+                    var getData = _tradeWebRepository.GetStatusCollateralData(userId, compCode);
+                    if (getData != null)
+                    {
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                    }
+                    else
+                    {
+                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
+
 
         private JwtSecurityToken GetToken()
         {
@@ -179,5 +159,6 @@ namespace TradeWeb.API.Controllers
             var token = handler.ReadToken(authHeader) as JwtSecurityToken;
             return token;
         }
+        #endregion
     }
 }
