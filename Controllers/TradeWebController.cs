@@ -163,6 +163,28 @@ namespace TradeWeb.API.Controllers
             }
             return BadRequest();
         }
+
+        [HttpPost("Login_Password_Update", Name = "Login_Password_Update")]
+        public IActionResult Login_Password_Update(string userId, string OTP, string oldPassword, string newPassword)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var result = _tradeWebRepository.Login_Password_Update(userId, OTP, oldPassword, newPassword);
+                    if (result != "failed")
+                    {
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = result });
+                    }
+                    return Ok(new commonResponse { status = false, message = "failed", status_code = (int)HttpStatusCode.NotFound, data = result });
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
         #endregion
 
 

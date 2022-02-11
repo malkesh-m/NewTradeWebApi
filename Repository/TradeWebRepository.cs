@@ -29,6 +29,8 @@ namespace TradeWeb.API.Repository
 
         public dynamic Login_Password_GenerateOTP(string userId, string mode);
 
+        public dynamic Login_Password_Update(string userId, string OTP, string oldPassword, string newPassword);
+
         public dynamic Login_validate_Password(string userId, string password);
 
         public dynamic Login_GetPassword(string userId);
@@ -176,7 +178,7 @@ namespace TradeWeb.API.Repository
                 var ds = CommonRepository.FillDataset(qury);
                 if (ds != null)
                 {
-                    if (ds.Tables.Count > 0)
+                    if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
                     {
                         DataTable Dt = new DataTable();
                         Dt = ds.Tables[0];
@@ -268,6 +270,21 @@ namespace TradeWeb.API.Repository
                 throw ex;
             }
         }
+
+        public dynamic Login_Password_Update(string userId, string OTP, string oldPassword, string newPassword)
+        {
+            try
+            {
+                Boolean result = Method_Login_Password_Update(userId, OTP, oldPassword, newPassword); //"select cm_mobile from Client_master with (nolock) where cm_cd='" + userId + "'  and cm_pwd='" + password + "'";
+
+                return JsonConvert.SerializeObject(result);
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
 
         public dynamic GetUserDetais(string userId)
         {
@@ -4758,7 +4775,7 @@ namespace TradeWeb.API.Repository
             }
 
             DataSet ds = new DataSet();
-            ds = objUtility.OpenDataSet("select cm_cd, cm_mobile, cm_email from client_master where cm_cd='"+userId+"';");
+            ds = objUtility.OpenDataSet("select cm_cd, cm_mobile, cm_email from client_master where cm_cd='" + userId + "';");
 
             if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
             {
@@ -4817,7 +4834,7 @@ namespace TradeWeb.API.Repository
             strMsgTxt = strMsgTxt.Replace("&", "");
             strMsgTxt = strMsgTxt.Replace("<~>", "&");
 
-           
+
             if (blnMobile == true)
             {
                 string strMobileNo = ds.Tables[0].Rows[0]["cm_mobile"].ToString();
@@ -5112,8 +5129,6 @@ namespace TradeWeb.API.Repository
 
             _httpContextAccessor.HttpContext.Session.SetString("testOtp", strSotp);
 
-            var responseSessionOtp2 = _httpContextAccessor.HttpContext.Session.GetObject<List<OtpUserIdSession>>("userOtp");
-
             string strMessage = string.Empty;
             if (mode == "ALL")
             {
@@ -5131,162 +5146,93 @@ namespace TradeWeb.API.Repository
             return strMessage + " OTP - " + strSotp;
         }
 
-        //public string Login_Password_Update(string userId, string OTP, string oldPassword, NewPassword)
-        //{
-        //    int count = 0;
-        //    if (txtSotp.Text.Trim() != Convert.ToString(Session["MOTP"]) || Convert.ToString(Session["MOTP"]) == "")
-        //    {
-        //        //Session["MOTP"] = "";
-        //        ShowMessage("OTP Mismatched", MessageType.Info);
-        //        //ScriptManager.RegisterStartupScript(this, this.GetType(), System.Guid.NewGuid().ToString(), "setTimeout(function(){window.location.href='../MasterPages/Home.aspx';},1000);", true);
-        //        return;
-        //    }
-        //    else
-        //    {
-        //        Session["MOTP"] = "";
-        //    }
-        //    if (rbMobile.SelectedIndex == 1)
-        //    {
-        //        string Strsql = "select * from master_change_request where MCR_ClientCode='" + this.Page.User.Identity.Name.ToUpper() + "' and MCR_Status = 'O' and MCR_Item='MO'";
-        //        DataTable dt = new DataTable();
-        //        dt = objAPI.OpenDataTableCommon(Strsql);
+        public Boolean Method_Login_Password_Update(string userId, string OTP, string oldPassword, string newPassword)
+        {
+            try
+            {
+                string Strsql = "";
 
-        //        if (dt.Rows.Count > 0)
-        //        {
-        //            txtNewmobile.Text = dt.Rows[0]["MCR_New1"].ToString().Trim();
-        //            Session["MOBILEID"] = dt.Rows[0]["MCR_ID"].ToString().Trim();
-        //            cmbMobile.SelectedIndex = int.Parse(dt.Rows[0]["MCR_Owner"].ToString().Trim());
-        //            Strsql = "update master_change_request set MCR_Status='O', MCR_Reason='OTP Sent' where MCR_ID='" + Convert.ToString(Session["MOBILEID"]) + "'";
-        //            ////  Calling API here
-        //            nm.Clear();
-        //            nm.Add("query", Strsql);
-        //            objAPI.Call_API_Get_string(nm, "Common/ExecuteQueryCommon");
-        //            //// End API Calling 
-        //            if (dt.Rows[0]["MCR_Status"].ToString().Trim() == "O")
-        //            {
-        //                txtNmotp.Attributes.Add("style", "visibility:visible");
-        //                lblEmotp.Attributes.Add("style", "visibility:visible");
-        //            }
-        //        }
-        //        else
-        //        {
-        //            Session["MOBILEID"] = "";
-        //        }
-        //        trNmobile.Visible = true;
-        //        Strsql = "Select * from Common_Contacts Where cc_Client = '" + this.Page.User.Identity.Name.ToUpper() + "' and cc_Contact = '" + lblMobile.Text.Trim() + "' and cc_type='M'";
-        //        ////  Calling API here
-        //        nm.Clear();
-        //        nm.Add("strVal", Strsql);
-        //        DataSet dtContact = objAPI.Call_API_Get_dsReturn(nm, "Common/OpenDataSetCommon");
-        //        //// End API Calling
-        //        if (dtContact.Tables[0].Rows.Count > 0)
-        //        {
-        //            txtNewmobile.Text = dtContact.Tables[0].Rows[0]["cc_contact"].ToString();
-        //            cmbMobile.SelectedValue = dtContact.Tables[0].Rows[0]["cc_relation"].ToString();
-        //        }
-        //    }
-        //    if (rbEmail.SelectedIndex == 1)
-        //    {
-        //        if (ConfigurationManager.AppSettings["SMTPSERVER"].Trim() != "")
-        //        {
-        //            Strsql = "select * from master_change_request where MCR_ClientCode='" + this.Page.User.Identity.Name.ToUpper() + "' and MCR_Status = 'O' and MCR_Item='EI'";
-        //            DataTable dt = new DataTable();
-        //            ////  Calling API here
-        //            nm.Clear();
-        //            nm.Add("strVal", Strsql);
-        //            dt = objAPI.Call_API_Get_dt(nm, "Common/OpenDataTableCommon");
-        //            //// End API Calling 
+                if (string.IsNullOrEmpty(newPassword))
+                {
+                    return false;
+                }
 
-        //            if (dt.Rows.Count > 0)
-        //            {
-        //                txtNemail.Text = dt.Rows[0]["MCR_New1"].ToString().Trim();
-        //                Session["EMAILID"] = dt.Rows[0]["MCR_ID"].ToString().Trim();
-        //                cmbEmail.SelectedIndex = int.Parse(dt.Rows[0]["MCR_Owner"].ToString().Trim());
-        //                Strsql = "update master_change_request set MCR_Status='O', MCR_Reason='OTP Sent' where MCR_ID='" + Convert.ToString(Session["EMAILID"]) + "'";
-        //                objAPI.ExecuteQueryCommon(Strsql);
+                if (!string.IsNullOrEmpty(OTP) && !string.IsNullOrEmpty(oldPassword))
+                {
+                    return false;
+                }
+                else if (!string.IsNullOrEmpty(OTP))
+                {
+                    var responseSessionOtp = _httpContextAccessor.HttpContext.Session.GetObject<List<OtpUserIdSession>>("userOtp");
+                    var responseOtp = responseSessionOtp.Where(x => x.UserId == userId && x.OTP == OTP).FirstOrDefault();
 
-        //                if (dt.Rows[0]["MCR_Status"].ToString().Trim() == "O")
-        //                {
-        //                    txtNeotp.Attributes.Add("style", "visibility:visible");
-        //                    lblEeotp.Attributes.Add("style", "visibility:visible");
-        //                }
-        //            }
-        //            else
-        //            {
-        //                Session["EMAILID"] = "";
-        //            }
-        //        }
-        //        else
-        //        {
-        //            lnkEotp.Visible = false;
-        //        }
-        //        trNemail.Visible = true;
-        //        DataSet dtContact = objAPI.OpenDataSetCommon("Select * from Common_Contacts Where cc_Client = '" + this.Page.User.Identity.Name.ToUpper() + "' and cc_Contact = '" + lblEmail.Text.Trim() + "' and cc_type='E'");
-        //        if (dtContact.Tables[0].Rows.Count > 0)
-        //        {
-        //            txtNemail.Text = dtContact.Tables[0].Rows[0]["cc_contact"].ToString();
-        //            cmbEmail.SelectedValue = dtContact.Tables[0].Rows[0]["cc_relation"].ToString();
-        //        }
-        //    }
-        //    if (rbIncome.SelectedIndex == 1)
-        //    {
-        //        string strIndex = objAPI.CallFireQueryTradeWeb("client_info", "cm_grossincome", "cm2_cd", this.Page.User.Identity.Name.ToUpper(), true);
-        //        string strDate = objAPI.CallFireQueryTradeWeb("client_info", "cm_grossincomedt", "cm2_cd", this.Page.User.Identity.Name.ToUpper(), true);
-        //        if (strIndex.Trim() != "")
-        //        {
-        //            int n;
-        //            if (int.TryParse(strIndex.Trim(), out n) == true)
-        //            {
-        //                cmbGross.SelectedIndex = Convert.ToInt32(strIndex) - 1;
-        //            }
-        //        }
-        //        if (strDate.Trim() != "")
-        //        {
-        //            DateTime dtGross = objUtility.ConvertDT(strDate);
-        //            if (dtGross.Month > 3)
-        //            {
-        //                if (cmbAsOn.Items.FindByValue(dtGross.AddYears(1).Year.ToString()) != null)
-        //                {
-        //                    cmbAsOn.ClearSelection();
-        //                    cmbAsOn.SelectedValue = dtGross.AddYears(1).Year.ToString();
-        //                }
-        //            }
-        //            else
-        //            {
-        //                if (cmbAsOn.Items.FindByValue(dtGross.Year.ToString()) != null)
-        //                {
-        //                    cmbAsOn.ClearSelection();
-        //                    cmbAsOn.SelectedValue = dtGross.Year.ToString();
-        //                }
-        //            }
-        //        }
-        //        trNincome.Visible = true;
-        //    }
+                    if (responseOtp != null)
+                    {
+                        responseSessionOtp.Remove(responseOtp);
+                        _httpContextAccessor.HttpContext.Session.SetObject("userOtp", responseSessionOtp);
 
-        //    if (count != 0)
-        //    {
-        //        if (rbMobile.SelectedIndex == 1 && rbEmail.SelectedIndex == 1)
-        //        {
-        //            ShowMessage("At least One OTP Mismatched", MessageType.Info);
-        //            ScriptManager.RegisterStartupScript(this, this.GetType(), System.Guid.NewGuid().ToString(), "setTimeout(function(){window.location.href='../MasterPages/Home.aspx';},1000);", true);
-        //            return;
-        //        }
-        //        else if (rbMobile.SelectedIndex == 1 || rbEmail.SelectedIndex == 1)
-        //        {
-        //            ShowMessage("OTP Mismatched", MessageType.Info);
-        //            ScriptManager.RegisterStartupScript(this, this.GetType(), System.Guid.NewGuid().ToString(), "setTimeout(function(){window.location.href='../MasterPages/Home.aspx';},1000);", true);
-        //            return;
-        //        }
-        //    }
-        //    else
-        //    {
-        //        if (rbMobile.SelectedIndex == 1 || rbEmail.SelectedIndex == 1 || rbIncome.SelectedIndex == 1)
-        //        {
-        //            divOTP.Visible = false;
-        //            divNew.Visible = true;
-        //        }
-        //    }
-        //}
+                        Strsql = "select cm_cd,cm_pwd from client_master where cm_cd='" + userId + "'";
+                        DataSet ObjDsPwd = new DataSet();
+                        ObjDsPwd = objUtility.OpenDataSet(Strsql);
+                        if (ObjDsPwd.Tables[0].Rows.Count > 0)
+                        {
+                            string strLastLoginDt = objUtility.fnFireQueryTradeWeb("Client_master", "cm_lastlogindt", "cm_cd", userId, true);
+
+                            Strsql = " update Client_master set cm_pwd='" + newPassword + "' where cm_cd='" + userId + "'";
+                            objUtility.ExecuteSQL(Strsql);
+
+                            if (_configuration["IsTradeWeb"] != "O") //not live
+                            {
+                                Strsql = "Update LoginDetails set lg_lastLoginDt='" + strLastLoginDt + "',lg_RsetPwd='Y',lg_ChangePwd='Y',lg_LastRSetDt='" + DateTime.Now.ToString("yyyyMMdd").Trim() + "' where lg_cmcd='" + userId + "' and lg_companycode=''";
+                                objUtility.ExecuteSQL(Strsql);
+                            }
+                            return true;
+                        }
+
+                        return false;
+                    }
+                    else
+                    {
+                        return false;
+                    }
+
+                }
+                else if (!string.IsNullOrEmpty(oldPassword))
+                {
+                    Strsql = "select cm_cd,cm_pwd from client_master where cm_cd='" + userId + "'";
+                    DataSet ObjDsPwd = new DataSet();
+                    ObjDsPwd = objUtility.OpenDataSet(Strsql);
+                    if (ObjDsPwd.Tables[0].Rows.Count > 0)
+                    {
+                        string strLastLoginDt = objUtility.fnFireQueryTradeWeb("Client_master", "cm_lastlogindt", "cm_cd", userId, true);
+                        if (ObjDsPwd.Tables[0].Rows[0]["cm_pwd"].ToString().Trim() == oldPassword)
+                        {
+                            Strsql = " update Client_master set cm_pwd='" + newPassword + "' where cm_cd='" + userId + "'";
+                            Strsql = Strsql + " and cm_pwd='" + oldPassword + "'";
+                            objUtility.ExecuteSQL(Strsql);
+
+                            if (_configuration["IsTradeWeb"] != "O") //not live
+                            {
+                                Strsql = "Update LoginDetails set lg_lastLoginDt='" + strLastLoginDt + "',lg_RsetPwd='Y',lg_ChangePwd='Y',lg_LastRSetDt='" + DateTime.Now.ToString("yyyyMMdd").Trim() + "' where lg_cmcd='" + userId + "' and lg_companycode=''";
+                                objUtility.ExecuteSQL(Strsql);
+                            }
+                            return true;
+                        }
+                        else
+                        {
+                            return false;
+                        }
+                    }
+
+                    return false;
+                }
+                return false;
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
 
         #endregion
 
