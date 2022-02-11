@@ -38,7 +38,6 @@ namespace TradeWeb.API.Controllers
         private readonly ITradeWebRepository _tradeWebRepository;
         private readonly IWebHostEnvironment _environment;
         private string strsql = "";
-        private string strConnecton = "";
         #endregion
 
         #region Constructor
@@ -55,6 +54,118 @@ namespace TradeWeb.API.Controllers
         #endregion
 
         #region API Methods
+
+        #region Login
+
+        /// <summary>
+        /// Login validate USER
+        /// </summary>
+        /// <param name="userId"></param>
+        /// <returns></returns>
+        [HttpPost("Login_validate_USER", Name = "Login_validate_USER")]
+        public IActionResult Login_validate_USER(string userId)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var result = _tradeWebRepository.Login_validate_USER(userId);
+                    if (result != "failed")
+                    {
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = result });
+                    }
+                    return Ok(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, data = result });
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
+
+        /// <summary>
+        /// Login validate Password
+        /// </summary>
+        /// <param name="userId"></param>
+        /// <param name="password"></param>
+        /// <returns></returns>
+        [HttpPost("Login_validate_Password", Name = "Login_validate_Password")]
+        public IActionResult Login_validate_Password(string userId, string password)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var result = _tradeWebRepository.Login_validate_Password(userId, password);
+                    var userList = _tradeWebRepository.UserDetails(userId, password);
+                    if (userList != null)
+                    {
+                        var tokenString = GenerateJSONWebToken(new TradeWebLoginModel { username = userId, password = password });
+                        FillConfigParametersString();
+                        return Ok(new tokenResponse { status = true, message = "success", token = tokenString, status_code = (int)HttpStatusCode.OK, data = userList });
+                    }
+                    return Ok(new commonResponse { status = false, message = "failed", status_code = (int)HttpStatusCode.NotFound, error_message = "Invalid userid / password" });
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
+
+        /// <summary>
+        /// Login validate Password
+        /// </summary>
+        /// <param name="userId"></param>
+        /// <returns></returns>
+        [HttpPost("Login_GetPassword", Name = "Login_GetPassword")]
+        public IActionResult Login_GetPassword(string userId)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var result = _tradeWebRepository.Login_GetPassword(userId);
+                    if (result != "failed")
+                    {
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = result });
+                    }
+                    return Ok(new commonResponse { status = false, message = "failed", status_code = (int)HttpStatusCode.NotFound, data = result });
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
+
+        [HttpPost("Login_Password_GenerateOTP", Name = "Login_Password_GenerateOTP")]
+        public IActionResult Login_Password_GenerateOTP(string userId, string mode)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var result = _tradeWebRepository.Login_Password_GenerateOTP(userId, mode);
+                    if (result != "failed")
+                    {
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = result });
+                    }
+                    return Ok(new commonResponse { status = false, message = "failed", status_code = (int)HttpStatusCode.NotFound, data = result });
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
+        #endregion
+
+
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpPost("Home_UserProfile", Name = "Home_UserProfile")]
         public IActionResult Home_UserProfile()
@@ -584,94 +695,9 @@ namespace TradeWeb.API.Controllers
             }
             return BadRequest();
         }
-
-
-        /// <summary>
-        /// Login validate USER
-        /// </summary>
-        /// <param name="userId"></param>
-        /// <returns></returns>
-        [HttpPost("Login_validate_USER", Name = "Login_validate_USER")]
-        public IActionResult Login_validate_USER(string userId)
-        {
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    var result = _tradeWebRepository.Login_validate_USER(userId);
-                    if (result != "failed")
-                    {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = result });
-                    }
-                    return Ok(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, data = result });
-                }
-                catch (Exception ex)
-                {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
-                }
-            }
-            return BadRequest();
-        }
-
-        /// <summary>
-        /// Login validate Password
-        /// </summary>
-        /// <param name="userId"></param>
-        /// <param name="password"></param>
-        /// <returns></returns>
-        [HttpPost("Login_validate_Password", Name = "Login_validate_Password")]
-        public IActionResult Login_validate_Password(string userId, string password)
-        {
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    var result = _tradeWebRepository.Login_validate_Password(userId, password);
-                    var userList = _tradeWebRepository.UserDetails(userId, password);
-                    if (userList != null)
-                    {
-                        var tokenString = GenerateJSONWebToken(new TradeWebLoginModel { username=userId, password=password });
-                        FillConfigParametersString();
-                        return Ok(new tokenResponse { status = true, message = "success", token = tokenString, status_code = (int)HttpStatusCode.OK, data = userList });
-                    }
-                    return Ok(new commonResponse { status = false, message = "failed", status_code = (int)HttpStatusCode.NotFound, error_message = "Invalid userid / password" });
-                }
-                catch (Exception ex)
-                {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
-                }
-            }
-            return BadRequest();
-        }
-
-        /// <summary>
-        /// Login validate Password
-        /// </summary>
-        /// <param name="userId"></param>
-        /// <returns></returns>
-        [HttpPost("Login_GetPassword", Name = "Login_GetPassword")]
-        public IActionResult Login_GetPassword(string userId)
-        {
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    var result = _tradeWebRepository.Login_GetPassword(userId);
-                    if (result != "failed")
-                    {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = result });
-                    }
-                    return Ok(new commonResponse { status = false, message = "failed", status_code = (int)HttpStatusCode.NotFound, data = result });
-                }
-                catch (Exception ex)
-                {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
-                }
-            }
-            return BadRequest();
-        }
         #endregion
 
+       
         #region Agreement
         // TODO : Get Family Page_Load Data
         [Authorize(AuthenticationSchemes = "Bearer")]

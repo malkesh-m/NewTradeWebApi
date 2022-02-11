@@ -1,4 +1,5 @@
 ﻿using INVPLService;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -11,6 +12,7 @@ using System.Data;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Mail;
 using System.Text;
 using System.Text.RegularExpressions;
 using TradeWeb.API.Data;
@@ -24,6 +26,8 @@ namespace TradeWeb.API.Repository
         public dynamic UserDetails(string userId, string password);
 
         public dynamic Login_validate_USER(string userId);
+
+        public dynamic Login_Password_GenerateOTP(string userId, string mode);
 
         public dynamic Login_validate_Password(string userId, string password);
 
@@ -150,13 +154,15 @@ namespace TradeWeb.API.Repository
         private string strsql = "";
         private string strConnecton = "";
         NVPLSoapClient nVPLSoapClient = new NVPLSoapClient(EndpointConfiguration.INVPLSoap);
+        IHttpContextAccessor _httpContextAccessor;
         #endregion
 
         #region Constructor
-        public TradeWebRepository(IConfiguration configuration, UtilityCommon objUtility)
+        public TradeWebRepository(IConfiguration configuration, UtilityCommon objUtility, IHttpContextAccessor httpContextAccessor)
         {
             _configuration = configuration;
             this.objUtility = objUtility;
+            _httpContextAccessor = httpContextAccessor;
         }
         #endregion
 
@@ -234,6 +240,23 @@ namespace TradeWeb.API.Repository
             try
             {
                 string result = ResetPassword(userId); //"select cm_mobile from Client_master with (nolock) where cm_cd='" + userId + "'  and cm_pwd='" + password + "'";
+                if (result != null)
+                {
+                    return JsonConvert.SerializeObject(result);
+                }
+                return "failed";
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        public dynamic Login_Password_GenerateOTP(string userId, string mode)
+        {
+            try
+            {
+                string result = Method_Login_Password_GenerateOTP(userId, mode); //"select cm_mobile from Client_master with (nolock) where cm_cd='" + userId + "'  and cm_pwd='" + password + "'";
                 if (result != null)
                 {
                     return JsonConvert.SerializeObject(result);
@@ -1513,9 +1536,9 @@ namespace TradeWeb.API.Repository
                 strCommClientMaster = StrCommexConn + ".Client_master";
             }
 
-            foreach(var segmentModel in model.type_exchseg)
+            foreach (var segmentModel in model.type_exchseg)
             {
-                foreach(var exSeg in segmentModel.exchseg)
+                foreach (var exSeg in segmentModel.exchseg)
                 {
                     if (!string.IsNullOrEmpty(type_cesCd))
                     {
@@ -4709,6 +4732,564 @@ namespace TradeWeb.API.Repository
         #endregion
         #endregion
 
+        #region Login method
+
+        public string Method_Login_Password_GenerateOTP(string userId, string mode)
+        {
+            List<OtpUserIdSession> sessionOtp = new List<OtpUserIdSession>();
+            string Strsql = "";
+            Boolean blnMobile = false;
+            Boolean blnEmail = false;
+            mode = mode.ToUpper();
+            if (mode == "ALL")
+            {
+                blnMobile = true;
+                blnEmail = true;
+            }
+            else if (mode == "MOBILE")
+            {
+                blnMobile = true;
+                blnEmail = false;
+            }
+            else if (mode == "EMAIL")
+            {
+                blnMobile = false;
+                blnEmail = true;
+            }
+
+            DataSet ds = new DataSet();
+            ds = objUtility.OpenDataSet("select cm_cd, cm_mobile, cm_email from client_master where cm_cd='"+userId+"';");
+
+            if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+            {
+            }
+            else
+            {
+                return "user not found";
+            }
+
+            string chars1 = "1234567890";
+            char[] stringChars1 = new char[4];
+
+            Random random1 = new Random();
+
+            for (int i = 0; i < stringChars1.Length; i++)
+            {
+                stringChars1[i] = chars1[random1.Next(chars1.Length)];
+            }
+
+            string strSotp = new String(stringChars1);
+            string strMsgTxt = string.Empty;
+            if (Convert.ToInt16(objUtility.fnFireQueryTradeWeb("Sysparameter", "count(0)", "sp_parmcd", "SMSCLMMO", true)) > 0)
+            {
+                strMsgTxt = objUtility.fnFireQueryTradeWeb("sysparameter", "SP_SYSVALUE", "sp_parmcd", "SMSCLMMO", true);
+            }
+            else
+            {
+                strMsgTxt = "Your OTP to initiate Mobile/Email/Gross Income change request for <Client> is <OTP>";
+            }
+            //strMsgTxt = "Your OTP to initiate change request for <Client> is <OTP>";
+            strMsgTxt = strMsgTxt.Replace("<Client>", userId.ToUpper());
+            strMsgTxt = strMsgTxt.Replace("<OTP>", strSotp);
+
+            if (strMsgTxt.ToUpper().Contains("<EMAIL ID/MOBILE NUMBER/INCOME>") == true)
+            {
+                string strTag = "";
+                List<string> lstTag = new List<string> { };
+                if (mode == "EMAIL")
+                {
+                    lstTag.Add("Email ID");
+                }
+                if (mode == "MOBILE")
+                {
+                    lstTag.Add("Mobile number");
+                }
+                if (mode == "ALL")
+                {
+                    lstTag.Add("Mobile number");
+                    lstTag.Add("Email ID");
+                }
+                strTag = String.Join("/", lstTag.ToArray());
+                strMsgTxt = strMsgTxt.Replace("<Email ID/Mobile number/Income>", strTag);
+            }
+
+            strMsgTxt = strMsgTxt.Replace("<&>", "<~>");
+            strMsgTxt = strMsgTxt.Replace("&", "");
+            strMsgTxt = strMsgTxt.Replace("<~>", "&");
+
+           
+            if (blnMobile == true)
+            {
+                string strMobileNo = ds.Tables[0].Rows[0]["cm_mobile"].ToString();
+                if (string.IsNullOrEmpty(strMobileNo))
+                {
+                    return "Mobile no not found";
+                }
+                strMobileNo = strMobileNo.Trim();
+                string[] strSMSParamVal = new string[5];
+                string strSMSParameter = "SMSUSERID/SMSPWD/SMSSENDER/SMSLENGTH/SMSLINK";
+                string strvalue = string.Empty;
+                string strFromNo1 = "";
+                string strFromNo2 = "";
+
+                for (int i = 0; i <= 4; i++)
+                {
+                    strvalue = strSMSParameter.Split('/')[i];
+                    strSMSParamVal[i] = objUtility.fnFireQueryTradeWeb("sysparameter", "SP_SYSVALUE", "sp_parmcd", strvalue, true);
+                }
+
+                string strURLLink = strSMSParamVal[4];
+
+                if (strURLLink.IndexOf("<USERID>") != -1 && strSMSParamVal[0].Trim() != "")
+                {
+                    strURLLink = strURLLink.Replace("<USERID>", strSMSParamVal[0].Trim());
+                }
+                if (strURLLink.IndexOf("<PASSWORD>") != -1 && strSMSParamVal[1].Trim() != "")
+                {
+                    strURLLink = strURLLink.Replace("<PASSWORD>", strSMSParamVal[1].Trim());
+                }
+                if (strSMSParamVal[2].Trim() == "")
+                {
+                    if (strURLLink.IndexOf("<SENDERID>") != -1)
+                    {
+                        strURLLink = strURLLink.Replace("<SENDERID>", strSMSParamVal[2].Trim());
+                    }
+                }
+                else
+                {
+                    strFromNo1 = strSMSParamVal[2].Trim();
+                    if (strFromNo1.IndexOf("|") != -1)
+                    {
+                        strFromNo2 = strFromNo1.Split('|')[1];
+                        strFromNo1 = strFromNo1.Split('|')[0];
+                    }
+                    else
+                    {
+                        strFromNo1 = Strings.Left(strFromNo1.Trim(), 10);
+                        strFromNo2 = "";
+                    }
+                    if (strURLLink.IndexOf("<SENDERID>") != -1)
+                    {
+                        strURLLink = strURLLink.Replace("<SENDERID>", strSMSParamVal[2].Trim());
+                    }
+                    else if (strURLLink.IndexOf("<SENDERID1>") != -1 || strURLLink.IndexOf("<SENDERID2>") != -1)
+                    {
+                        strURLLink = strURLLink.Replace("<SENDERID1>", strFromNo1).Replace("<SENDERID2>", strFromNo2);
+                    }
+                }
+                strURLLink = strURLLink.Replace("<MESSAGE>", strMsgTxt);
+
+                if (strURLLink.IndexOf("/opted.smsapi.org/v1.0.7/") != -1)
+                {
+                    strURLLink = strURLLink.Replace("<MESSAGE>", strMsgTxt);
+                }
+
+                if (strURLLink.IndexOf("/174.143.34.193/") != -1)
+                {
+                    if (strMsgTxt.Trim().Length > 160)
+                    {
+                        strURLLink = strURLLink + "&mt=4";
+                    }
+                    else
+                    {
+                        strURLLink = strURLLink + "&mt=0";
+                    }
+                    strURLLink = strURLLink + "&typeofmessage=1";
+                }
+                //////  Calling API here
+                //nm.Clear();
+                //nm.Add("param1", "SMSCOUNTRYCD");
+                //nm.Add("param2", "");
+                //string strv = objAPI.Call_API_Get_string(nm, "ChangeDetail/GetSysParmStChangeDetail");
+                //strv = JsonConvert.DeserializeObject<string>(strv);
+
+                string strv = objUtility.GetSysParmSt("SMSCOUNTRYCD", "");
+                //// End API Calling 
+                if (strv == "Y")
+                {
+                    if (strMobileNo.Trim().Length == 10)
+                    {
+                        strMobileNo = "91" + strMobileNo;
+                    }
+                }
+                else
+                {
+                    if (strMobileNo.Trim().Length > 10)
+                    {
+                        strMobileNo = Strings.Right(strMobileNo.Trim(), 10);
+                    }
+                }
+                strURLLink = strURLLink.Replace("<CLIENTMOBILE>", strMobileNo.Trim());
+
+                if (strURLLink.IndexOf("myvaluefirst.com") != -1)
+                {
+                    string strSENDER = "";
+                    if (strSMSParamVal[2].Trim().IndexOf("|") != -1)
+                    {
+                        if (Strings.Left(strMobileNo.Trim(), 2) == "92" || Strings.Left(strMobileNo.Trim(), 2) == "93")
+                        {
+                            strSENDER = strSMSParamVal[2].Trim().Split('|')[1];
+                        }
+                        else
+                        {
+                            strSENDER = strSMSParamVal[2].Trim().Split('|')[0];
+                        }
+                    }
+                    else
+                    {
+                        strSENDER = Strings.Left(strSMSParamVal[2].Trim(), 10);
+                    }
+                    strURLLink = strURLLink.Replace("<SENDERID3>", strSENDER);
+                }
+
+                if (!string.IsNullOrEmpty(_configuration["SECURITYPROT"]))
+                {
+                    if (_configuration["SECURITYPROT"].Trim() == "TLS12")
+                    {
+                        ServicePointManager.SecurityProtocol = (SecurityProtocolType)192 | (SecurityProtocolType)768 | (SecurityProtocolType)3072 | (SecurityProtocolType)48;
+                    }
+                }
+                HttpWebRequest http = (HttpWebRequest)WebRequest.Create(strURLLink);
+                HttpWebResponse response = (HttpWebResponse)http.GetResponse();
+                StreamReader sr = new StreamReader(response.GetResponseStream());
+                string content = sr.ReadToEnd();
+                string strresponse = content;
+                sr.Close();
+                //response.Close();
+
+                if (response.StatusCode == HttpStatusCode.OK)
+                {
+                    strresponse = "SMS Sent Successfully.";
+                }
+                else if (content.IndexOf("<ERROR>") != -1)
+                {
+                    if (content.IndexOf("<DESC>") != -1)
+                    {
+                        strresponse = Strings.Mid(content, Strings.InStr(1, content, "<DESC>", CompareMethod.Text) + 6);
+                        strresponse = Strings.Left(content, Strings.InStr(1, content, "</DESC>", CompareMethod.Text) - 1);
+                    }
+                    else
+                    {
+                        strresponse = "SMS Sent Successfully.";
+                    }
+                }
+                else if (content.IndexOf("\"\"error-status\"\":\"\"Success\"\"") != -1)
+                {
+                    strresponse = "SMS Sent Successfully.";
+                }
+                else if (content.IndexOf(strMobileNo.Trim()) != -1)
+                {
+                    strresponse = "Message Send Successfully.";
+                }
+                else if (content.IndexOf("<sms>") != -1)
+                {
+                    if (content.IndexOf("-1") != -1)
+                    {
+                        strresponse = "Message Sending Failed";
+                    }
+                    else if (content.ToUpper().IndexOf("INVALID USERNAME OR PASSWORD") != -1)
+                    {
+                        strresponse = "Sending Failed. Invalid Username Or Password.";
+                    }
+                    else
+                    {
+                        strresponse = "Message Send Successfully.";
+                    }
+                }
+                else if (content.IndexOf("Fail") != -1)
+                {
+                    strresponse = "Message Sending Failed";
+                }
+                else if (content.ToUpper().IndexOf("INVALID USERNAME OR PASSWORD") != -1 || content.ToUpper().IndexOf("INVALID USERNAME AND PASSWORD") != -1)
+                {
+                    strresponse = "Message Sending Failed. Invalid Username Or Password.";
+                }
+                else if (content.ToUpper().IndexOf("1701|") != -1 || content.ToUpper().IndexOf("SUCCESS") != -1)
+                {
+                    strresponse = "Message Send Successfully.";
+                }
+                else if (content == "100")
+                {
+                    strresponse = "Message Send Successfully.";
+                }
+                else if (content.ToUpper().IndexOf(":") != -1)
+                {
+                    if (content.ToUpper().Split(':')[1] == "")
+                    {
+                        strresponse = content;
+                    }
+                    else
+                    {
+                        strresponse = "Message Send Successfully.";
+                    }
+                }
+                else
+                {
+                    strresponse = content;
+                }
+
+                Strsql = "Insert into sms_Logs values(";
+                Strsql += "'" + userId.ToUpper() + "','" + strMobileNo + "','" + strMsgTxt + "',";
+                Strsql += "'" + strresponse.Replace("'", " ") + "','" + userId.ToUpper() + "','" + objUtility.dtos(System.DateTime.Today.Date.ToString()) + "','" + DateTime.Now.ToString("HH:mm:ss") + "')";
+                objUtility.ExecuteSQL(Strsql);
+            }
+
+            if (blnEmail == true)
+            {
+                string strEsendto = ds.Tables[0].Rows[0]["cm_email"].ToString();
+
+                if (string.IsNullOrEmpty(strEsendto))
+                {
+                    return "Email not found";
+                }
+
+                if (_configuration["SMTPSERVER"].Trim() != "" && strEsendto != "")
+                {
+                    try
+                    {
+                        string strHost = string.Empty;
+                        int intPort;
+                        string strUserID = string.Empty;
+                        string strPWD = string.Empty;
+                        string strEmail = string.Empty;
+                        string strSSL = string.Empty;
+                        string strSMTPParamVal = _configuration["SMTPSERVER"];
+                        string strEmailID = strEsendto;
+
+                        strHost = strSMTPParamVal.Split('/')[0];
+                        intPort = Convert.ToInt32(strSMTPParamVal.Split('/')[1]);
+                        strUserID = strSMTPParamVal.Split('/')[2];
+                        strPWD = strSMTPParamVal.Split('/')[3];
+                        strEmail = strSMTPParamVal.Split('/')[4];
+                        strSSL = strSMTPParamVal.Split('/')[5];
+
+                        MailMessage Msg = new MailMessage();
+
+                        Msg.From = new MailAddress(strEmail);
+                        Msg.To.Add(strEmailID);
+                        Msg.Subject = "Change Request OTP For Client " + userId.ToUpper();
+                        Msg.Body = strMsgTxt;
+                        Msg.IsBodyHtml = true;
+                        SmtpClient smtp = new SmtpClient();
+                        smtp.Host = strHost;
+                        smtp.Port = intPort;
+                        smtp.Credentials = new System.Net.NetworkCredential(strUserID, strPWD);
+                        smtp.EnableSsl = strSSL == "N" ? false : true;
+                        System.Net.ServicePointManager.ServerCertificateValidationCallback = delegate (object s,
+                        System.Security.Cryptography.X509Certificates.X509Certificate certificate,
+                        System.Security.Cryptography.X509Certificates.X509Chain chain,
+                        System.Net.Security.SslPolicyErrors sslPolicyErrors)
+                        {
+                            return true;
+                        };
+                        smtp.Send(Msg);
+                    }
+                    catch (Exception)
+                    {
+                        return "Unable to send Email";
+                    }
+                }
+            }
+
+            List<OtpUserIdSession> responseSessionOtp = _httpContextAccessor.HttpContext.Session.GetObject<List<OtpUserIdSession>>("userOtp");
+
+            if (responseSessionOtp == null)
+            {
+                responseSessionOtp = new List<OtpUserIdSession>
+                {
+                    new OtpUserIdSession { UserId = "xyzabc", OTP= "1234" }
+                };
+            }
+            var otpUser = responseSessionOtp.Where(a => a.UserId == userId).FirstOrDefault();
+            if (otpUser != null)
+            {
+                responseSessionOtp.Remove(otpUser);
+            }
+
+            responseSessionOtp.Add(new OtpUserIdSession { UserId = userId, OTP = strSotp });
+
+            _httpContextAccessor.HttpContext.Session.SetObject("userOtp", responseSessionOtp);
+
+            _httpContextAccessor.HttpContext.Session.SetString("testOtp", strSotp);
+
+            var responseSessionOtp2 = _httpContextAccessor.HttpContext.Session.GetObject<List<OtpUserIdSession>>("userOtp");
+
+            string strMessage = string.Empty;
+            if (mode == "ALL")
+            {
+                strMessage = "OTP sent to Mobile & Email";
+            }
+            else if (mode == "MOBILE" || mode == "NMOBILE")
+            {
+                strMessage = "OTP sent to " + (mode == "MOBILE" ? "Mobile" : "new Mobile");
+            }
+            else if (mode == "EMAIL" || mode == "NEMAIL")
+            {
+                strMessage = "OTP sent to " + (mode == "EMAIL" ? "Email" : "new Email");
+            }
+
+            return strMessage + " OTP - " + strSotp;
+        }
+
+        //public string Login_Password_Update(string userId, string OTP, string oldPassword, NewPassword)
+        //{
+        //    int count = 0;
+        //    if (txtSotp.Text.Trim() != Convert.ToString(Session["MOTP"]) || Convert.ToString(Session["MOTP"]) == "")
+        //    {
+        //        //Session["MOTP"] = "";
+        //        ShowMessage("OTP Mismatched", MessageType.Info);
+        //        //ScriptManager.RegisterStartupScript(this, this.GetType(), System.Guid.NewGuid().ToString(), "setTimeout(function(){window.location.href='../MasterPages/Home.aspx';},1000);", true);
+        //        return;
+        //    }
+        //    else
+        //    {
+        //        Session["MOTP"] = "";
+        //    }
+        //    if (rbMobile.SelectedIndex == 1)
+        //    {
+        //        string Strsql = "select * from master_change_request where MCR_ClientCode='" + this.Page.User.Identity.Name.ToUpper() + "' and MCR_Status = 'O' and MCR_Item='MO'";
+        //        DataTable dt = new DataTable();
+        //        dt = objAPI.OpenDataTableCommon(Strsql);
+
+        //        if (dt.Rows.Count > 0)
+        //        {
+        //            txtNewmobile.Text = dt.Rows[0]["MCR_New1"].ToString().Trim();
+        //            Session["MOBILEID"] = dt.Rows[0]["MCR_ID"].ToString().Trim();
+        //            cmbMobile.SelectedIndex = int.Parse(dt.Rows[0]["MCR_Owner"].ToString().Trim());
+        //            Strsql = "update master_change_request set MCR_Status='O', MCR_Reason='OTP Sent' where MCR_ID='" + Convert.ToString(Session["MOBILEID"]) + "'";
+        //            ////  Calling API here
+        //            nm.Clear();
+        //            nm.Add("query", Strsql);
+        //            objAPI.Call_API_Get_string(nm, "Common/ExecuteQueryCommon");
+        //            //// End API Calling 
+        //            if (dt.Rows[0]["MCR_Status"].ToString().Trim() == "O")
+        //            {
+        //                txtNmotp.Attributes.Add("style", "visibility:visible");
+        //                lblEmotp.Attributes.Add("style", "visibility:visible");
+        //            }
+        //        }
+        //        else
+        //        {
+        //            Session["MOBILEID"] = "";
+        //        }
+        //        trNmobile.Visible = true;
+        //        Strsql = "Select * from Common_Contacts Where cc_Client = '" + this.Page.User.Identity.Name.ToUpper() + "' and cc_Contact = '" + lblMobile.Text.Trim() + "' and cc_type='M'";
+        //        ////  Calling API here
+        //        nm.Clear();
+        //        nm.Add("strVal", Strsql);
+        //        DataSet dtContact = objAPI.Call_API_Get_dsReturn(nm, "Common/OpenDataSetCommon");
+        //        //// End API Calling
+        //        if (dtContact.Tables[0].Rows.Count > 0)
+        //        {
+        //            txtNewmobile.Text = dtContact.Tables[0].Rows[0]["cc_contact"].ToString();
+        //            cmbMobile.SelectedValue = dtContact.Tables[0].Rows[0]["cc_relation"].ToString();
+        //        }
+        //    }
+        //    if (rbEmail.SelectedIndex == 1)
+        //    {
+        //        if (ConfigurationManager.AppSettings["SMTPSERVER"].Trim() != "")
+        //        {
+        //            Strsql = "select * from master_change_request where MCR_ClientCode='" + this.Page.User.Identity.Name.ToUpper() + "' and MCR_Status = 'O' and MCR_Item='EI'";
+        //            DataTable dt = new DataTable();
+        //            ////  Calling API here
+        //            nm.Clear();
+        //            nm.Add("strVal", Strsql);
+        //            dt = objAPI.Call_API_Get_dt(nm, "Common/OpenDataTableCommon");
+        //            //// End API Calling 
+
+        //            if (dt.Rows.Count > 0)
+        //            {
+        //                txtNemail.Text = dt.Rows[0]["MCR_New1"].ToString().Trim();
+        //                Session["EMAILID"] = dt.Rows[0]["MCR_ID"].ToString().Trim();
+        //                cmbEmail.SelectedIndex = int.Parse(dt.Rows[0]["MCR_Owner"].ToString().Trim());
+        //                Strsql = "update master_change_request set MCR_Status='O', MCR_Reason='OTP Sent' where MCR_ID='" + Convert.ToString(Session["EMAILID"]) + "'";
+        //                objAPI.ExecuteQueryCommon(Strsql);
+
+        //                if (dt.Rows[0]["MCR_Status"].ToString().Trim() == "O")
+        //                {
+        //                    txtNeotp.Attributes.Add("style", "visibility:visible");
+        //                    lblEeotp.Attributes.Add("style", "visibility:visible");
+        //                }
+        //            }
+        //            else
+        //            {
+        //                Session["EMAILID"] = "";
+        //            }
+        //        }
+        //        else
+        //        {
+        //            lnkEotp.Visible = false;
+        //        }
+        //        trNemail.Visible = true;
+        //        DataSet dtContact = objAPI.OpenDataSetCommon("Select * from Common_Contacts Where cc_Client = '" + this.Page.User.Identity.Name.ToUpper() + "' and cc_Contact = '" + lblEmail.Text.Trim() + "' and cc_type='E'");
+        //        if (dtContact.Tables[0].Rows.Count > 0)
+        //        {
+        //            txtNemail.Text = dtContact.Tables[0].Rows[0]["cc_contact"].ToString();
+        //            cmbEmail.SelectedValue = dtContact.Tables[0].Rows[0]["cc_relation"].ToString();
+        //        }
+        //    }
+        //    if (rbIncome.SelectedIndex == 1)
+        //    {
+        //        string strIndex = objAPI.CallFireQueryTradeWeb("client_info", "cm_grossincome", "cm2_cd", this.Page.User.Identity.Name.ToUpper(), true);
+        //        string strDate = objAPI.CallFireQueryTradeWeb("client_info", "cm_grossincomedt", "cm2_cd", this.Page.User.Identity.Name.ToUpper(), true);
+        //        if (strIndex.Trim() != "")
+        //        {
+        //            int n;
+        //            if (int.TryParse(strIndex.Trim(), out n) == true)
+        //            {
+        //                cmbGross.SelectedIndex = Convert.ToInt32(strIndex) - 1;
+        //            }
+        //        }
+        //        if (strDate.Trim() != "")
+        //        {
+        //            DateTime dtGross = objUtility.ConvertDT(strDate);
+        //            if (dtGross.Month > 3)
+        //            {
+        //                if (cmbAsOn.Items.FindByValue(dtGross.AddYears(1).Year.ToString()) != null)
+        //                {
+        //                    cmbAsOn.ClearSelection();
+        //                    cmbAsOn.SelectedValue = dtGross.AddYears(1).Year.ToString();
+        //                }
+        //            }
+        //            else
+        //            {
+        //                if (cmbAsOn.Items.FindByValue(dtGross.Year.ToString()) != null)
+        //                {
+        //                    cmbAsOn.ClearSelection();
+        //                    cmbAsOn.SelectedValue = dtGross.Year.ToString();
+        //                }
+        //            }
+        //        }
+        //        trNincome.Visible = true;
+        //    }
+
+        //    if (count != 0)
+        //    {
+        //        if (rbMobile.SelectedIndex == 1 && rbEmail.SelectedIndex == 1)
+        //        {
+        //            ShowMessage("At least One OTP Mismatched", MessageType.Info);
+        //            ScriptManager.RegisterStartupScript(this, this.GetType(), System.Guid.NewGuid().ToString(), "setTimeout(function(){window.location.href='../MasterPages/Home.aspx';},1000);", true);
+        //            return;
+        //        }
+        //        else if (rbMobile.SelectedIndex == 1 || rbEmail.SelectedIndex == 1)
+        //        {
+        //            ShowMessage("OTP Mismatched", MessageType.Info);
+        //            ScriptManager.RegisterStartupScript(this, this.GetType(), System.Guid.NewGuid().ToString(), "setTimeout(function(){window.location.href='../MasterPages/Home.aspx';},1000);", true);
+        //            return;
+        //        }
+        //    }
+        //    else
+        //    {
+        //        if (rbMobile.SelectedIndex == 1 || rbEmail.SelectedIndex == 1 || rbIncome.SelectedIndex == 1)
+        //        {
+        //            divOTP.Visible = false;
+        //            divNew.Visible = true;
+        //        }
+        //    }
+        //}
+
+        #endregion
+
         #region Reset Password method
         public string ResetPassword(string userId)
         {
@@ -6471,7 +7052,7 @@ namespace TradeWeb.API.Repository
             }
         }
 
-        public dynamic GetINVPLGainLoss(string userId, string FromDate, string ToDate, Boolean chkjobing, Boolean chkdelivery, Boolean chkIgnoreSection,string TrxType)
+        public dynamic GetINVPLGainLoss(string userId, string FromDate, string ToDate, Boolean chkjobing, Boolean chkdelivery, Boolean chkIgnoreSection, string TrxType)
         {
             try
             {
@@ -6674,7 +7255,7 @@ namespace TradeWeb.API.Repository
                 string strurl = objUtility.GetWebParameter("TNetInvplUrl");
                 string jsondata = string.Empty;
                 DataSet ObjDataSet = new DataSet();
-               // ObjInvpl.Timeout = 300000;
+                // ObjInvpl.Timeout = 300000;
                 if (strurl != "" || strurl != null)
                 {
                     if (objUtility.WebRequestTest(strurl) == false)
@@ -6755,7 +7336,7 @@ namespace TradeWeb.API.Repository
             {
                 DataSet ObjDataSet = new DataSet();
                 double MarketRate = netRate;
-                date = objUtility.stod(date).ToString("dd/MM/yyyy").Replace('-','/');
+                date = objUtility.stod(date).ToString("dd/MM/yyyy").Replace('-', '/');
                 if (date.ToString() != "")
                 {
                     if (InvalidDateCheck(date.ToString()) == false)

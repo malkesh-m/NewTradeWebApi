@@ -13,6 +13,7 @@ using System.Text;
 using Microsoft.AspNetCore.Identity;
 using TradeWeb.API.Repository;
 using TradeWeb.API.Data;
+using Microsoft.AspNetCore.Http;
 
 namespace TradeWeb.API
 {
@@ -36,6 +37,7 @@ namespace TradeWeb.API
 
             //// TODO : Added dependancy here
             services.AddScoped<UtilityCommon>();
+            services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
             services.AddScoped<ITradeWebRepository, TradeWebRepository>();
 
             //// End dependancy
@@ -95,8 +97,7 @@ namespace TradeWeb.API
                         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Configuration["Jwt:Key"]))
                     };
                 });
-            services.AddMvc();
-
+            services.AddSession();
             services.AddCors(options =>
             {
                 options.AddDefaultPolicy(builder =>
@@ -129,6 +130,7 @@ namespace TradeWeb.API
             });
 
             app.UseRouting();
+            app.UseSession();
             app.UseAuthentication();
             app.UseAuthorization();
             app.UseEndpoints(endpoints =>
