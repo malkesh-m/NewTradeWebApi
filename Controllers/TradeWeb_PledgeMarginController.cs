@@ -14,51 +14,20 @@ namespace TradeWeb.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class TradeWeb_MargingFinanceController : ControllerBase
+    public class TradeWeb_PledgeMarginController : ControllerBase
     {
         private readonly ITradeWebRepository _tradeWebRepository;
 
-        public TradeWeb_MargingFinanceController(ITradeWebRepository tradeWebRepository)
+        public TradeWeb_PledgeMarginController(ITradeWebRepository tradeWebRepository)
         {
             _tradeWebRepository = tradeWebRepository;
         }
 
-        #region Marging Finance Api
-
-        // Get Trades Data
+        #region Margin Api
+        // TODO : Get margin grid main data
         [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("GetTradesData", Name = "GetTradesData")]
-        public IActionResult GetTradesData([FromQuery] string fromDate, string toDate, string selectedIndex)
-        {
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    var tokenS = GetToken();
-                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
-
-                    var getData = _tradeWebRepository.GetTradesData(userId, fromDate, toDate, selectedIndex);
-                    if (getData != null)
-                    {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
-                    }
-                    else
-                    {
-                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
-                    }
-                }
-                catch (Exception ex)
-                {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
-                }
-            }
-            return BadRequest();
-        }
-
-        // get Temp table RmsSummary Data for status module.
-        [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("GetTempRMSSummaryData", Name = "GetTempRMSSummaryData")]
-        public IActionResult GetTempRMSSummaryData()
+        [HttpGet("GetMargin", Name = "GetMargin")]
+        public IActionResult GetMargin()
         {
             if (ModelState.IsValid)
             {
@@ -68,7 +37,7 @@ namespace TradeWeb.API.Controllers
                     var compCode = tokenS.Claims.First(claim => claim.Type == "companyCode").Value;
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.GetTempRMSSummaryData(userId, compCode);
+                    var getData = _tradeWebRepository.GetMarginMainData(userId, compCode);
                     if (getData != null)
                     {
                         return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
@@ -86,11 +55,10 @@ namespace TradeWeb.API.Controllers
             return BadRequest();
         }
 
-
-        // Get fund data of status module.
+        // TODO : Get dropdown data
         [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("GetStatusFundData", Name = "GetStatusFundData")]
-        public IActionResult GetStatusFundData()
+        [HttpGet("GetDropdownData", Name = "GetDropdownData")]
+        public IActionResult GetDropdownData()
         {
             if (ModelState.IsValid)
             {
@@ -100,7 +68,7 @@ namespace TradeWeb.API.Controllers
                     var compCode = tokenS.Claims.First(claim => claim.Type == "companyCode").Value;
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.GetStatusFundData(userId, compCode);
+                    var getData = _tradeWebRepository.GetDropdownListData(userId, compCode);
                     if (getData != null)
                     {
                         return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
@@ -118,11 +86,10 @@ namespace TradeWeb.API.Controllers
             return BadRequest();
         }
 
-
-        // Get collateral data of status module.
+        // TODO : Get margin pledge data
         [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("GetStatusCollateralData", Name = "GetStatusCollateralData")]
-        public IActionResult GetStatusCollateralData()
+        [HttpGet("GetMarginPledgeData", Name = "GetMarginPledgeData")]
+        public IActionResult GetMarginPledgeData([FromQuery] string DPIDValue)
         {
             if (ModelState.IsValid)
             {
@@ -132,7 +99,7 @@ namespace TradeWeb.API.Controllers
                     var compCode = tokenS.Claims.First(claim => claim.Type == "companyCode").Value;
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.GetStatusCollateralData(userId, compCode);
+                    var getData = _tradeWebRepository.GetMarginPledgeData(userId, userId.ToUpper(), compCode, DPIDValue);
                     if (getData != null)
                     {
                         return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
@@ -150,35 +117,10 @@ namespace TradeWeb.API.Controllers
             return BadRequest();
         }
 
-
+        // TODO : Get margin pledge request
         [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("GetprSecurityListRptCommon", Name = "GetprSecurityListRptCommon")]
-        public IActionResult GetprSecurityListRptData(Boolean blnBSE, Boolean blnNSE)
-        {
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    var dataList = _tradeWebRepository.GetprSecurityListRptHandler(blnBSE, blnNSE);
-                    if (dataList != null)
-                    {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = dataList });
-                    }
-                    return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.NotFound, data = null });
-                }
-                catch (Exception ex)
-                {
-                    return BadRequest(new { response = ex.Message.ToString() });
-                }
-            }
-            return BadRequest();
-        }
-
-
-        //Get margin trading finance shortfall main grid data
-        [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("GetFinanceShortFallMainGridData", Name = "GetFinanceShortFallMainGridData")]
-        public IActionResult GetFinanceShortFallMainGridData([FromQuery] int days)
+        [HttpGet("GetCurrentPledgeRequest", Name = "GetCurrentPledgeRequest")]
+        public IActionResult GetCurrentPledgeRequest()
         {
             if (ModelState.IsValid)
             {
@@ -187,7 +129,7 @@ namespace TradeWeb.API.Controllers
                     var tokenS = GetToken();
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.GetShortFallMainGridData(userId, days);
+                    var getData = _tradeWebRepository.GetCurrentPledgeRequest(userId.ToUpper());
                     if (getData != null)
                     {
                         return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
@@ -204,6 +146,38 @@ namespace TradeWeb.API.Controllers
             }
             return BadRequest();
         }
+
+        // TODO : Add margin pledge request
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpGet("AddPledgeRequest", Name = "AddPledgeRequest")]
+        public IActionResult AddPledgeRequest([FromQuery] string DPIDValue, bool isIdentityOn, string intcnt, string scripcd, string quantity)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var tokenS = GetToken();
+                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
+
+                    var getData = _tradeWebRepository.AddPledgeRequest(userId.ToUpper(), DPIDValue, isIdentityOn, intcnt, scripcd, quantity);
+                    if (getData != null)
+                    {
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                    }
+                    else
+                    {
+                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
+
+        #endregion
 
         private JwtSecurityToken GetToken()
         {
@@ -213,6 +187,5 @@ namespace TradeWeb.API.Controllers
             var token = handler.ReadToken(authHeader) as JwtSecurityToken;
             return token;
         }
-        #endregion
     }
 }
