@@ -43,6 +43,8 @@ namespace TradeWeb.API.Repository
 
         public dynamic Ledger_Summary(string userId, string type, string fromdate, string toDate);
 
+        public dynamic Ledger_Year();
+
         public dynamic Ledger_Detail(string userId, LedgerDetailsModel model, string fromDate, string toDate);
 
         public dynamic OutStandingPosition(string userId, string AsOnDt);
@@ -1644,6 +1646,25 @@ namespace TradeWeb.API.Repository
             }
             strsql = " select Type [Type],ld_clientcd [ClientCode],ld_dt [Date],ExchSeg,ld_amount Amount,ld_particular Particular,ld_debitflag Debitflag,ld_chequeno Chequeno,ld_documenttype Documenttype,ld_common Common,Ldate,ld_dpid CESCD from (" + strsql + ") a ";
             strsql = strsql + " order by Type,Ldate";
+            try
+            {
+                var ds = CommonRepository.FillDataset(strsql);
+                if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                {
+                    var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
+                    return json;
+                }
+                return new List<string>();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        public dynamic Ledger_Year()
+        {
+            strsql = strsql + "select distinct ld_AccYear AccYear from Ledger";
             try
             {
                 var ds = CommonRepository.FillDataset(strsql);

@@ -128,7 +128,7 @@ namespace TradeWeb.API.Controllers
         /// <param name="toDate"></param>
         /// <param name="type_cesCd"></param>
         /// <returns></returns>
-        //[Authorize(AuthenticationSchemes = "Bearer")]
+        [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpPost("Ledger_Detail", Name = "Ledger_Detail")]
         public IActionResult Ledger_Detail( LedgerDetailsModel model /*string fromDate, string toDate, string type_cesCd*/)
         {
@@ -158,8 +158,37 @@ namespace TradeWeb.API.Controllers
             }
             return BadRequest();
         }
+
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpGet("Ledger_Year", Name = "Ledger_Year")]
+        public IActionResult Ledger_Year()
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    
+                    var getData = _tradeWebRepository.Ledger_Year();
+                    if (getData != null)
+                    {
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                    }
+                    else
+                    {
+                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
+
+
         #endregion
-                
+
         #region OutStanding Api
         /// <summary>
         ///  OutStanding data 
