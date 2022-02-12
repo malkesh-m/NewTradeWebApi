@@ -845,7 +845,10 @@ namespace TradeWeb.API.Controllers
                             //Response.ContentType = "application/download";
                             //Response.BinaryWrite((byte[])ObjReader["dd_document"]);
                             //Response.End();
-                            return File((byte[])ObjReader["dd_document"], "application/pdf", DataSet.Tables[0].Rows[0]["dd_filename"].ToString().Trim());
+                            var bytes = (byte[])ObjReader["dd_document"];
+                            var result = Convert.ToBase64String(bytes, 0, bytes.Length);
+                            //return File((byte[])ObjReader["dd_document"], "application/pdf", DataSet.Tables[0].Rows[0]["dd_filename"].ToString().Trim());
+                            return Ok(new downloadResponse {  status = true, message = "Success", statusCode = (int)HttpStatusCode.OK,  fileName = DataSet.Tables[0].Rows[0]["dd_filename"].ToString().Trim(), fileData = result });
                         }
                         ObjReader.Close();
                     }

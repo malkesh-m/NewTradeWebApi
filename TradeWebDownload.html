@@ -8,18 +8,45 @@ $(document).ready(function(){
 		
 		$.ajax({
             type: "Get",
-			
+			async: false,
             url:"https://localhost:5001/api/TradeWeb/DownloadDigitalDocument?docType=Tplus&date=20210101&srNo=50.0",
             <!-- contentType : "application/json; charset=utf-8", -->
 			dataType: "text",
             success: function (result) {
-			alert("success");
-				window.loaction="https://localhost:5001/api/TradeWeb/DownloadDigitalDocument?docType=Tplus&date=20210101&srNo=50.0";
+			var obj = JSON.parse(result);
+				var bytes = Base64ToBytes(obj.fileData);
+				var blob = new Blob([bytes], { type: "application/octetstream" });
+				
+				var isIE = false || !!document.documentMode;
+				if(isIE){
+					window.navigator.msSaveBlob(blob, obj.fileName);
+				}
+				else{
+					var url = window.URL || window.webkitURL;
+					link = url.createObjectURL(blob);
+					var a = $("<a/>");
+					a.attr("download", obj.fileName);
+					a.attr("href", link),
+					$("body").append(a);
+					a[0].click();
+					$("body").remove(a);
+				}
+				
             },
             error: function (result) {
             }
 		});
 	});
+	
+	function Base64ToBytes(base64){
+		var s = window.atob(base64);
+		var bytes = new Uint8Array(s.length);
+		for(var i = 0; i < s.length; i++){
+			bytes[i] = s.charCodeAt(i);
+		}
+		return bytes;
+	}
+	
 });
 </script>
 </head>
