@@ -925,6 +925,39 @@ namespace TradeWeb.API.Controllers
         }
 
 
+        // get dropdown Exchange list
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpGet("GetDigitalDocumentDownload", Name = "GetDigitalDocumentDownload")]
+        public IActionResult GetDigitalDocumentDownload([FromQuery] string productType, string documentType, string exchangeType, string fromDate)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var tokenS = GetToken();
+                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
+
+                    var getData = _tradeWebRepository.GetDigitalDocumentDownload(userId, productType, documentType, exchangeType, fromDate);
+                    if (getData != null)
+                    {
+                        return Ok(new downloadResponse { status = true, message = "success", statusCode = (int)HttpStatusCode.OK , fileName = getData.FileName,  fileData = getData.FileData });
+                    }
+                    else
+                    {
+                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
+
+
+
+
         #endregion
 
         //[Authorize(AuthenticationSchemes = "Bearer")]
