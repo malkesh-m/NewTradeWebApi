@@ -19,7 +19,7 @@ namespace TradeWeb.Repo.Interface
         string ParseDate(string Date);
         void prTempFOBill(SqlConnection ObjConnectionTmp);
         void prTempFOBill1(SqlConnection ObjConnectionTmp);
-        DataSet fnForBill(string strclientid, string strExcode, string StrFromDt, string StrToDt, string Exchange, string Segment, SqlConnection ObjConnectionTmp);
+        DataSet fnForBill(string userId, string exchSeg, string StrFromDt, SqlConnection ObjConnectionTmp);
         string GetPaddedString(string StringToPad, int TotalExpectedLength);
         string GetLeftPaddedString(string StringToPad, int TotalExpectedLength);
         string GetFormattedDate(string Date);
@@ -28,7 +28,7 @@ namespace TradeWeb.Repo.Interface
         string mfnFormatCurrency(Object objAmount, int intDecimal);
         string GetHtmlFromUrl(string url);
         HttpWebRequest GenerateHttpWebRequest(string UriString);
-        decimal mfnRoundoffCashbill(string strClient, string strRefDt, decimal dblBillamount, string strExchange, string strCompanyCode);
+        decimal mfnRoundoffCashbill(string strClient, string strRefDt, decimal dblBillamount, string strExchange);
         string Encrypt(string strenc);
         string Decrypt(string strenc);
         bool mfnGetSysSplFeature(string strKeyCode);

@@ -260,13 +260,13 @@ namespace TradeWeb.API.Repository
             string strCreate = string.Empty;
             try
             {
-                strCreate = "drop table  #tmpfobill ";
+                strCreate = "drop table  ##tmpfobill ";
                 ExecuteSQLTmp(strCreate, ObjConnectionTmp);
             }
             catch (Exception EX)
             {
 
-                strCreate = "CREATE TABLE  #tmpfobill ( ";
+                strCreate = "CREATE TABLE  ##tmpfobill ( ";
                 strCreate = strCreate + "[tx_controlflag] numeric(18,3) NOT NULL ,";
                 strCreate = strCreate + "[tx_dt] [char] (8) NOT NULL ,";
                 strCreate = strCreate + "[tx_clientcd] [char] (8) NOT NULL ,";
@@ -317,13 +317,13 @@ namespace TradeWeb.API.Repository
             string strsql = string.Empty;
             try
             {
-                strsql = " Drop Table #tmpfobill ";
+                strsql = " Drop Table ##tmpfobill ";
                 ExecuteSQLTmp(strsql, ObjConnectionTmp);
 
             }
             catch (Exception ex)
             {
-                strsql = "CREATE TABLE [#tmpfobill] ([tx_controlflag] numeric(18,3) NOT NULL , ";
+                strsql = "CREATE TABLE [##tmpfobill] ([tx_controlflag] numeric(18,3) NOT NULL , ";
                 strsql = strsql + " [tx_dt] [char] (8) NOT NULL ,[tx_clientcd] [char] (8) NOT NULL , ";
                 strsql = strsql + " [tx_mainbrcd] [char] (8) NOT NULL ,[tx_seriesid] [numeric]  NOT NULL , ";
                 strsql = strsql + " [tx_desc] char(45) NOT NULL,[tx_bqty] numeric (18,3)  NOT NULL , ";
@@ -362,291 +362,6 @@ namespace TradeWeb.API.Repository
                 ExecuteSQLTmp(strsql, ObjConnectionTmp);
             }
         }
-        //public DataSet fnForBill(string strclientid, string strExcode, string StrFromDt, string StrToDt, string Exchange, string Segment, SqlConnection ObjConnectionTmp)
-        //{
-        //    if ((Exchange != "MCX-COMM") && (Exchange != "NCDEX-COMM") && (Exchange != "ICEX-COMM") && (Exchange != "NCME-COMM") && (Exchange != "MCX") && (Exchange != "NCDEX") && (Exchange != "ICEX") && (Exchange != "NCME"))
-        //    {
-        //        prTempFOBill(ObjConnectionTmp);
-
-        //        string strinsert = string.Empty;
-        //        strinsert = "insert into #tmpmosesdates values('" + StrFromDt + "') ";
-        //        ExecuteSQLTmp(strinsert, ObjConnectionTmp);
-
-        //        string StrExchWhere = "";
-        //        string strIndexName = string.Empty;
-        //        string strsql = string.Empty;
-
-        //        strIndexName = "idx_trades_dt_clientcd";
-        //        strsql = "Select Name from sysindexes where Name= 'idx_trades_clientcd'";
-        //        DataSet ObjIndexds = OpenDataSet(strsql);
-        //        if (ObjIndexds.Tables[0].Rows.Count > 0)
-        //        {
-        //            strIndexName = "idx_trades_clientcd";
-        //        }
-
-        //        if (strExcode.Contains("IOP"))
-        //        {
-        //            StrExchWhere = "";
-        //            strExcode = Strings.Right(strExcode, 1);
-        //        }
-        //        else
-        //        { StrExchWhere = "and td_exchange = '" + strExcode + "'"; }
-
-        //        strinsert = " insert into  #tmpfobill  select 1 td_controlflag,'" + StrFromDt + "',td_clientcd, ";
-        //        strinsert = strinsert + " td_mainbrcd, td_seriesid,'',case sign(sum(td_bqty - td_sqty)) when 1 then abs(sum(td_bqty - td_sqty)) else 0 end  td_bqty, case sign(sum(td_bqty - td_sqty)) when 1 then 0 else abs(sum(td_bqty - td_sqty)) end td_sqty, 0.0000 td_rate,0.0000 td_mainbrrate,0.0000 td_mainbrrate, 0.0000 td_servicetax,0.0000 td_closeprice, case sm_prodtype when 'IF' then 1 when 'CF' then 1 when 'EF' then 2 when 'IO' then 5 else 6 end td_sortlist, sm_prodtype,0 ,td_exchange ";
-        //        strinsert = strinsert + " ,0,0 From Trades with(nolock,index(" + strIndexName + ")) , Series_master with(nolock),Client_master with(nolock)";
-        //        strinsert = strinsert + " Where td_clientcd = cm_cd and td_exchange = sm_exchange and td_Segment = sm_Segment And td_seriesid = sm_seriesid and sm_expirydt >= '" + StrFromDt + "' and  td_dt < '" + StrFromDt + "' " + StrExchWhere + " and td_Segment = '" + Segment + "' and sm_prodtype in('IF','EF','CF')  and ltrim(rtrim(td_groupid)) <> 'B'  and td_clientcd = '" + strclientid + "' group by td_clientcd,td_mainbrcd,td_seriesid,sm_prodtype,td_exchange having sum(td_bqty - td_sqty) <> 0 ";
-        //        ExecuteSQLTmp(strinsert, ObjConnectionTmp);
-
-        //        strinsert = " insert into #tmpfobill select 2 td_controlflag,td_dt,td_clientcd,td_mainbrcd, td_seriesid,'',td_bqty,td_sqty, td_rate, td_mainbrrate, td_mainbrrate, td_servicetax,0.0000 td_closeprice, case sm_prodtype when 'IF' then 1 when 'CF' then 1 when 'EF' then 2 when 'IO' then 5 else 6 end td_sortlist, sm_prodtype,0,td_exchange ";
-        //        strinsert = strinsert + " ,convert(decimal (15,2),td_marketrate) as tx_marketrate1,convert(decimal (15,4),td_brokerage) tx_Brokerage From Trades with(nolock,index(" + strIndexName + ")) , Series_master with(nolock),Client_master with(nolock)";
-        //        strinsert = strinsert + " Where td_clientcd = cm_cd and td_exchange = sm_exchange and td_Segment = sm_Segment and td_seriesid = sm_seriesid and sm_expirydt >= '" + StrFromDt + "' and  td_dt between '" + StrFromDt + "' and '" + StrFromDt + "' " + StrExchWhere + " and td_Segment = '" + Segment + "' and cm_cd = '" + strclientid + "' Order By td_tradeid , td_subtradeid ";
-        //        ExecuteSQLTmp(strinsert, ObjConnectionTmp);
-
-        //        strinsert = " insert into #tmpfobill select 2 td_controlflag,td_dt,td_clientcd,td_mainbrcd, td_seriesid,'',td_sqty,td_bqty, convert(decimal (15,2),td_marketrate) as tx_marketrate1, td_mainbrrate, td_mainbrrate, 0,0.0000 td_closeprice, case sm_prodtype when 'IF' then 1 when 'CF' then 1 when 'EF' then 2 when 'IO' then 5 else 6 end td_sortlist, sm_prodtype,0,td_exchange ";
-        //        strinsert = strinsert + " ,convert(decimal (15,2),td_marketrate) as tx_marketrate1,convert(decimal (15,4),td_brokerage) tx_Brokerage From Trades with(nolock,index(" + strIndexName + ")) , Series_master,Client_master ";
-        //        strinsert = strinsert + " Where td_clientcd = cm_cd and td_exchange = sm_exchange and td_Segment = sm_Segment and td_seriesid = sm_seriesid and sm_expirydt >= '" + StrFromDt + "' and  td_dt between '" + StrFromDt + "' and '" + StrFromDt + "' " + StrExchWhere + " and td_Segment = '" + Segment + "' and ltrim(rtrim(td_groupid)) = 'B'  and td_clientcd = '" + strclientid + "' Order By td_tradeid , td_subtradeid ";
-        //        ExecuteSQLTmp(strinsert, ObjConnectionTmp);
-
-        //        strinsert = " insert into #tmpfobill  select 99 tx_controlflag,bd_dt,tx_clientcd,tx_mainbrcd, tx_seriesid,'',  case sign(sum(tx_bqty - tx_sqty)) when 1 then abs(sum(tx_bqty - tx_sqty)) else 0 end  tx_bqty,  case sign(sum(tx_bqty - tx_sqty)) when 1 then 0 else abs(sum(tx_bqty - tx_sqty)) end tx_sqty,  0.0000 tx_rate,0.0000 tx_mainbrrate,0.0000 tx_mainbrrate, 0.0000 tx_servicetax,0.0000 tx_closeprice,  case sm_prodtype when 'IF' then 1 when 'CF' then 1 when 'EF' then 2 when 'IO' then 5 else 6 end tx_sortlist, sm_prodtype,0 ,sm_exchange";
-        //        strinsert = strinsert + " ,0,0 From #tmpfobill  , #tmpmosesdates , Series_master with (nolock),Client_master with (nolock)";
-        //        strinsert = strinsert + " Where tx_clientcd = cm_cd and sm_exchange = '" + strExcode + "' and sm_Segment = '" + Segment + "' And tx_seriesid = sm_seriesid  and sm_expirydt >= bd_dt and  tx_dt < bd_dt  and sm_prodtype in('IF','EF','CF')  and tx_controlflag not in ( '99','3')  group by bd_dt,tx_clientcd,tx_mainbrcd,tx_seriesid,sm_prodtype,sm_exchange  Having Sum(tx_bqty - tx_sqty) <> 0 ";
-        //        strinsert = strinsert + " Union All ";
-        //        strinsert = strinsert + " select 3 tx_controlflag,bd_dt,tx_clientcd,tx_mainbrcd, tx_seriesid,'', ";
-        //        strinsert = strinsert + " case sign(sum(tx_bqty - tx_sqty)) when 1 then 0 else abs(sum(tx_bqty - tx_sqty)) end tx_bqty, ";
-        //        strinsert = strinsert + " case sign(sum(tx_bqty - tx_sqty)) when 1 then abs(sum(tx_bqty - tx_sqty)) else 0 end  tx_sqty, ";
-        //        strinsert = strinsert + " 0.0000 tx_rate,0.0000 tx_mainbrrate,0.0000 tx_mainbrrate, 0.0000 tx_servicetax,0.0000 tx_closeprice, ";
-        //        strinsert = strinsert + " case sm_prodtype when 'IF' then 1 when 'CF' then 1 when 'EF' then 2 when 'IO' then 5 else 6 end tx_sortlist, sm_prodtype,0,sm_exchange ";
-        //        strinsert = strinsert + " ,0,0 From #tmpfobill  , #tmpmosesdates , Series_master with (nolock),Client_master with (nolock) ";
-        //        strinsert = strinsert + " Where tx_clientcd = cm_cd and sm_exchange = '" + strExcode + "' and sm_Segment = '" + Segment + "' And tx_seriesid = sm_seriesid ";
-        //        strinsert = strinsert + " and sm_expirydt >= bd_dt and  tx_dt <= bd_dt ";
-        //        strinsert = strinsert + " and sm_prodtype in('IF','EF','CF') ";
-        //        strinsert = strinsert + " and tx_controlflag not in ( '99','3') ";
-        //        strinsert = strinsert + " group by bd_dt,tx_clientcd,tx_mainbrcd,tx_seriesid,sm_prodtype,sm_exchange ";
-        //        strinsert = strinsert + " Having Sum(tx_bqty - tx_sqty) <> 0 ";
-        //        ExecuteSQLTmp(strinsert, ObjConnectionTmp);
-
-        //        strinsert = "Update #tmpfobill set tx_controlflag = '1' where tx_controlflag = '99' ";
-        //        ExecuteSQLTmp(strinsert, ObjConnectionTmp);
-
-        //        strinsert = "insert into #tmpfobill select case ex_eaflag when 'E' then 5 else 6 end td_controlflag,ex_dt,ex_clientcd,ex_mainbrcd, ex_seriesid,'',ex_eqty,ex_aqty, ex_diffbrokrate,ex_mainbrdiffrate,ex_mainbrdiffrate, ex_servicetax,ex_settlerate, case sm_prodtype when 'IF' then 1 when 'CF' then 1 when 'EF' then 2 when 'IO' then 5 else 6 end + 3 td_sortlist, sm_prodtype,0 ,ex_exchange";
-        //        strinsert = strinsert + " ,convert(decimal (15,2),ex_diffrate) as tx_marketrate1 ,convert(decimal(15,2),ex_brokerage) tx_Brokerage From Exercise with (nolock), Series_master with (nolock) ,Client_master with (nolock) ";
-        //        strinsert = strinsert + "Where ex_clientcd = cm_cd and ex_exchange = sm_exchange and ex_Segment = sm_Segment And ex_seriesid = sm_seriesid and sm_expirydt >= '" + StrFromDt + "' and ex_dt between '" + StrFromDt + "' and '" + StrFromDt + "' " + StrExchWhere.Replace("td_", "ex_") + " and ex_Segment = '" + Segment + "' and cm_cd = '" + strclientid + "' ";
-        //        ExecuteSQLTmp(strinsert, ObjConnectionTmp);
-
-        //        strinsert = "insert into #tmpbillcharges select tx_dt,tx_clientcd,'SERVICE TAX',round(sum(tx_servicetax),2),0,tx_exchange ";
-        //        strinsert = strinsert + " from #tmpfobill,#tmpmosesdates,Client_master with (nolock) ";
-        //        strinsert = strinsert + " where tx_clientcd = cm_cd and tx_dt = bd_dt and cm_cd = '" + strclientid + "' group by tx_dt,tx_clientcd,tx_exchange having sum(tx_servicetax) > 0 ";
-        //        ExecuteSQLTmp(strinsert, ObjConnectionTmp);
-
-        //        strinsert = "update #tmpfobill set tx_closerate = ms_lastprice ";
-        //        strinsert = strinsert + " from #tmpfobill, Market_summary with (nolock) ";
-        //        strinsert = strinsert + " where ms_seriesid = tx_seriesid and tx_controlflag in ('1','2') and ms_exchange=tx_exchange and ms_Segment = '" + Segment + "' and ms_dt = tx_dt ";
-        //        ExecuteSQLTmp(strinsert, ObjConnectionTmp);
-
-        //        strinsert = "update #tmpfobill set tx_rate = ms_prcloseprice ";
-        //        strinsert = strinsert + " from #tmpfobill,Market_summary with (nolock) ";
-        //        strinsert = strinsert + " where ms_seriesid = tx_seriesid and tx_controlflag = 1 and ms_exchange = tx_Exchange  and ms_Segment = '" + Segment + "' and ms_dt = tx_dt ";
-        //        ExecuteSQLTmp(strinsert, ObjConnectionTmp);
-
-        //        strinsert = "update #tmpfobill set tx_rate = ms_lastprice from #tmpfobill,Market_summary with (nolock) ";
-        //        strinsert = strinsert + " where ms_seriesid = tx_seriesid and tx_controlflag = 3";
-        //        strinsert = strinsert + " and ms_exchange = tx_Exchange  and ms_Segment = '" + Segment + "'";
-        //        strinsert = strinsert + " and ms_dt = tx_dt";
-        //        ExecuteSQLTmp(strinsert, ObjConnectionTmp);
-
-        //        strinsert = "insert into #tmpbillcharges select fc_dt,fc_clientcd,fc_desc,round(sum(fc_amount),2),0,fc_exchange ";
-        //        strinsert = strinsert + " from Fspecialcharges with (nolock) ,#tmpmosesdates,Client_master with (nolock) ";
-        //        strinsert = strinsert + " where fc_clientcd = cm_cd and fc_dt = bd_dt and cm_cd = '" + strclientid + "' " + StrExchWhere.Replace("td_", "fc_") + " and fc_Segment = '" + Segment + "' group by fc_dt,fc_clientcd,fc_desc,fc_exchange having round(sum(fc_amount),2) <> 0 ";
-        //        ExecuteSQLTmp(strinsert, ObjConnectionTmp);
-
-        //        strinsert = "insert into #tmpbillcharges select fc_dt,fc_clientcd,'SERVICE TAX',round(sum(fc_servicetax),2),0,fc_exchange ";
-        //        strinsert = strinsert + " from Fspecialcharges with (nolock) ,#tmpmosesdates,Client_master with (nolock) ";
-        //        strinsert = strinsert + " where fc_clientcd = cm_cd and fc_dt = bd_dt and cm_cd = '" + strclientid + "' " + StrExchWhere.Replace("td_", "fc_") + " and fc_Segment = '" + Segment + "' group by fc_dt,fc_clientcd,fc_desc,fc_exchange having round(sum(fc_servicetax),2) <> 0 ";
-        //        ExecuteSQLTmp(strinsert, ObjConnectionTmp);
-
-        //        strinsert = "update #tmpfobill set tx_value = round(((case tx_controlflag when 5  then (tx_bqty + tx_sqty)*-1 when 6 then (tx_bqty + tx_sqty)*-1 else (tx_bqty - tx_sqty) end) *tx_rate)*sm_multiplier,4)";
-        //        strinsert = strinsert + " From series_master with (nolock) ";
-        //        strinsert = strinsert + " Where sm_Segment = '" + Segment + "' and sm_exchange = tx_Exchange and tx_seriesid = sm_seriesid ";
-        //        ExecuteSQLTmp(strinsert, ObjConnectionTmp);
-
-        //        strinsert = "insert into #tmpfobill select 10 ,bc_dt,bc_clientcd,bc_clientcd, 1,upper(bc_desc),0 td_bqty,0 td_sqty, 0,0 td_mainbrrate,0 td_mainbrrate, 0 td_servicetax,0.0000 td_closeprice, 10 td_sortlist, 'XX',round(sum(bc_amount),2),bc_exchange,0,0 From #tmpbillcharges group by bc_dt,bc_clientcd,bc_desc,bc_exchange ";
-        //        ExecuteSQLTmp(strinsert, ObjConnectionTmp);
-
-        //        strinsert = "insert into #tmpfobill select 90 ,fb_billdt,fb_clientcd,fb_clientcd, 1,'[PREV. DAY MRGN.]',0 td_bqty,0 td_sqty, 0,0 td_mainbrrate,0 td_mainbrrate, 0 td_servicetax,0.0000 td_closeprice, 90 td_sortlist, 'XX',round(Case when fb_postmrgyn = 'Y' then fb_margin1 else 0 end + CAse When fb_postExpmrgyn = 'Y' then fb_Expmargin1 else 0 end ,2),fb_exchange ";
-        //        strinsert = strinsert + " ,0,0 From #tmpmosesdates,Fbills with (nolock) ,Client_master with (nolock) ";
-        //        strinsert = strinsert + " where fb_clientcd = cm_cd and fb_billdt = bd_dt and fb_exchange = '" + strExcode + "' and fb_Segment = '" + Segment + "' and round(Case when fb_postmrgyn = 'Y' then fb_margin1 else 0 end + CAse When fb_postExpmrgyn = 'Y' then fb_Expmargin1 else 0 end ,2) <> 0  and cm_cd = '" + strclientid + "' ";
-        //        ExecuteSQLTmp(strinsert, ObjConnectionTmp);
-
-        //        strinsert = "insert into #tmpfobill select 91 ,fb_billdt,fb_clientcd,fb_clientcd, 1,'[CURR. DAY MRGN.]',0 td_bqty,0 td_sqty, 0,0 td_mainbrrate,0 td_mainbrrate, 0 td_servicetax,0.0000 td_closeprice, 91 td_sortlist, 'XX',round(Case When fb_postmrgyn = 'Y' then fb_margin2 else 0 end + Case When fb_postExpmrgyn = 'Y' then fb_Expmargin2 else 0 end,2),fb_exchange ";
-        //        strinsert = strinsert + " ,0,0 From #tmpmosesdates,Fbills with (nolock) ,Client_master with (nolock) ";
-        //        strinsert = strinsert + " where fb_clientcd = cm_cd and fb_billdt = bd_dt and fb_exchange = '" + strExcode + "' and fb_Segment = '" + Segment + "' and round(Case When fb_postmrgyn = 'Y' then fb_margin2 else 0 end + Case When fb_postExpmrgyn = 'Y' then fb_Expmargin2 else 0 end,2) <> 0  and cm_cd = '" + strclientid + "' ";
-        //        ExecuteSQLTmp(strinsert, ObjConnectionTmp);
-
-        //        strinsert = "alter table #tmpfobill add tx_billno numeric default(0) NOT NULL ";
-        //        ExecuteSQLTmp(strinsert, ObjConnectionTmp);
-
-        //        strinsert = "update #tmpfobill set tx_billno = fb_billno from #tmpfobill,Fbills with (nolock) where fb_clientcd = tx_clientcd  and fb_exchange = tx_exchange and fb_Segment = '" + Segment + "' and fb_billdt = tx_dt  ";
-        //        ExecuteSQLTmp(strinsert, ObjConnectionTmp);
-
-        //        strinsert = "select tx_sortlist,tx_dt as dt,tx_billno,case tx_controlflag when '1' then 'b/f' when '3' then 'c/f' else convert(char,convert(datetime,tx_dt),103) end tx_dt,tx_clientcd, tx_seriesid,sm_sname as tx_desc, cast((tx_bqty)as decimal(15,0))as tx_bqty,cast((tx_sqty)as decimal(15,0))as tx_sqty,cast((tx_rate)as decimal(15,4))as tx_rate,cast((tx_closerate)as decimal(15,4))as tx_closerate,cast((tx_value)as decimal(15,2))as drcr,cast((((tx_bqty-tx_sqty) * tx_rate)) as decimal(15,2)) value,sm_sname,sm_desc,sm_productcd,sm_symbol, ";
-        //        strinsert = strinsert + " sm_expirydt,sm_strikeprice,sm_callput,sm_optionstyle,cm_name, ";
-        //        strinsert = strinsert + " cm_add1,cm_add2,cm_add3,cm_tele1,cm_tele2,cm_email,cm_sebino, cm_panno, cm_add4, cm_pincode,sm_prodtype,cm_groupcd,cm_familycd,cm_brboffcode,cm_subbroker,sm_multiplier, ";
-        //        strinsert = strinsert + " cm_introducer ,replicate(' ',8-len(ltrim(rtrim(tx_clientcd)))) + ltrim(rtrim(tx_clientcd)) ,case tx_controlflag when '1' then 0 when '3' then 2 else 1 end ord, '' as NetValue ";
-        //        strinsert = strinsert + " ,tx_marketrate1,tx_Brokerage from #tmpfobill,Series_master with (nolock) ,Client_master with (nolock) ";
-        //        strinsert = strinsert + " where tx_clientcd = cm_cd and tx_seriesid = sm_seriesid and tx_exchange = sm_exchange and sm_Segment = '" + Segment + "' and tx_controlflag < 10 ";
-        //        strinsert = strinsert + " union all ";
-        //        strinsert = strinsert + " select tx_sortlist,tx_dt as dt,tx_billno,case tx_controlflag when '1' then 'b/f' when '3' then 'c/f' else convert(char,convert(datetime,tx_dt),103) end tx_dt,tx_clientcd, tx_seriesid,tx_desc, cast((tx_bqty)as decimal(15,0))as tx_bqty,cast((tx_sqty)as decimal(15,0))as tx_sqty,cast((tx_rate)as decimal(15,4))as tx_rate,cast((tx_closerate)as decimal(15,4))as tx_closerate,cast((tx_value)as decimal(15,2)) as drcr,cast((((tx_bqty-tx_sqty) * tx_rate))as decimal(15,2)) value, tx_desc as sm_sname,'' sm_desc,'' sm_productcd,'' sm_symbol,'' sm_expirydt, 0 sm_strikeprice, 'X' sm_callput,'X' sm_optionstyle, cm_name,cm_add1,cm_add2,cm_add3,cm_tele1,cm_tele2,cm_email, cm_sebino, cm_panno,cm_add4, ";
-        //        strinsert = strinsert + " cm_pincode,'EF' as sm_prodtype,cm_groupcd,cm_familycd,cm_brboffcode, ";
-        //        strinsert = strinsert + " cm_subbroker,0 sm_multiplier,cm_introducer ,replicate('',8-len(ltrim(rtrim(tx_clientcd)))) + ltrim(rtrim(tx_clientcd)),case tx_controlflag when '1' then 0 when '3' then 2 else 1 end ord, '' as NetValue  ";
-        //        strinsert = strinsert + " ,tx_marketrate1,tx_Brokerage from #tmpfobill,Client_master with (nolock) ";
-        //        strinsert = strinsert + " where tx_clientcd = cm_cd and tx_controlflag >= 10 ";
-        //        strinsert = strinsert + " order by  replicate(' ',8-len(ltrim(rtrim(tx_clientcd)))) + ltrim(rtrim(tx_clientcd))  ,dt ,tx_sortlist,sm_symbol,tx_seriesid,tx_desc  , ord ";
-
-        //        DataSet objDataset = new DataSet();
-        //        objDataset = OpenDataSetTmp(strinsert, ObjConnectionTmp);
-
-        //        string StrDrop = string.Empty;
-        //        prTempFOBill(ObjConnectionTmp);
-        //        return objDataset;
-
-        //    }
-
-        //    else //MCX And NCDEX
-        //    {
-        //        prTempFOBill1(ObjConnectionTmp);
-        //        string strsql = string.Empty;
-
-        //        strsql = "insert into #tmpmosesdates values('" + StrFromDt + "') ";
-        //        ExecuteSQLTmp(strsql, ObjConnectionTmp);
-
-        //        string strDelivery = string.Empty;
-        //        string strSeries_master = string.Empty;
-        //        string strClient_master = string.Empty;
-        //        string strTrades = string.Empty;
-        //        string strMarket_summary = string.Empty;
-        //        string strFspecialcharges = string.Empty;
-        //        string strproduct_master = string.Empty;
-        //        string strFbills = string.Empty;
-
-
-        //        if (ConfigurationManager["IsTradeWeb"] == "O")
-        //        {
-        //            if (ConfigurationManager["Commex"] != null || ConfigurationManager["Commex"] != string.Empty)
-        //            {
-        //                string StrCommexConn = "";
-        //                StrCommexConn = GetCommexConnection();
-
-        //                strSeries_master = StrCommexConn + ".Series_master";
-        //                strClient_master = StrCommexConn + ".Client_master";
-        //                strTrades = StrCommexConn + ".Trades";
-        //                strDelivery = StrCommexConn + ".Delivery";
-        //                strMarket_summary = StrCommexConn + ".Market_summary";
-        //                strFspecialcharges = StrCommexConn + ".Fspecialcharges";
-        //                strproduct_master = StrCommexConn + ".product_master";
-        //                strFbills = StrCommexConn + ".Fbills";
-        //            }
-        //        }
-        //        strsql = "insert into #tmpfobill select 1 td_controlflag,bd_dt,td_clientcd,td_mainbrcd, td_seriesid,'',case sign(sum(td_bqty - td_sqty)) when 1 then abs(sum(td_bqty - td_sqty)) else 0 end  td_bqty, case sign(sum(td_bqty - td_sqty)) when 1 then 0 else abs(sum(td_bqty - td_sqty)) end td_sqty, 0.0000 td_rate,0.0000 td_mainbrrate,0.0000 td_mainbrrate, 0.0000 td_servicetax,0.0000 td_closeprice, case sm_prodtype when 'CF' then 1 when 'CO' then 2 else 6 end td_sortlist, sm_prodtype,0, sm_multiplier , 0 td_tradeid, '' td_time, 0 td_orderid";
-        //        strsql = strsql + " From " + strTrades + ", #tmpmosesdates, " + strSeries_master + "," + strClient_master + " ";
-        //        strsql = strsql + "Where td_clientcd = cm_cd and td_exchange = sm_exchange And td_seriesid = sm_seriesid and sm_expirydt >= bd_dt and  td_dt < bd_dt and td_exchange = '" + strExcode + "' and sm_prodtype in('CF') and cm_cd = '" + strclientid + "' group by bd_dt,td_clientcd,td_mainbrcd,td_seriesid,sm_prodtype, sm_multiplier   having sum(td_bqty - td_sqty) <> 0 ";
-        //        ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
-
-        //        strsql = "insert into #tmpfobill select 2 td_controlflag,bd_dt,td_clientcd,td_mainbrcd, td_seriesid,'',td_bqty,td_sqty, td_rate,td_mainbrrate,td_mainbrrate, td_servicetax,0.0000 td_closeprice, case sm_prodtype when 'CF' then 1 when 'CO' then 2 else 6 end td_sortlist, sm_prodtype, 0, sm_multiplier, td_tradeid, td_time, td_orderid";
-        //        strsql = strsql + " From " + strTrades + ", #tmpmosesdates, " + strSeries_master + "," + strClient_master + " ";
-        //        strsql = strsql + "Where td_clientcd = cm_cd and td_exchange = sm_exchange and td_seriesid = sm_seriesid and sm_expirydt >= bd_dt and  td_dt = bd_dt and td_exchange = '" + strExcode + "' and cm_cd = '" + strclientid + "' ";
-        //        ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
-
-        //        strsql = " insert into #tmpfobill  select Case dl_type When 'DL' Then 7 When 'PD' Then 8 When 'SL' Then 9 When 'DS' Then 9.5 Else '' End td_controlflag, dl_BillDate,dl_clientcd,dl_mainbrcd, dl_seriesid,'',  dl_Bqty , dl_SQty ,  dl_rate , dl_mainbrrate, dl_marketrate, dl_servicetax,0,  case sm_prodtype when 'CF' then 1 when 'CO' then 2 else 6 end + 3 td_sortlist, sm_prodtype, (dl_bqty - dl_sQty) * dl_Rate * sm_multiplier  , sm_multiplier , 0 tx_tradeid, '' tx_time, 0 tx_orderid ";
-        //        strsql = strsql + "  From " + strDelivery + ", #tmpmosesdates, " + strSeries_master + "," + strClient_master + " ";
-        //        strsql = strsql + "  Where dl_clientcd = cm_cd And dl_exchange = sm_exchange And dl_seriesid = sm_seriesid  and  dl_BillDate = bd_dt  and dl_exchange = '" + strExcode + "' and dl_type In ('DL','SL','PD','DS')  and cm_cd = '" + strclientid + "' ";
-        //        ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
-
-        //        strsql = "insert into #tmpfobill select 3 td_controlflag,bd_dt,td_clientcd,td_mainbrcd, td_seriesid,'',case sign(sum(td_bqty - td_sqty)) when 1 then 0 else abs(sum(td_bqty - td_sqty)) end  td_bqty, case sign(sum(td_bqty - td_sqty)) when 1 then abs(sum(td_bqty - td_sqty)) else 0 end td_sqty, 0.0000 td_rate,0.0000 td_mainbrrate,0.0000 td_mainbrrate, 0.0000 td_servicetax,0.0000 td_closeprice, case sm_prodtype when 'CF' then 1 when 'CO' then 2 else 6 end td_sortlist, sm_prodtype,0, sm_multiplier, 0,'',0       ";
-        //        strsql = strsql + " From " + strTrades + ", #tmpmosesdates, " + strSeries_master + "," + strClient_master + " ";
-        //        strsql = strsql + " Where td_clientcd = cm_cd and td_exchange = sm_exchange And td_seriesid = sm_seriesid and sm_expirydt >= bd_dt and  td_dt <= bd_dt and td_exchange = '" + strExcode + "' and sm_prodtype in('CF') and cm_cd = '" + strclientid + "' group by bd_dt,td_clientcd,td_mainbrcd,td_seriesid,sm_prodtype, sm_multiplier having sum(td_bqty - td_sqty) <> 0";
-        //        ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
-
-        //        strsql = "insert into #tmpbillcharges select tx_dt,tx_clientcd,'SERVICE TAX',round(sum(tx_servicetax),2),0 ";
-        //        strsql = strsql + " from #tmpfobill,#tmpmosesdates," + strClient_master + " ";
-        //        strsql = strsql + "where tx_clientcd = cm_cd and tx_dt = bd_dt and cm_cd = '" + strclientid + "' group by tx_dt,tx_clientcd having sum(tx_servicetax) > 0 ";
-        //        ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
-
-        //        strsql = "update #tmpfobill set tx_closerate = ms_lastprice ";
-        //        strsql = strsql + " from #tmpfobill, " + strMarket_summary + " ";
-        //        strsql = strsql + " where ms_seriesid = tx_seriesid and tx_controlflag in ('1','2') and ms_exchange = '" + strExcode + "' and ms_dt = tx_dt ";
-        //        ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
-
-        //        strsql = "update #tmpfobill set tx_rate = ms_prcloseprice ";
-        //        strsql = strsql + " from #tmpfobill," + strMarket_summary + " ";
-        //        strsql = strsql + " where ms_seriesid = tx_seriesid and tx_controlflag = 1 and ms_exchange = '" + strExcode + "' and ms_dt = tx_dt ";
-        //        ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
-
-        //        strsql = "update #tmpfobill set tx_rate = ms_lastprice ";
-        //        strsql = strsql + " from #tmpfobill, " + strMarket_summary + " ";
-        //        strsql = strsql + " where ms_seriesid = tx_seriesid and tx_controlflag = 3 and ms_exchange = '" + strExcode + "' and ms_dt = tx_dt ";
-        //        ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
-
-        //        strsql = "insert into #tmpbillcharges select fc_dt,fc_clientcd,fc_desc,round(sum(fc_amount),2),0";
-        //        strsql = strsql + " from " + strFspecialcharges + ",#tmpmosesdates," + strClient_master + " ";
-        //        strsql = strsql + " where fc_clientcd = cm_cd and fc_dt = bd_dt and cm_cd = '" + strclientid + "' and fc_exchange = '" + strExcode + "' group by fc_dt,fc_clientcd,fc_desc having round(sum(fc_amount),2) <> 0 ";
-        //        ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
-
-        //        strsql = "insert into #tmpbillcharges select fc_dt,fc_clientcd,'SERVICE TAX',round(sum(fc_servicetax),2),0 ";
-        //        strsql = strsql + " from " + strFspecialcharges + ",#tmpmosesdates," + strClient_master + " ";
-        //        strsql = strsql + " where fc_clientcd = cm_cd and fc_dt = bd_dt and cm_cd = '" + strclientid + "' and fc_exchange = '" + strExcode + "' group by fc_dt,fc_clientcd,fc_desc having round(sum(fc_servicetax),2) <> 0 ";
-        //        ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
-
-        //        strsql = "update #tmpfobill set tx_value = round(((case tx_controlflag when 5  then (tx_bqty + tx_sqty)*0 when 6 then (tx_bqty + tx_sqty)*0 else (tx_bqty - tx_sqty) end) *tx_rate)*tx_multiplier,4) ";
-        //        ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
-
-        //        strsql = "insert into #tmpfobill select 10 ,bc_dt,bc_clientcd,bc_clientcd, 1,upper(bc_desc),0 td_bqty,0 td_sqty, 0,0 td_mainbrrate,0 td_mainbrrate, 0 td_servicetax,0.0000 td_closeprice, 10 td_sortlist, 'XX',round(sum(bc_amount),2),0,0,'',0 ";
-        //        strsql = strsql + " From #tmpbillcharges group by bc_dt,bc_clientcd,bc_desc ";
-        //        ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
-
-        //        strsql = "insert into #tmpfobill select 90 ,fb_billdt,fb_clientcd,fb_clientcd, 1,'[PREV. DAY MRGN.]',0 td_bqty,0 td_sqty, 0,0 td_mainbrrate,0 td_mainbrrate, 0 td_servicetax,0.0000 td_closeprice, 90 td_sortlist, 'XX',round(fb_margin1,2),0, 0,'',0 ";
-        //        strsql = strsql + " From #tmpmosesdates," + strFbills + "," + strClient_master + " ";
-        //        strsql = strsql + " where fb_clientcd = cm_cd and fb_billdt = bd_dt and fb_exchange = '" + strExcode + "' and fb_margin1 <> 0 and fb_postmrgyn = 'Y' and cm_cd = '" + strclientid + "' ";
-        //        ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
-
-        //        strsql = "insert into #tmpfobill select 91 ,fb_billdt,fb_clientcd,fb_clientcd, 1,'[CURR. DAY MRGN.]',0 td_bqty,0 td_sqty, 0,0 td_mainbrrate,0 td_mainbrrate, 0 td_servicetax,0.0000 td_closeprice, 91 td_sortlist, 'XX',round(fb_margin2,2),0, 0, '', 0 ";
-        //        strsql = strsql + " From #tmpmosesdates," + strFbills + "," + strClient_master + " ";
-        //        strsql = strsql + " where fb_clientcd = cm_cd and fb_billdt = bd_dt and fb_exchange = '" + strExcode + "' and fb_margin2 <> 0 and fb_postmrgyn = 'Y' and cm_cd = '" + strclientid + "' ";
-        //        ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
-
-        //        strsql = "alter table #tmpfobill add tx_billno numeric default(0) NOT NULL ";
-        //        ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
-
-        //        strsql = "update #tmpfobill set tx_billno = fb_billno ";
-        //        strsql = strsql + " from #tmpfobill," + strFbills + " ";
-        //        strsql = strsql + " where fb_clientcd = tx_clientcd  and fb_exchange = '" + strExcode + "' and fb_billdt = tx_dt ";
-        //        ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
-
-        //        strsql = "alter table #tmpfobill add tx_unit char (15) ";
-        //        ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
-
-        //        strsql = "update a Set tx_unit=left(rtrim(convert(char,convert(numeric,floor(pm_divisor))))+' '+pm_unitper,15) ";
-        //        strsql = strsql + " from #tmpfobill a, " + strSeries_master + ", " + strproduct_master + " ";
-        //        strsql = strsql + " where tx_seriesid = sm_seriesid and sm_exchange='" + strExcode + "' and sm_prodtype=pm_type and sm_exchange=pm_exchange and sm_symbol=pm_assetcd ";
-        //        ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
-
-        //        strsql = "select tx_sortlist,tx_dt as dt,tx_billno,case tx_controlflag when '1' then 'b/f' when '3' then 'c/f' else convert(char,convert(datetime,tx_dt),103) end tx_dt,tx_clientcd, tx_seriesid,sm_sname as tx_desc,cast((tx_bqty) as decimal(15,2)) as tx_bqty,cast((tx_sqty) as decimal(15,2)) as tx_sqty,cast((tx_rate) as decimal(15,4)) as tx_rate,cast((tx_closerate) as decimal(15,4)) as tx_closerate,cast((tx_value) as decimal(15,2)) as drcr,cast((((tx_bqty-tx_sqty) * tx_rate)) as decimal(15,2))  value,tx_multiplier, sm_sname,sm_desc,sm_productcd,sm_symbol, sm_expirydt,sm_strikeprice, sm_callput,sm_optionstyle,cm_name,cm_add1, cm_add2,cm_add3,cm_tele1, cm_tele2,cm_email, cm_sebino, cm_panno, cm_add4, cm_pincode, sm_prodtype,cm_groupcd,cm_familycd, cm_brboffcode, tx_tradeid,";
-        //        strsql = strsql + " case tx_controlflag when '1' then 'b/f' when '3' then 'c/f' else tx_time end tx_time, tx_orderid, tx_marketrate, tx_unit,case tx_controlflag when '1' then 0 when '3' then 2 else 1 end ord , '' as NetValue";
-        //        strsql = strsql + " from #tmpfobill," + strSeries_master + "," + strClient_master + " ";
-        //        strsql = strsql + " where tx_clientcd = cm_cd and tx_seriesid = sm_seriesid and sm_exchange = '" + strExcode + "' and tx_controlflag < 10 and cm_brboffcode <> '' ";
-        //        strsql = strsql + "union all ";
-        //        strsql = strsql + "select tx_sortlist,tx_dt as dt,tx_billno,case tx_controlflag when '1' then 'b/f' when '3' then 'c/f' else convert(char,convert(datetime,tx_dt),103) end tx_dt,tx_clientcd, tx_seriesid,tx_desc, cast((tx_bqty) as decimal(15,2)) as tx_bqty, cast((tx_sqty) as decimal(15,4)) as tx_sqty,tx_rate,cast((tx_closerate) as decimal(15,4)) as tx_closerate ,cast((tx_value) as decimal(15,2)) as drcr,cast((((tx_bqty-tx_sqty) * tx_rate)) as decimal(15,2))  value,tx_multiplier, tx_desc as  sm_sname,'' sm_desc,'' sm_productcd,'' sm_symbol,'' sm_expirydt, 0 sm_strikeprice, 'X' sm_callput,'X' sm_optionstyle, cm_name,cm_add1,cm_add2,cm_add3,cm_tele1,cm_tele2,cm_email, cm_sebino, cm_panno,cm_add4, cm_pincode,'EF' as sm_prodtype,cm_groupcd,cm_familycd, cm_brboffcode, tx_tradeid,";
-        //        strsql = strsql + "case tx_controlflag when '1' then 'b/f' when '3' then 'c/f' else tx_time end tx_time, tx_orderid, tx_marketrate, tx_unit,case tx_controlflag when '1' then 0 when '3' then 2 else 1 end ord, '' as NetValue  ";
-        //        strsql = strsql + " from #tmpfobill," + strClient_master + " ";
-        //        strsql = strsql + " where tx_clientcd = cm_cd  and tx_controlflag >= 10 and cm_brboffcode <> ''  order by tx_clientcd,dt ,tx_sortlist,sm_symbol,tx_seriesid,tx_desc  , ord  ";
-        //        DataSet objDataset = new DataSet();
-        //        objDataset = OpenDataSetTmp(strsql, ObjConnectionTmp);
-
-        //        string StrDrop = string.Empty;
-        //        prTempFOBill1(ObjConnectionTmp);
-        //        return objDataset;
-        //    }
-        //}
 
         public string GetSqlTradeHolding(string rsCon, string strClient, string strdate, string strcollat, SqlConnection ObjConnectionTmp)
         {
@@ -806,14 +521,14 @@ namespace TradeWeb.API.Repository
             }
         }
 
-        public DataSet fnForBill(string strclientid, string strExcode, string StrFromDt, string StrToDt, string Exchange, string Segment, SqlConnection ObjConnectionTmp)
+        public DataSet fnForBill(string userId,string exchSeg,string dt, SqlConnection ObjConnectionTmp)
         {
-            if ((Exchange != "MCX-COMM") && (Exchange != "NCDEX-COMM") && (Exchange != "ICEX-COMM") && (Exchange != "NCME-COMM") && (Exchange != "MCX") && (Exchange != "NCDEX") && (Exchange != "ICEX") && (Exchange != "NCME"))
+            if (exchSeg.Substring(1,1) != "X")
             {
                 prTempFOBill(ObjConnectionTmp);
 
                 string strinsert = string.Empty;
-                strinsert = "insert into #tmpmosesdates values('" + StrFromDt + "') ";
+                strinsert = "insert into #tmpmosesdates values('" + dt + "') ";
                 ExecuteSQLTmp(strinsert, ObjConnectionTmp);
 
                 string StrExchWhere = "";
@@ -828,41 +543,38 @@ namespace TradeWeb.API.Repository
                     strIndexName = "idx_trades_clientcd";
                 }
 
-                if (strExcode.Contains("IOP"))
-                {
-                    StrExchWhere = "";
-                    strExcode = Strings.Right(strExcode, 1);
-                }
+                if (exchSeg.Substring(0, 1) == "X")
+                { StrExchWhere = ""; }
                 else
-                { StrExchWhere = "and td_exchange = '" + strExcode + "'"; }
+                { StrExchWhere = "and td_exchange = '" + exchSeg.Substring(0, 1) + "'";}
 
-                strinsert = " insert into  #tmpfobill  select 1 td_controlflag,'" + StrFromDt + "',td_clientcd, ";
+                strinsert = " insert into  ##tmpfobill  select 1 td_controlflag,'" + dt + "',td_clientcd, ";
                 strinsert = strinsert + " td_mainbrcd, td_seriesid,'',case sign(sum(td_bqty - td_sqty)) when 1 then abs(sum(td_bqty - td_sqty)) else 0 end  td_bqty, case sign(sum(td_bqty - td_sqty)) when 1 then 0 else abs(sum(td_bqty - td_sqty)) end td_sqty, 0.0000 td_rate,0.0000 td_mainbrrate,0.0000 td_mainbrrate, 0.0000 td_servicetax,0.0000 td_closeprice, case sm_prodtype when 'IF' then 1 when 'CF' then 1 when 'EF' then 2 when 'IO' then 5 else 6 end td_sortlist, sm_prodtype,0 ,td_exchange ";
                 strinsert = strinsert + " ,0,0 From Trades with(nolock,index(" + strIndexName + ")) , Series_master with(nolock),Client_master with(nolock)";
-                strinsert = strinsert + " Where td_clientcd = cm_cd and td_exchange = sm_exchange and td_Segment = sm_Segment And td_seriesid = sm_seriesid and sm_expirydt >= '" + StrFromDt + "' and  td_dt < '" + StrFromDt + "' " + StrExchWhere + " and td_Segment = '" + Segment + "' and sm_prodtype in('IF','EF','CF')  and ltrim(rtrim(td_groupid)) <> 'B'  and td_clientcd = '" + strclientid + "' group by td_clientcd,td_mainbrcd,td_seriesid,sm_prodtype,td_exchange having sum(td_bqty - td_sqty) <> 0 ";
+                strinsert = strinsert + " Where td_clientcd = cm_cd and td_exchange = sm_exchange and td_Segment = sm_Segment And td_seriesid = sm_seriesid and sm_expirydt >= '" + dt + "' and  td_dt < '" + dt + "' " + StrExchWhere + " and td_Segment = '" + exchSeg.Substring(1,1) + "' and sm_prodtype in('IF','EF','CF')  and ltrim(rtrim(td_groupid)) <> 'B'  and td_clientcd = '" + userId + "' group by td_clientcd,td_mainbrcd,td_seriesid,sm_prodtype,td_exchange having sum(td_bqty - td_sqty) <> 0 ";
                 ExecuteSQLTmp(strinsert, ObjConnectionTmp);
 
-                strinsert = " insert into #tmpfobill select 2 td_controlflag,td_dt,td_clientcd,td_mainbrcd, td_seriesid,'',td_bqty,td_sqty, td_rate, td_mainbrrate, td_mainbrrate, td_servicetax,0.0000 td_closeprice, case sm_prodtype when 'IF' then 1 when 'CF' then 1 when 'EF' then 2 when 'IO' then 5 else 6 end td_sortlist, sm_prodtype,0,td_exchange ";
+                strinsert = " insert into ##tmpfobill select 2 td_controlflag,td_dt,td_clientcd,td_mainbrcd, td_seriesid,'',td_bqty,td_sqty, td_rate, td_mainbrrate, td_mainbrrate, td_servicetax,0.0000 td_closeprice, case sm_prodtype when 'IF' then 1 when 'CF' then 1 when 'EF' then 2 when 'IO' then 5 else 6 end td_sortlist, sm_prodtype,0,td_exchange ";
                 strinsert = strinsert + " ,convert(decimal (15,2),td_marketrate) as tx_marketrate1,convert(decimal (15,4),td_brokerage) tx_Brokerage From Trades with(nolock,index(" + strIndexName + ")) , Series_master with(nolock),Client_master with(nolock)";
-                strinsert = strinsert + " Where td_clientcd = cm_cd and td_exchange = sm_exchange and td_Segment = sm_Segment and td_seriesid = sm_seriesid and sm_expirydt >= '" + StrFromDt + "' and  td_dt between '" + StrFromDt + "' and '" + StrFromDt + "' " + StrExchWhere + " and td_Segment = '" + Segment + "' and cm_cd = '" + strclientid + "' Order By td_tradeid , td_subtradeid ";
+                strinsert = strinsert + " Where td_clientcd = cm_cd and td_exchange = sm_exchange and td_Segment = sm_Segment and td_seriesid = sm_seriesid and sm_expirydt >= '" + dt + "' and  td_dt between '" + dt + "' and '" + dt + "' " + StrExchWhere + " and td_Segment = '" + exchSeg.Substring(1, 1) + "' and cm_cd = '" + userId + "' Order By td_tradeid , td_subtradeid ";
                 ExecuteSQLTmp(strinsert, ObjConnectionTmp);
 
-                strinsert = " insert into #tmpfobill select 2 td_controlflag,td_dt,td_clientcd,td_mainbrcd, td_seriesid,'',td_sqty,td_bqty, convert(decimal (15,2),td_marketrate) as tx_marketrate1, td_mainbrrate, td_mainbrrate, 0,0.0000 td_closeprice, case sm_prodtype when 'IF' then 1 when 'CF' then 1 when 'EF' then 2 when 'IO' then 5 else 6 end td_sortlist, sm_prodtype,0,td_exchange ";
+                strinsert = " insert into ##tmpfobill select 2 td_controlflag,td_dt,td_clientcd,td_mainbrcd, td_seriesid,'',td_sqty,td_bqty, convert(decimal (15,2),td_marketrate) as tx_marketrate1, td_mainbrrate, td_mainbrrate, 0,0.0000 td_closeprice, case sm_prodtype when 'IF' then 1 when 'CF' then 1 when 'EF' then 2 when 'IO' then 5 else 6 end td_sortlist, sm_prodtype,0,td_exchange ";
                 strinsert = strinsert + " ,convert(decimal (15,2),td_marketrate) as tx_marketrate1,convert(decimal (15,4),td_brokerage) tx_Brokerage From Trades with(nolock,index(" + strIndexName + ")) , Series_master,Client_master ";
-                strinsert = strinsert + " Where td_clientcd = cm_cd and td_exchange = sm_exchange and td_Segment = sm_Segment and td_seriesid = sm_seriesid and sm_expirydt >= '" + StrFromDt + "' and  td_dt between '" + StrFromDt + "' and '" + StrFromDt + "' " + StrExchWhere + " and td_Segment = '" + Segment + "' and ltrim(rtrim(td_groupid)) = 'B'  and td_clientcd = '" + strclientid + "' Order By td_tradeid , td_subtradeid ";
+                strinsert = strinsert + " Where td_clientcd = cm_cd and td_exchange = sm_exchange and td_Segment = sm_Segment and td_seriesid = sm_seriesid and sm_expirydt >= '" + dt + "' and  td_dt between '" + dt + "' and '" + dt + "' " + StrExchWhere + " and td_Segment = '" + exchSeg.Substring(1, 1) + "' and ltrim(rtrim(td_groupid)) = 'B'  and td_clientcd = '" + userId + "' Order By td_tradeid , td_subtradeid ";
                 ExecuteSQLTmp(strinsert, ObjConnectionTmp);
 
-                strinsert = " insert into #tmpfobill  select 99 tx_controlflag,bd_dt,tx_clientcd,tx_mainbrcd, tx_seriesid,'',  case sign(sum(tx_bqty - tx_sqty)) when 1 then abs(sum(tx_bqty - tx_sqty)) else 0 end  tx_bqty,  case sign(sum(tx_bqty - tx_sqty)) when 1 then 0 else abs(sum(tx_bqty - tx_sqty)) end tx_sqty,  0.0000 tx_rate,0.0000 tx_mainbrrate,0.0000 tx_mainbrrate, 0.0000 tx_servicetax,0.0000 tx_closeprice,  case sm_prodtype when 'IF' then 1 when 'CF' then 1 when 'EF' then 2 when 'IO' then 5 else 6 end tx_sortlist, sm_prodtype,0 ,sm_exchange";
-                strinsert = strinsert + " ,0,0 From #tmpfobill  , #tmpmosesdates , Series_master with (nolock),Client_master with (nolock)";
-                strinsert = strinsert + " Where tx_clientcd = cm_cd and sm_exchange = '" + strExcode + "' and sm_Segment = '" + Segment + "' And tx_seriesid = sm_seriesid  and sm_expirydt >= bd_dt and  tx_dt < bd_dt  and sm_prodtype in('IF','EF','CF')  and tx_controlflag not in ( '99','3')  group by bd_dt,tx_clientcd,tx_mainbrcd,tx_seriesid,sm_prodtype,sm_exchange  Having Sum(tx_bqty - tx_sqty) <> 0 ";
+                strinsert = " insert into ##tmpfobill  select 99 tx_controlflag,bd_dt,tx_clientcd,tx_mainbrcd, tx_seriesid,'',  case sign(sum(tx_bqty - tx_sqty)) when 1 then abs(sum(tx_bqty - tx_sqty)) else 0 end  tx_bqty,  case sign(sum(tx_bqty - tx_sqty)) when 1 then 0 else abs(sum(tx_bqty - tx_sqty)) end tx_sqty,  0.0000 tx_rate,0.0000 tx_mainbrrate,0.0000 tx_mainbrrate, 0.0000 tx_servicetax,0.0000 tx_closeprice,  case sm_prodtype when 'IF' then 1 when 'CF' then 1 when 'EF' then 2 when 'IO' then 5 else 6 end tx_sortlist, sm_prodtype,0 ,sm_exchange";
+                strinsert = strinsert + " ,0,0 From ##tmpfobill  , #tmpmosesdates , Series_master with (nolock),Client_master with (nolock)";
+                strinsert = strinsert + " Where tx_clientcd = cm_cd and sm_exchange = tx_exchange and sm_Segment = '" + exchSeg.Substring(1,1) + "' And tx_seriesid = sm_seriesid  and sm_expirydt >= bd_dt and  tx_dt < bd_dt  and sm_prodtype in('IF','EF','CF')  and tx_controlflag not in ( '99','3')  group by bd_dt,tx_clientcd,tx_mainbrcd,tx_seriesid,sm_prodtype,sm_exchange  Having Sum(tx_bqty - tx_sqty) <> 0 ";
                 strinsert = strinsert + " Union All ";
                 strinsert = strinsert + " select 3 tx_controlflag,bd_dt,tx_clientcd,tx_mainbrcd, tx_seriesid,'', ";
                 strinsert = strinsert + " case sign(sum(tx_bqty - tx_sqty)) when 1 then 0 else abs(sum(tx_bqty - tx_sqty)) end tx_bqty, ";
                 strinsert = strinsert + " case sign(sum(tx_bqty - tx_sqty)) when 1 then abs(sum(tx_bqty - tx_sqty)) else 0 end  tx_sqty, ";
                 strinsert = strinsert + " 0.0000 tx_rate,0.0000 tx_mainbrrate,0.0000 tx_mainbrrate, 0.0000 tx_servicetax,0.0000 tx_closeprice, ";
                 strinsert = strinsert + " case sm_prodtype when 'IF' then 1 when 'CF' then 1 when 'EF' then 2 when 'IO' then 5 else 6 end tx_sortlist, sm_prodtype,0,sm_exchange ";
-                strinsert = strinsert + " ,0,0 From #tmpfobill  , #tmpmosesdates , Series_master with (nolock),Client_master with (nolock) ";
-                strinsert = strinsert + " Where tx_clientcd = cm_cd and sm_exchange = '" + strExcode + "' and sm_Segment = '" + Segment + "' And tx_seriesid = sm_seriesid ";
+                strinsert = strinsert + " ,0,0 From ##tmpfobill  , #tmpmosesdates , Series_master with (nolock),Client_master with (nolock) ";
+                strinsert = strinsert + " Where tx_clientcd = cm_cd and sm_exchange = tx_exchange and sm_Segment = '" + exchSeg.Substring(1, 1) + "' And tx_seriesid = sm_seriesid ";
                 strinsert = strinsert + " and sm_expirydt >= bd_dt and  tx_dt <= bd_dt ";
                 strinsert = strinsert + " and sm_prodtype in('IF','EF','CF') ";
                 strinsert = strinsert + " and tx_controlflag not in ( '99','3') ";
@@ -870,84 +582,86 @@ namespace TradeWeb.API.Repository
                 strinsert = strinsert + " Having Sum(tx_bqty - tx_sqty) <> 0 ";
                 ExecuteSQLTmp(strinsert, ObjConnectionTmp);
 
-                strinsert = "Update #tmpfobill set tx_controlflag = '1' where tx_controlflag = '99' ";
+                strinsert = "Update ##tmpfobill set tx_controlflag = '1' where tx_controlflag = '99' ";
                 ExecuteSQLTmp(strinsert, ObjConnectionTmp);
 
-                strinsert = "insert into #tmpfobill select case ex_eaflag when 'E' then 5 else 6 end td_controlflag,ex_dt,ex_clientcd,ex_mainbrcd, ex_seriesid,'',ex_eqty,ex_aqty, ex_diffbrokrate,ex_mainbrdiffrate,ex_mainbrdiffrate, ex_servicetax,ex_settlerate, case sm_prodtype when 'IF' then 1 when 'CF' then 1 when 'EF' then 2 when 'IO' then 5 else 6 end + 3 td_sortlist, sm_prodtype,0 ,ex_exchange";
+                strinsert = "insert into ##tmpfobill select case ex_eaflag when 'E' then 5 else 6 end td_controlflag,ex_dt,ex_clientcd,ex_mainbrcd, ex_seriesid,'',ex_eqty,ex_aqty, ex_diffbrokrate,ex_mainbrdiffrate,ex_mainbrdiffrate, ex_servicetax,ex_settlerate, case sm_prodtype when 'IF' then 1 when 'CF' then 1 when 'EF' then 2 when 'IO' then 5 else 6 end + 3 td_sortlist, sm_prodtype,0 ,ex_exchange";
                 strinsert = strinsert + " ,convert(decimal (15,2),ex_diffrate) as tx_marketrate1 ,convert(decimal(15,2),ex_brokerage) tx_Brokerage From Exercise with (nolock), Series_master with (nolock) ,Client_master with (nolock) ";
-                strinsert = strinsert + "Where ex_clientcd = cm_cd and ex_exchange = sm_exchange and ex_Segment = sm_Segment And ex_seriesid = sm_seriesid and sm_expirydt >= '" + StrFromDt + "' and ex_dt between '" + StrFromDt + "' and '" + StrFromDt + "' " + StrExchWhere.Replace("td_", "ex_") + " and ex_Segment = '" + Segment + "' and cm_cd = '" + strclientid + "' ";
+                strinsert = strinsert + "Where ex_clientcd = cm_cd and ex_exchange = sm_exchange and ex_Segment = sm_Segment And ex_seriesid = sm_seriesid and sm_expirydt >= '" + dt + "' and ex_dt between '" + dt + "' and '" + dt + "' " + StrExchWhere.Replace("td_", "ex_") + " and ex_Segment = '" + exchSeg.Substring(1, 1) + "' and cm_cd = '" + userId + "' ";
                 ExecuteSQLTmp(strinsert, ObjConnectionTmp);
 
                 strinsert = "insert into #tmpbillcharges select tx_dt,tx_clientcd,'SERVICE TAX',round(sum(tx_servicetax),2),0,tx_exchange ";
-                strinsert = strinsert + " from #tmpfobill,#tmpmosesdates,Client_master with (nolock) ";
-                strinsert = strinsert + " where tx_clientcd = cm_cd and tx_dt = bd_dt and cm_cd = '" + strclientid + "' group by tx_dt,tx_clientcd,tx_exchange having sum(tx_servicetax) > 0 ";
+                strinsert = strinsert + " from ##tmpfobill,#tmpmosesdates,Client_master with (nolock) ";
+                strinsert = strinsert + " where tx_clientcd = cm_cd and tx_dt = bd_dt and cm_cd = '" + userId + "' group by tx_dt,tx_clientcd,tx_exchange having sum(tx_servicetax) > 0 ";
                 ExecuteSQLTmp(strinsert, ObjConnectionTmp);
 
-                strinsert = "update #tmpfobill set tx_closerate = ms_lastprice ";
-                strinsert = strinsert + " from #tmpfobill, Market_summary with (nolock) ";
-                strinsert = strinsert + " where ms_seriesid = tx_seriesid and tx_controlflag in ('1','2') and ms_exchange=tx_exchange and ms_Segment = '" + Segment + "' and ms_dt = tx_dt ";
+                strinsert = "update ##tmpfobill set tx_closerate = ms_lastprice ";
+                strinsert = strinsert + " from ##tmpfobill, Market_summary with (nolock) ";
+                strinsert = strinsert + " where ms_seriesid = tx_seriesid and tx_controlflag in ('1','2') and ms_exchange=tx_exchange and ms_Segment = '" + exchSeg.Substring(1, 1) + "' and ms_dt = tx_dt ";
                 ExecuteSQLTmp(strinsert, ObjConnectionTmp);
 
-                strinsert = "update #tmpfobill set tx_rate = ms_prcloseprice ";
-                strinsert = strinsert + " from #tmpfobill,Market_summary with (nolock) ";
-                strinsert = strinsert + " where ms_seriesid = tx_seriesid and tx_controlflag = 1 and ms_exchange = tx_Exchange  and ms_Segment = '" + Segment + "' and ms_dt = tx_dt ";
+                strinsert = "update ##tmpfobill set tx_rate = ms_prcloseprice ";
+                strinsert = strinsert + " from ##tmpfobill,Market_summary with (nolock) ";
+                strinsert = strinsert + " where ms_seriesid = tx_seriesid and tx_controlflag = 1 and ms_exchange = tx_Exchange  and ms_Segment = '" + exchSeg.Substring(1, 1) + "' and ms_dt = tx_dt ";
                 ExecuteSQLTmp(strinsert, ObjConnectionTmp);
 
-                strinsert = "update #tmpfobill set tx_rate = ms_lastprice from #tmpfobill,Market_summary with (nolock) ";
+                strinsert = "update ##tmpfobill set tx_rate = ms_lastprice from ##tmpfobill,Market_summary with (nolock) ";
                 strinsert = strinsert + " where ms_seriesid = tx_seriesid and tx_controlflag = 3";
-                strinsert = strinsert + " and ms_exchange = tx_Exchange  and ms_Segment = '" + Segment + "'";
+                strinsert = strinsert + " and ms_exchange = tx_Exchange  and ms_Segment = '" + exchSeg.Substring(1, 1) + "'";
                 strinsert = strinsert + " and ms_dt = tx_dt";
                 ExecuteSQLTmp(strinsert, ObjConnectionTmp);
 
                 strinsert = "insert into #tmpbillcharges select fc_dt,fc_clientcd,fc_desc,round(sum(fc_amount),2),0,fc_exchange ";
                 strinsert = strinsert + " from Fspecialcharges with (nolock) ,#tmpmosesdates,Client_master with (nolock) ";
-                strinsert = strinsert + " where fc_clientcd = cm_cd and fc_dt = bd_dt and cm_cd = '" + strclientid + "' " + StrExchWhere.Replace("td_", "fc_") + " and fc_Segment = '" + Segment + "' group by fc_dt,fc_clientcd,fc_desc,fc_exchange having round(sum(fc_amount),2) <> 0 ";
+                strinsert = strinsert + " where fc_clientcd = cm_cd and fc_dt = bd_dt and cm_cd = '" + userId + "' " + StrExchWhere.Replace("td_", "fc_") + " and fc_Segment = '" + exchSeg.Substring(1, 1) + "' group by fc_dt,fc_clientcd,fc_desc,fc_exchange having round(sum(fc_amount),2) <> 0 ";
                 ExecuteSQLTmp(strinsert, ObjConnectionTmp);
 
                 strinsert = "insert into #tmpbillcharges select fc_dt,fc_clientcd,'SERVICE TAX',round(sum(fc_servicetax),2),0,fc_exchange ";
                 strinsert = strinsert + " from Fspecialcharges with (nolock) ,#tmpmosesdates,Client_master with (nolock) ";
-                strinsert = strinsert + " where fc_clientcd = cm_cd and fc_dt = bd_dt and cm_cd = '" + strclientid + "' " + StrExchWhere.Replace("td_", "fc_") + " and fc_Segment = '" + Segment + "' group by fc_dt,fc_clientcd,fc_desc,fc_exchange having round(sum(fc_servicetax),2) <> 0 ";
+                strinsert = strinsert + " where fc_clientcd = cm_cd and fc_dt = bd_dt and cm_cd = '" + userId + "' " + StrExchWhere.Replace("td_", "fc_") + " and fc_Segment = '" + exchSeg.Substring(1, 1) + "' group by fc_dt,fc_clientcd,fc_desc,fc_exchange having round(sum(fc_servicetax),2) <> 0 ";
                 ExecuteSQLTmp(strinsert, ObjConnectionTmp);
 
-                strinsert = "update #tmpfobill set tx_value = round(((case tx_controlflag when 5  then (tx_bqty + tx_sqty)*-1 when 6 then (tx_bqty + tx_sqty)*-1 else (tx_bqty - tx_sqty) end) *tx_rate)*sm_multiplier,4)";
+                strinsert = "update ##tmpfobill set tx_value = round(((case tx_controlflag when 5  then (tx_bqty + tx_sqty)*-1 when 6 then (tx_bqty + tx_sqty)*-1 else (tx_bqty - tx_sqty) end) *tx_rate)*sm_multiplier,4)";
                 strinsert = strinsert + " From series_master with (nolock) ";
-                strinsert = strinsert + " Where sm_Segment = '" + Segment + "' and sm_exchange = tx_Exchange and tx_seriesid = sm_seriesid ";
+                strinsert = strinsert + " Where sm_Segment = '" + exchSeg.Substring(1, 1) + "' and sm_exchange = tx_Exchange and tx_seriesid = sm_seriesid ";
                 ExecuteSQLTmp(strinsert, ObjConnectionTmp);
 
-                strinsert = "insert into #tmpfobill select 10 ,bc_dt,bc_clientcd,bc_clientcd, 1,upper(bc_desc),0 td_bqty,0 td_sqty, 0,0 td_mainbrrate,0 td_mainbrrate, 0 td_servicetax,0.0000 td_closeprice, 10 td_sortlist, 'XX',round(sum(bc_amount),2),bc_exchange,0,0 From #tmpbillcharges group by bc_dt,bc_clientcd,bc_desc,bc_exchange ";
+                strinsert = "insert into ##tmpfobill select 10 ,bc_dt,bc_clientcd,bc_clientcd, 1,upper(bc_desc),0 td_bqty,0 td_sqty, 0,0 td_mainbrrate,0 td_mainbrrate, 0 td_servicetax,0.0000 td_closeprice, 10 td_sortlist, 'XX',round(sum(bc_amount),2),bc_exchange,0,0 From #tmpbillcharges group by bc_dt,bc_clientcd,bc_desc,bc_exchange ";
                 ExecuteSQLTmp(strinsert, ObjConnectionTmp);
 
-                strinsert = "insert into #tmpfobill select 90 ,fb_billdt,fb_clientcd,fb_clientcd, 1,'[PREV. DAY MRGN.]',0 td_bqty,0 td_sqty, 0,0 td_mainbrrate,0 td_mainbrrate, 0 td_servicetax,0.0000 td_closeprice, 90 td_sortlist, 'XX',round(Case when fb_postmrgyn = 'Y' then fb_margin1 else 0 end + CAse When fb_postExpmrgyn = 'Y' then fb_Expmargin1 else 0 end ,2),fb_exchange ";
+                strinsert = "insert into ##tmpfobill select 90 ,fb_billdt,fb_clientcd,fb_clientcd, 1,'[PREV. DAY MRGN.]',0 td_bqty,0 td_sqty, 0,0 td_mainbrrate,0 td_mainbrrate, 0 td_servicetax,0.0000 td_closeprice, 90 td_sortlist, 'XX',round(Case when fb_postmrgyn = 'Y' then fb_margin1 else 0 end + CAse When fb_postExpmrgyn = 'Y' then fb_Expmargin1 else 0 end ,2),fb_exchange ";
                 strinsert = strinsert + " ,0,0 From #tmpmosesdates,Fbills with (nolock) ,Client_master with (nolock) ";
-                strinsert = strinsert + " where fb_clientcd = cm_cd and fb_billdt = bd_dt and fb_exchange = '" + strExcode + "' and fb_Segment = '" + Segment + "' and round(Case when fb_postmrgyn = 'Y' then fb_margin1 else 0 end + CAse When fb_postExpmrgyn = 'Y' then fb_Expmargin1 else 0 end ,2) <> 0  and cm_cd = '" + strclientid + "' ";
+                strinsert = strinsert + " where fb_clientcd = cm_cd and fb_billdt = bd_dt " + StrExchWhere.Replace("td_","fb_") + " and fb_Segment = '" + exchSeg.Substring(1, 1) + "' and round(Case when fb_postmrgyn = 'Y' then fb_margin1 else 0 end + CAse When fb_postExpmrgyn = 'Y' then fb_Expmargin1 else 0 end ,2) <> 0  and cm_cd = '" + userId + "' ";
                 ExecuteSQLTmp(strinsert, ObjConnectionTmp);
 
-                strinsert = "insert into #tmpfobill select 91 ,fb_billdt,fb_clientcd,fb_clientcd, 1,'[CURR. DAY MRGN.]',0 td_bqty,0 td_sqty, 0,0 td_mainbrrate,0 td_mainbrrate, 0 td_servicetax,0.0000 td_closeprice, 91 td_sortlist, 'XX',round(Case When fb_postmrgyn = 'Y' then fb_margin2 else 0 end + Case When fb_postExpmrgyn = 'Y' then fb_Expmargin2 else 0 end,2),fb_exchange ";
+                strinsert = "insert into ##tmpfobill select 91 ,fb_billdt,fb_clientcd,fb_clientcd, 1,'[CURR. DAY MRGN.]',0 td_bqty,0 td_sqty, 0,0 td_mainbrrate,0 td_mainbrrate, 0 td_servicetax,0.0000 td_closeprice, 91 td_sortlist, 'XX',round(Case When fb_postmrgyn = 'Y' then fb_margin2 else 0 end + Case When fb_postExpmrgyn = 'Y' then fb_Expmargin2 else 0 end,2),fb_exchange ";
                 strinsert = strinsert + " ,0,0 From #tmpmosesdates,Fbills with (nolock) ,Client_master with (nolock) ";
-                strinsert = strinsert + " where fb_clientcd = cm_cd and fb_billdt = bd_dt and fb_exchange = '" + strExcode + "' and fb_Segment = '" + Segment + "' and round(Case When fb_postmrgyn = 'Y' then fb_margin2 else 0 end + Case When fb_postExpmrgyn = 'Y' then fb_Expmargin2 else 0 end,2) <> 0  and cm_cd = '" + strclientid + "' ";
+                strinsert = strinsert + " where fb_clientcd = cm_cd and fb_billdt = bd_dt " + StrExchWhere.Replace("td_", "fb_") + " and fb_Segment = '" + exchSeg.Substring(1, 1) + "' and round(Case When fb_postmrgyn = 'Y' then fb_margin2 else 0 end + Case When fb_postExpmrgyn = 'Y' then fb_Expmargin2 else 0 end,2) <> 0  and cm_cd = '" + userId + "' ";
                 ExecuteSQLTmp(strinsert, ObjConnectionTmp);
 
-                strinsert = "alter table #tmpfobill add tx_billno numeric default(0) NOT NULL ";
+                strinsert = "alter table ##tmpfobill add tx_billno numeric default(0) NOT NULL ";
                 ExecuteSQLTmp(strinsert, ObjConnectionTmp);
 
-                strinsert = "update #tmpfobill set tx_billno = fb_billno from #tmpfobill,Fbills with (nolock) where fb_clientcd = tx_clientcd  and fb_exchange = tx_exchange and fb_Segment = '" + Segment + "' and fb_billdt = tx_dt  ";
+                strinsert = "update ##tmpfobill set tx_billno = fb_billno from ##tmpfobill,Fbills with (nolock) where fb_clientcd = tx_clientcd  and fb_exchange = tx_exchange and fb_Segment = '" + exchSeg.Substring(1, 1) + "' and fb_billdt = tx_dt  ";
                 ExecuteSQLTmp(strinsert, ObjConnectionTmp);
 
                 strinsert = "select tx_sortlist,tx_dt as dt,tx_billno,case tx_controlflag when '1' then 'b/f' when '3' then 'c/f' else convert(char,convert(datetime,tx_dt),103) end tx_dt,tx_clientcd, tx_seriesid,sm_sname as tx_desc, cast((tx_bqty)as decimal(15,0))as tx_bqty,cast((tx_sqty)as decimal(15,0))as tx_sqty,cast((tx_rate)as decimal(15,4))as tx_rate,cast((tx_closerate)as decimal(15,4))as tx_closerate,cast((tx_value)as decimal(15,2))as drcr,cast((((tx_bqty-tx_sqty) * tx_rate)) as decimal(15,2)) value,sm_sname,sm_desc,sm_productcd,sm_symbol, ";
                 strinsert = strinsert + " sm_expirydt,sm_strikeprice,sm_callput,sm_optionstyle,cm_name, ";
                 strinsert = strinsert + " cm_add1,cm_add2,cm_add3,cm_tele1,cm_tele2,cm_email,cm_sebino, cm_panno, cm_add4, cm_pincode,sm_prodtype,cm_groupcd,cm_familycd,cm_brboffcode,cm_subbroker,sm_multiplier, ";
-                strinsert = strinsert + " cm_introducer ,replicate(' ',8-len(ltrim(rtrim(tx_clientcd)))) + ltrim(rtrim(tx_clientcd)) ,case tx_controlflag when '1' then 0 when '3' then 2 else 1 end ord, '' as NetValue ";
-                strinsert = strinsert + " ,tx_marketrate1,tx_Brokerage from #tmpfobill,Series_master with (nolock) ,Client_master with (nolock) ";
-                strinsert = strinsert + " where tx_clientcd = cm_cd and tx_seriesid = sm_seriesid and tx_exchange = sm_exchange and sm_Segment = '" + Segment + "' and tx_controlflag < 10 ";
+                strinsert = strinsert + " cm_introducer ,replicate(' ',8-len(ltrim(rtrim(tx_clientcd)))) + ltrim(rtrim(tx_clientcd)) tx_clientcd2 ,case tx_controlflag when '1' then 0 when '3' then 2 else 1 end ord, '' as NetValue ";
+                strinsert = strinsert + " ,tx_marketrate1,tx_Brokerage from ##tmpfobill,Series_master with (nolock) ,Client_master with (nolock) ";
+                strinsert = strinsert + " where tx_clientcd = cm_cd and tx_seriesid = sm_seriesid and tx_exchange = sm_exchange and sm_Segment = '" + exchSeg.Substring(1, 1) + "' and tx_controlflag < 10 ";
                 strinsert = strinsert + " union all ";
                 strinsert = strinsert + " select tx_sortlist,tx_dt as dt,tx_billno,case tx_controlflag when '1' then 'b/f' when '3' then 'c/f' else convert(char,convert(datetime,tx_dt),103) end tx_dt,tx_clientcd, tx_seriesid,tx_desc, cast((tx_bqty)as decimal(15,0))as tx_bqty,cast((tx_sqty)as decimal(15,0))as tx_sqty,cast((tx_rate)as decimal(15,4))as tx_rate,cast((tx_closerate)as decimal(15,4))as tx_closerate,cast((tx_value)as decimal(15,2)) as drcr,cast((((tx_bqty-tx_sqty) * tx_rate))as decimal(15,2)) value, tx_desc as sm_sname,'' sm_desc,'' sm_productcd,'' sm_symbol,'' sm_expirydt, 0 sm_strikeprice, 'X' sm_callput,'X' sm_optionstyle, cm_name,cm_add1,cm_add2,cm_add3,cm_tele1,cm_tele2,cm_email, cm_sebino, cm_panno,cm_add4, ";
                 strinsert = strinsert + " cm_pincode,'EF' as sm_prodtype,cm_groupcd,cm_familycd,cm_brboffcode, ";
                 strinsert = strinsert + " cm_subbroker,0 sm_multiplier,cm_introducer ,replicate('',8-len(ltrim(rtrim(tx_clientcd)))) + ltrim(rtrim(tx_clientcd)),case tx_controlflag when '1' then 0 when '3' then 2 else 1 end ord, '' as NetValue  ";
-                strinsert = strinsert + " ,tx_marketrate1,tx_Brokerage from #tmpfobill,Client_master with (nolock) ";
+                strinsert = strinsert + " ,tx_marketrate1,tx_Brokerage from ##tmpfobill,Client_master with (nolock) ";
                 strinsert = strinsert + " where tx_clientcd = cm_cd and tx_controlflag >= 10 ";
-                strinsert = strinsert + " order by  replicate(' ',8-len(ltrim(rtrim(tx_clientcd)))) + ltrim(rtrim(tx_clientcd))  ,dt ,tx_sortlist,sm_symbol,tx_seriesid,tx_desc  , ord ";
 
                 DataSet objDataset = new DataSet();
+
+                strinsert = " select tx_dt tddt,tx_seriesid seriesid,tx_desc seriesname,tx_bqty buy,tx_sqty sell,tx_marketrate1 Marketrate, tx_rate Rate,tx_closerate CloseRate,drcr,value,NetValue,tx_sortlist SortOrder,tx_billno BillNo from ( " + strinsert + " ) a ";
+                    strinsert += " order by  dt ,tx_sortlist,sm_symbol,tx_seriesid,tx_desc  , ord ";
                 objDataset = OpenDataSetTmp(strinsert, ObjConnectionTmp);
 
                 string StrDrop = string.Empty;
@@ -961,7 +675,7 @@ namespace TradeWeb.API.Repository
                 prTempFOBill1(ObjConnectionTmp);
                 string strsql = string.Empty;
 
-                strsql = "insert into #tmpmosesdates values('" + StrFromDt + "') ";
+                strsql = "insert into #tmpmosesdates values('" + dt + "') ";
                 ExecuteSQLTmp(strsql, ObjConnectionTmp);
 
                 string strDelivery = string.Empty;
@@ -991,99 +705,103 @@ namespace TradeWeb.API.Repository
                         strFbills = StrCommexConn + ".Fbills";
                     }
                 }
-                strsql = "insert into #tmpfobill select 1 td_controlflag,bd_dt,td_clientcd,td_mainbrcd, td_seriesid,'',case sign(sum(td_bqty - td_sqty)) when 1 then abs(sum(td_bqty - td_sqty)) else 0 end  td_bqty, case sign(sum(td_bqty - td_sqty)) when 1 then 0 else abs(sum(td_bqty - td_sqty)) end td_sqty, 0.0000 td_rate,0.0000 td_mainbrrate,0.0000 td_mainbrrate, 0.0000 td_servicetax,0.0000 td_closeprice, case sm_prodtype when 'CF' then 1 when 'CO' then 2 else 6 end td_sortlist, sm_prodtype,0, sm_multiplier , 0 td_tradeid, '' td_time, 0 td_orderid";
+                strsql = "insert into ##tmpfobill select 1 td_controlflag,bd_dt,td_clientcd,td_mainbrcd, td_seriesid,'',case sign(sum(td_bqty - td_sqty)) when 1 then abs(sum(td_bqty - td_sqty)) else 0 end  td_bqty, case sign(sum(td_bqty - td_sqty)) when 1 then 0 else abs(sum(td_bqty - td_sqty)) end td_sqty, 0.0000 td_rate,0.0000 td_mainbrrate,0.0000 td_mainbrrate, 0.0000 td_servicetax,0.0000 td_closeprice, case sm_prodtype when 'CF' then 1 when 'CO' then 2 else 6 end td_sortlist, sm_prodtype,0, sm_multiplier , 0 td_tradeid, '' td_time, 0 td_orderid";
                 strsql = strsql + " From " + strTrades + ", #tmpmosesdates, " + strSeries_master + "," + strClient_master + " ";
-                strsql = strsql + "Where td_clientcd = cm_cd and td_exchange = sm_exchange And td_seriesid = sm_seriesid and sm_expirydt >= bd_dt and  td_dt < bd_dt and td_exchange = '" + strExcode + "' and sm_prodtype in('CF') and cm_cd = '" + strclientid + "' group by bd_dt,td_clientcd,td_mainbrcd,td_seriesid,sm_prodtype, sm_multiplier   having sum(td_bqty - td_sqty) <> 0 ";
+                strsql = strsql + "Where td_clientcd = cm_cd and td_exchange = sm_exchange And td_seriesid = sm_seriesid and sm_expirydt >= bd_dt and  td_dt < bd_dt and td_exchange = '" + exchSeg.Substring(0,1) + "' and sm_prodtype in('CF') and cm_cd = '" + userId + "' group by bd_dt,td_clientcd,td_mainbrcd,td_seriesid,sm_prodtype, sm_multiplier   having sum(td_bqty - td_sqty) <> 0 ";
                 ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
 
-                strsql = "insert into #tmpfobill select 2 td_controlflag,bd_dt,td_clientcd,td_mainbrcd, td_seriesid,'',td_bqty,td_sqty, td_rate,td_mainbrrate,td_mainbrrate, td_servicetax,0.0000 td_closeprice, case sm_prodtype when 'CF' then 1 when 'CO' then 2 else 6 end td_sortlist, sm_prodtype, 0, sm_multiplier, td_tradeid, td_time, td_orderid";
+                strsql = "insert into ##tmpfobill select 2 td_controlflag,bd_dt,td_clientcd,td_mainbrcd, td_seriesid,'',td_bqty,td_sqty, td_rate,td_mainbrrate,td_mainbrrate, td_servicetax,0.0000 td_closeprice, case sm_prodtype when 'CF' then 1 when 'CO' then 2 else 6 end td_sortlist, sm_prodtype, 0, sm_multiplier, td_tradeid, td_time, td_orderid";
                 strsql = strsql + " From " + strTrades + ", #tmpmosesdates, " + strSeries_master + "," + strClient_master + " ";
-                strsql = strsql + "Where td_clientcd = cm_cd and td_exchange = sm_exchange and td_seriesid = sm_seriesid and sm_expirydt >= bd_dt and  td_dt = bd_dt and td_exchange = '" + strExcode + "' and cm_cd = '" + strclientid + "' ";
+                strsql = strsql + "Where td_clientcd = cm_cd and td_exchange = sm_exchange and td_seriesid = sm_seriesid and sm_expirydt >= bd_dt and  td_dt = bd_dt and td_exchange = '" + exchSeg.Substring(0, 1) + "' and cm_cd = '" + userId + "' ";
                 ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
 
-                strsql = " insert into #tmpfobill  select Case dl_type When 'DL' Then 7 When 'PD' Then 8 When 'SL' Then 9 When 'DS' Then 9.5 Else '' End td_controlflag, dl_BillDate,dl_clientcd,dl_mainbrcd, dl_seriesid,'',  dl_Bqty , dl_SQty ,  dl_rate , dl_mainbrrate, dl_marketrate, dl_servicetax,0,  case sm_prodtype when 'CF' then 1 when 'CO' then 2 else 6 end + 3 td_sortlist, sm_prodtype, (dl_bqty - dl_sQty) * dl_Rate * sm_multiplier  , sm_multiplier , 0 tx_tradeid, '' tx_time, 0 tx_orderid ";
+                strsql = " insert into ##tmpfobill  select Case dl_type When 'DL' Then 7 When 'PD' Then 8 When 'SL' Then 9 When 'DS' Then 9.5 Else '' End td_controlflag, dl_BillDate,dl_clientcd,dl_mainbrcd, dl_seriesid,'',  dl_Bqty , dl_SQty ,  dl_rate , dl_mainbrrate, dl_marketrate, dl_servicetax,0,  case sm_prodtype when 'CF' then 1 when 'CO' then 2 else 6 end + 3 td_sortlist, sm_prodtype, (dl_bqty - dl_sQty) * dl_Rate * sm_multiplier  , sm_multiplier , 0 tx_tradeid, '' tx_time, 0 tx_orderid ";
                 strsql = strsql + "  From " + strDelivery + ", #tmpmosesdates, " + strSeries_master + "," + strClient_master + " ";
-                strsql = strsql + "  Where dl_clientcd = cm_cd And dl_exchange = sm_exchange And dl_seriesid = sm_seriesid  and  dl_BillDate = bd_dt  and dl_exchange = '" + strExcode + "' and dl_type In ('DL','SL','PD','DS')  and cm_cd = '" + strclientid + "' ";
+                strsql = strsql + "  Where dl_clientcd = cm_cd And dl_exchange = sm_exchange And dl_seriesid = sm_seriesid  and  dl_BillDate = bd_dt  and dl_exchange = '" + exchSeg.Substring(0, 1) + "' and dl_type In ('DL','SL','PD','DS')  and cm_cd = '" + userId + "' ";
                 ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
 
-                strsql = "insert into #tmpfobill select 3 td_controlflag,bd_dt,td_clientcd,td_mainbrcd, td_seriesid,'',case sign(sum(td_bqty - td_sqty)) when 1 then 0 else abs(sum(td_bqty - td_sqty)) end  td_bqty, case sign(sum(td_bqty - td_sqty)) when 1 then abs(sum(td_bqty - td_sqty)) else 0 end td_sqty, 0.0000 td_rate,0.0000 td_mainbrrate,0.0000 td_mainbrrate, 0.0000 td_servicetax,0.0000 td_closeprice, case sm_prodtype when 'CF' then 1 when 'CO' then 2 else 6 end td_sortlist, sm_prodtype,0, sm_multiplier, 0,'',0       ";
+                strsql = "insert into ##tmpfobill select 3 td_controlflag,bd_dt,td_clientcd,td_mainbrcd, td_seriesid,'',case sign(sum(td_bqty - td_sqty)) when 1 then 0 else abs(sum(td_bqty - td_sqty)) end  td_bqty, case sign(sum(td_bqty - td_sqty)) when 1 then abs(sum(td_bqty - td_sqty)) else 0 end td_sqty, 0.0000 td_rate,0.0000 td_mainbrrate,0.0000 td_mainbrrate, 0.0000 td_servicetax,0.0000 td_closeprice, case sm_prodtype when 'CF' then 1 when 'CO' then 2 else 6 end td_sortlist, sm_prodtype,0, sm_multiplier, 0,'',0       ";
                 strsql = strsql + " From " + strTrades + ", #tmpmosesdates, " + strSeries_master + "," + strClient_master + " ";
-                strsql = strsql + " Where td_clientcd = cm_cd and td_exchange = sm_exchange And td_seriesid = sm_seriesid and sm_expirydt >= bd_dt and  td_dt <= bd_dt and td_exchange = '" + strExcode + "' and sm_prodtype in('CF') and cm_cd = '" + strclientid + "' group by bd_dt,td_clientcd,td_mainbrcd,td_seriesid,sm_prodtype, sm_multiplier having sum(td_bqty - td_sqty) <> 0";
+                strsql = strsql + " Where td_clientcd = cm_cd and td_exchange = sm_exchange And td_seriesid = sm_seriesid and sm_expirydt >= bd_dt and  td_dt <= bd_dt and td_exchange = '" + exchSeg.Substring(0, 1) + "' and sm_prodtype in('CF') and cm_cd = '" + userId + "' group by bd_dt,td_clientcd,td_mainbrcd,td_seriesid,sm_prodtype, sm_multiplier having sum(td_bqty - td_sqty) <> 0";
                 ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
 
                 strsql = "insert into #tmpbillcharges select tx_dt,tx_clientcd,'SERVICE TAX',round(sum(tx_servicetax),2),0 ";
-                strsql = strsql + " from #tmpfobill,#tmpmosesdates," + strClient_master + " ";
-                strsql = strsql + "where tx_clientcd = cm_cd and tx_dt = bd_dt and cm_cd = '" + strclientid + "' group by tx_dt,tx_clientcd having sum(tx_servicetax) > 0 ";
+                strsql = strsql + " from ##tmpfobill,#tmpmosesdates," + strClient_master + " ";
+                strsql = strsql + "where tx_clientcd = cm_cd and tx_dt = bd_dt and cm_cd = '" + userId + "' group by tx_dt,tx_clientcd having sum(tx_servicetax) > 0 ";
                 ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
 
-                strsql = "update #tmpfobill set tx_closerate = ms_lastprice ";
-                strsql = strsql + " from #tmpfobill, " + strMarket_summary + " ";
-                strsql = strsql + " where ms_seriesid = tx_seriesid and tx_controlflag in ('1','2') and ms_exchange = '" + strExcode + "' and ms_dt = tx_dt ";
+                strsql = "update ##tmpfobill set tx_closerate = ms_lastprice ";
+                strsql = strsql + " from ##tmpfobill, " + strMarket_summary + " ";
+                strsql = strsql + " where ms_seriesid = tx_seriesid and tx_controlflag in ('1','2') and ms_exchange = '" + exchSeg.Substring(0, 1) + "' and ms_dt = tx_dt ";
                 ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
 
-                strsql = "update #tmpfobill set tx_rate = ms_prcloseprice ";
-                strsql = strsql + " from #tmpfobill," + strMarket_summary + " ";
-                strsql = strsql + " where ms_seriesid = tx_seriesid and tx_controlflag = 1 and ms_exchange = '" + strExcode + "' and ms_dt = tx_dt ";
+                strsql = "update ##tmpfobill set tx_rate = ms_prcloseprice ";
+                strsql = strsql + " from ##tmpfobill," + strMarket_summary + " ";
+                strsql = strsql + " where ms_seriesid = tx_seriesid and tx_controlflag = 1 and ms_exchange = '" + exchSeg.Substring(0, 1) + "' and ms_dt = tx_dt ";
                 ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
 
-                strsql = "update #tmpfobill set tx_rate = ms_lastprice ";
-                strsql = strsql + " from #tmpfobill, " + strMarket_summary + " ";
-                strsql = strsql + " where ms_seriesid = tx_seriesid and tx_controlflag = 3 and ms_exchange = '" + strExcode + "' and ms_dt = tx_dt ";
+                strsql = "update ##tmpfobill set tx_rate = ms_lastprice ";
+                strsql = strsql + " from ##tmpfobill, " + strMarket_summary + " ";
+                strsql = strsql + " where ms_seriesid = tx_seriesid and tx_controlflag = 3 and ms_exchange = '" + exchSeg.Substring(0, 1) + "' and ms_dt = tx_dt ";
                 ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
 
                 strsql = "insert into #tmpbillcharges select fc_dt,fc_clientcd,fc_desc,round(sum(fc_amount),2),0";
                 strsql = strsql + " from " + strFspecialcharges + ",#tmpmosesdates," + strClient_master + " ";
-                strsql = strsql + " where fc_clientcd = cm_cd and fc_dt = bd_dt and cm_cd = '" + strclientid + "' and fc_exchange = '" + strExcode + "' group by fc_dt,fc_clientcd,fc_desc having round(sum(fc_amount),2) <> 0 ";
+                strsql = strsql + " where fc_clientcd = cm_cd and fc_dt = bd_dt and cm_cd = '" + userId + "' and fc_exchange = '" + exchSeg.Substring(0, 1) + "' group by fc_dt,fc_clientcd,fc_desc having round(sum(fc_amount),2) <> 0 ";
                 ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
 
                 strsql = "insert into #tmpbillcharges select fc_dt,fc_clientcd,'SERVICE TAX',round(sum(fc_servicetax),2),0 ";
                 strsql = strsql + " from " + strFspecialcharges + ",#tmpmosesdates," + strClient_master + " ";
-                strsql = strsql + " where fc_clientcd = cm_cd and fc_dt = bd_dt and cm_cd = '" + strclientid + "' and fc_exchange = '" + strExcode + "' group by fc_dt,fc_clientcd,fc_desc having round(sum(fc_servicetax),2) <> 0 ";
+                strsql = strsql + " where fc_clientcd = cm_cd and fc_dt = bd_dt and cm_cd = '" + userId + "' and fc_exchange = '" + exchSeg.Substring(0, 1) + "' group by fc_dt,fc_clientcd,fc_desc having round(sum(fc_servicetax),2) <> 0 ";
                 ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
 
-                strsql = "update #tmpfobill set tx_value = round(((case tx_controlflag when 5  then (tx_bqty + tx_sqty)*0 when 6 then (tx_bqty + tx_sqty)*0 else (tx_bqty - tx_sqty) end) *tx_rate)*tx_multiplier,4) ";
+                strsql = "update ##tmpfobill set tx_value = round(((case tx_controlflag when 5  then (tx_bqty + tx_sqty)*0 when 6 then (tx_bqty + tx_sqty)*0 else (tx_bqty - tx_sqty) end) *tx_rate)*tx_multiplier,4) ";
                 ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
 
-                strsql = "insert into #tmpfobill select 10 ,bc_dt,bc_clientcd,bc_clientcd, 1,upper(bc_desc),0 td_bqty,0 td_sqty, 0,0 td_mainbrrate,0 td_mainbrrate, 0 td_servicetax,0.0000 td_closeprice, 10 td_sortlist, 'XX',round(sum(bc_amount),2),0,0,'',0 ";
+                strsql = "insert into ##tmpfobill select 10 ,bc_dt,bc_clientcd,bc_clientcd, 1,upper(bc_desc),0 td_bqty,0 td_sqty, 0,0 td_mainbrrate,0 td_mainbrrate, 0 td_servicetax,0.0000 td_closeprice, 10 td_sortlist, 'XX',round(sum(bc_amount),2),0,0,'',0 ";
                 strsql = strsql + " From #tmpbillcharges group by bc_dt,bc_clientcd,bc_desc ";
                 ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
 
-                strsql = "insert into #tmpfobill select 90 ,fb_billdt,fb_clientcd,fb_clientcd, 1,'[PREV. DAY MRGN.]',0 td_bqty,0 td_sqty, 0,0 td_mainbrrate,0 td_mainbrrate, 0 td_servicetax,0.0000 td_closeprice, 90 td_sortlist, 'XX',round(fb_margin1,2),0, 0,'',0 ";
+                strsql = "insert into ##tmpfobill select 90 ,fb_billdt,fb_clientcd,fb_clientcd, 1,'[PREV. DAY MRGN.]',0 td_bqty,0 td_sqty, 0,0 td_mainbrrate,0 td_mainbrrate, 0 td_servicetax,0.0000 td_closeprice, 90 td_sortlist, 'XX',round(fb_margin1,2),0, 0,'',0 ";
                 strsql = strsql + " From #tmpmosesdates," + strFbills + "," + strClient_master + " ";
-                strsql = strsql + " where fb_clientcd = cm_cd and fb_billdt = bd_dt and fb_exchange = '" + strExcode + "' and fb_margin1 <> 0 and fb_postmrgyn = 'Y' and cm_cd = '" + strclientid + "' ";
+                strsql = strsql + " where fb_clientcd = cm_cd and fb_billdt = bd_dt and fb_exchange = '" + exchSeg.Substring(0, 1) + "' and fb_margin1 <> 0 and fb_postmrgyn = 'Y' and cm_cd = '" + userId + "' ";
                 ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
 
-                strsql = "insert into #tmpfobill select 91 ,fb_billdt,fb_clientcd,fb_clientcd, 1,'[CURR. DAY MRGN.]',0 td_bqty,0 td_sqty, 0,0 td_mainbrrate,0 td_mainbrrate, 0 td_servicetax,0.0000 td_closeprice, 91 td_sortlist, 'XX',round(fb_margin2,2),0, 0, '', 0 ";
+                strsql = "insert into ##tmpfobill select 91 ,fb_billdt,fb_clientcd,fb_clientcd, 1,'[CURR. DAY MRGN.]',0 td_bqty,0 td_sqty, 0,0 td_mainbrrate,0 td_mainbrrate, 0 td_servicetax,0.0000 td_closeprice, 91 td_sortlist, 'XX',round(fb_margin2,2),0, 0, '', 0 ";
                 strsql = strsql + " From #tmpmosesdates," + strFbills + "," + strClient_master + " ";
-                strsql = strsql + " where fb_clientcd = cm_cd and fb_billdt = bd_dt and fb_exchange = '" + strExcode + "' and fb_margin2 <> 0 and fb_postmrgyn = 'Y' and cm_cd = '" + strclientid + "' ";
+                strsql = strsql + " where fb_clientcd = cm_cd and fb_billdt = bd_dt and fb_exchange = '" + exchSeg.Substring(0, 1) + "' and fb_margin2 <> 0 and fb_postmrgyn = 'Y' and cm_cd = '" + userId + "' ";
                 ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
 
-                strsql = "alter table #tmpfobill add tx_billno numeric default(0) NOT NULL ";
+                strsql = "alter table ##tmpfobill add tx_billno numeric default(0) NOT NULL ";
                 ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
 
-                strsql = "update #tmpfobill set tx_billno = fb_billno ";
-                strsql = strsql + " from #tmpfobill," + strFbills + " ";
-                strsql = strsql + " where fb_clientcd = tx_clientcd  and fb_exchange = '" + strExcode + "' and fb_billdt = tx_dt ";
+                strsql = "update ##tmpfobill set tx_billno = fb_billno ";
+                strsql = strsql + " from ##tmpfobill," + strFbills + " ";
+                strsql = strsql + " where fb_clientcd = tx_clientcd  and fb_exchange = '" + exchSeg.Substring(0, 1) + "' and fb_billdt = tx_dt ";
                 ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
 
-                strsql = "alter table #tmpfobill add tx_unit char (15) ";
+                strsql = "alter table ##tmpfobill add tx_unit char (15) ";
                 ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
 
                 strsql = "update a Set tx_unit=left(rtrim(convert(char,convert(numeric,floor(pm_divisor))))+' '+pm_unitper,15) ";
-                strsql = strsql + " from #tmpfobill a, " + strSeries_master + ", " + strproduct_master + " ";
-                strsql = strsql + " where tx_seriesid = sm_seriesid and sm_exchange='" + strExcode + "' and sm_prodtype=pm_type and sm_exchange=pm_exchange and sm_symbol=pm_assetcd ";
+                strsql = strsql + " from ##tmpfobill a, " + strSeries_master + ", " + strproduct_master + " ";
+                strsql = strsql + " where tx_seriesid = sm_seriesid and sm_exchange='" + exchSeg.Substring(0, 1) + "' and sm_prodtype=pm_type and sm_exchange=pm_exchange and sm_symbol=pm_assetcd ";
                 ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
 
                 strsql = "select tx_sortlist,tx_dt as dt,tx_billno,case tx_controlflag when '1' then 'b/f' when '3' then 'c/f' else convert(char,convert(datetime,tx_dt),103) end tx_dt,tx_clientcd, tx_seriesid,sm_sname as tx_desc,cast((tx_bqty) as decimal(15,2)) as tx_bqty,cast((tx_sqty) as decimal(15,2)) as tx_sqty,cast((tx_rate) as decimal(15,4)) as tx_rate,cast((tx_closerate) as decimal(15,4)) as tx_closerate,cast((tx_value) as decimal(15,2)) as drcr,cast((((tx_bqty-tx_sqty) * tx_rate)) as decimal(15,2))  value,tx_multiplier, sm_sname,sm_desc,sm_productcd,sm_symbol, sm_expirydt,sm_strikeprice, sm_callput,sm_optionstyle,cm_name,cm_add1, cm_add2,cm_add3,cm_tele1, cm_tele2,cm_email, cm_sebino, cm_panno, cm_add4, cm_pincode, sm_prodtype,cm_groupcd,cm_familycd, cm_brboffcode, tx_tradeid,";
                 strsql = strsql + " case tx_controlflag when '1' then 'b/f' when '3' then 'c/f' else tx_time end tx_time, tx_orderid, tx_marketrate, tx_unit,case tx_controlflag when '1' then 0 when '3' then 2 else 1 end ord , '' as NetValue";
-                strsql = strsql + " from #tmpfobill," + strSeries_master + "," + strClient_master + " ";
-                strsql = strsql + " where tx_clientcd = cm_cd and tx_seriesid = sm_seriesid and sm_exchange = '" + strExcode + "' and tx_controlflag < 10 and cm_brboffcode <> '' ";
+                strsql = strsql + " from ##tmpfobill," + strSeries_master + "," + strClient_master + " ";
+                strsql = strsql + " where tx_clientcd = cm_cd and tx_seriesid = sm_seriesid and sm_exchange = '" + exchSeg.Substring(0, 1) + "' and tx_controlflag < 10 and cm_brboffcode <> '' ";
                 strsql = strsql + "union all ";
                 strsql = strsql + "select tx_sortlist,tx_dt as dt,tx_billno,case tx_controlflag when '1' then 'b/f' when '3' then 'c/f' else convert(char,convert(datetime,tx_dt),103) end tx_dt,tx_clientcd, tx_seriesid,tx_desc, cast((tx_bqty) as decimal(15,2)) as tx_bqty, cast((tx_sqty) as decimal(15,4)) as tx_sqty,tx_rate,cast((tx_closerate) as decimal(15,4)) as tx_closerate ,cast((tx_value) as decimal(15,2)) as drcr,cast((((tx_bqty-tx_sqty) * tx_rate)) as decimal(15,2))  value,tx_multiplier, tx_desc as  sm_sname,'' sm_desc,'' sm_productcd,'' sm_symbol,'' sm_expirydt, 0 sm_strikeprice, 'X' sm_callput,'X' sm_optionstyle, cm_name,cm_add1,cm_add2,cm_add3,cm_tele1,cm_tele2,cm_email, cm_sebino, cm_panno,cm_add4, cm_pincode,'EF' as sm_prodtype,cm_groupcd,cm_familycd, cm_brboffcode, tx_tradeid,";
-                strsql = strsql + "case tx_controlflag when '1' then 'b/f' when '3' then 'c/f' else tx_time end tx_time, tx_orderid, tx_marketrate, tx_unit,case tx_controlflag when '1' then 0 when '3' then 2 else 1 end ord, '' as NetValue  ";
-                strsql = strsql + " from #tmpfobill," + strClient_master + " ";
-                strsql = strsql + " where tx_clientcd = cm_cd  and tx_controlflag >= 10 and cm_brboffcode <> ''  order by tx_clientcd,dt ,tx_sortlist,sm_symbol,tx_seriesid,tx_desc  , ord  ";
+                strsql = strsql + "case tx_controlflag when '1' then 'b/f' when '3' then 'c/f' else tx_time end tx_time, tx_orderid, tx_marketrate, tx_unit,case tx_controlflag when '1' then 0 when '3' then 2 else 1 end ord, '' as NetValue";
+                strsql = strsql + " from ##tmpfobill," + strClient_master + " ";
+                strsql = strsql + " where tx_clientcd = cm_cd  and tx_controlflag >= 10 and cm_brboffcode <> ''";
                 DataSet objDataset = new DataSet();
+
+                strsql = " select tx_dt tddt,tx_seriesid seriesid,tx_desc seriesname,tx_bqty buy,tx_sqty sell,tx_marketrate Marketrate, tx_rate Rate,tx_closerate CloseRate,drcr,value,NetValue,tx_sortlist SortOrder,tx_billno BillNo from ( " + strsql + " ) a ";
+                strsql += " order by  dt ,tx_sortlist,sm_symbol,tx_seriesid,tx_desc  , ord ";
+
                 objDataset = OpenDataSetTmp(strsql, ObjConnectionTmp);
 
                 string StrDrop = string.Empty;
@@ -1091,304 +809,7 @@ namespace TradeWeb.API.Repository
                 return objDataset;
             }
         }
-        //// TODO : Added for return string value;
-        public string fnForBill_String(string strclientid, string strExcode, string StrFromDt, string StrToDt, string Exchange, string Segment)
-        {
-            SqlConnection ObjConnectionTmp;
-            using (var db = new DataContext())
-            {
-                ObjConnectionTmp = new SqlConnection((db.Database.GetDbConnection()).ConnectionString);
-            }
-            if (ObjConnectionTmp.State == ConnectionState.Closed)
-            {
-                ObjConnectionTmp.Open();
-            }
-            if ((Exchange != "MCX-COMM") && (Exchange != "NCDEX-COMM") && (Exchange != "ICEX-COMM") && (Exchange != "NCME-COMM") && (Exchange != "MCX") && (Exchange != "NCDEX") && (Exchange != "ICEX") && (Exchange != "NCME"))
-            {
-                prTempFOBill(ObjConnectionTmp);
-
-                string strinsert = string.Empty;
-                strinsert = "insert into #tmpmosesdates values('" + StrFromDt + "') ";
-                ExecuteSQLTmp(strinsert, ObjConnectionTmp);
-
-                string StrExchWhere = "";
-                string strIndexName = string.Empty;
-                string strsql = string.Empty;
-
-                strIndexName = "idx_trades_dt_clientcd";
-                strsql = "Select Name from sysindexes where Name= 'idx_trades_clientcd'";
-                DataSet ObjIndexds = OpenDataSet(strsql);
-                if (ObjIndexds.Tables[0].Rows.Count > 0)
-                {
-                    strIndexName = "idx_trades_clientcd";
-                }
-
-                if (strExcode.Contains("IOP"))
-                {
-                    StrExchWhere = "";
-                    strExcode = Strings.Right(strExcode, 1);
-                }
-                else
-                { StrExchWhere = "and td_exchange = '" + strExcode + "'"; }
-
-                strinsert = " insert into  #tmpfobill  select 1 td_controlflag,'" + StrFromDt + "',td_clientcd, ";
-                strinsert = strinsert + " td_mainbrcd, td_seriesid,'',case sign(sum(td_bqty - td_sqty)) when 1 then abs(sum(td_bqty - td_sqty)) else 0 end  td_bqty, case sign(sum(td_bqty - td_sqty)) when 1 then 0 else abs(sum(td_bqty - td_sqty)) end td_sqty, 0.0000 td_rate,0.0000 td_mainbrrate,0.0000 td_mainbrrate, 0.0000 td_servicetax,0.0000 td_closeprice, case sm_prodtype when 'IF' then 1 when 'CF' then 1 when 'EF' then 2 when 'IO' then 5 else 6 end td_sortlist, sm_prodtype,0 ,td_exchange ";
-                strinsert = strinsert + " ,0,0 From Trades with(nolock,index(" + strIndexName + ")) , Series_master with(nolock),Client_master with(nolock)";
-                strinsert = strinsert + " Where td_clientcd = cm_cd and td_exchange = sm_exchange and td_Segment = sm_Segment And td_seriesid = sm_seriesid and sm_expirydt >= '" + StrFromDt + "' and  td_dt < '" + StrFromDt + "' " + StrExchWhere + " and td_Segment = '" + Segment + "' and sm_prodtype in('IF','EF','CF')  and ltrim(rtrim(td_groupid)) <> 'B'  and td_clientcd = '" + strclientid + "' group by td_clientcd,td_mainbrcd,td_seriesid,sm_prodtype,td_exchange having sum(td_bqty - td_sqty) <> 0 ";
-                ExecuteSQLTmp(strinsert, ObjConnectionTmp);
-
-                strinsert = " insert into #tmpfobill select 2 td_controlflag,td_dt,td_clientcd,td_mainbrcd, td_seriesid,'',td_bqty,td_sqty, td_rate, td_mainbrrate, td_mainbrrate, td_servicetax,0.0000 td_closeprice, case sm_prodtype when 'IF' then 1 when 'CF' then 1 when 'EF' then 2 when 'IO' then 5 else 6 end td_sortlist, sm_prodtype,0,td_exchange ";
-                strinsert = strinsert + " ,convert(decimal (15,2),td_marketrate) as tx_marketrate1,convert(decimal (15,4),td_brokerage) tx_Brokerage From Trades with(nolock,index(" + strIndexName + ")) , Series_master with(nolock),Client_master with(nolock)";
-                strinsert = strinsert + " Where td_clientcd = cm_cd and td_exchange = sm_exchange and td_Segment = sm_Segment and td_seriesid = sm_seriesid and sm_expirydt >= '" + StrFromDt + "' and  td_dt between '" + StrFromDt + "' and '" + StrFromDt + "' " + StrExchWhere + " and td_Segment = '" + Segment + "' and cm_cd = '" + strclientid + "' Order By td_tradeid , td_subtradeid ";
-                ExecuteSQLTmp(strinsert, ObjConnectionTmp);
-
-                strinsert = " insert into #tmpfobill select 2 td_controlflag,td_dt,td_clientcd,td_mainbrcd, td_seriesid,'',td_sqty,td_bqty, convert(decimal (15,2),td_marketrate) as tx_marketrate1, td_mainbrrate, td_mainbrrate, 0,0.0000 td_closeprice, case sm_prodtype when 'IF' then 1 when 'CF' then 1 when 'EF' then 2 when 'IO' then 5 else 6 end td_sortlist, sm_prodtype,0,td_exchange ";
-                strinsert = strinsert + " ,convert(decimal (15,2),td_marketrate) as tx_marketrate1,convert(decimal (15,4),td_brokerage) tx_Brokerage From Trades with(nolock,index(" + strIndexName + ")) , Series_master,Client_master ";
-                strinsert = strinsert + " Where td_clientcd = cm_cd and td_exchange = sm_exchange and td_Segment = sm_Segment and td_seriesid = sm_seriesid and sm_expirydt >= '" + StrFromDt + "' and  td_dt between '" + StrFromDt + "' and '" + StrFromDt + "' " + StrExchWhere + " and td_Segment = '" + Segment + "' and ltrim(rtrim(td_groupid)) = 'B'  and td_clientcd = '" + strclientid + "' Order By td_tradeid , td_subtradeid ";
-                ExecuteSQLTmp(strinsert, ObjConnectionTmp);
-
-                strinsert = " insert into #tmpfobill  select 99 tx_controlflag,bd_dt,tx_clientcd,tx_mainbrcd, tx_seriesid,'',  case sign(sum(tx_bqty - tx_sqty)) when 1 then abs(sum(tx_bqty - tx_sqty)) else 0 end  tx_bqty,  case sign(sum(tx_bqty - tx_sqty)) when 1 then 0 else abs(sum(tx_bqty - tx_sqty)) end tx_sqty,  0.0000 tx_rate,0.0000 tx_mainbrrate,0.0000 tx_mainbrrate, 0.0000 tx_servicetax,0.0000 tx_closeprice,  case sm_prodtype when 'IF' then 1 when 'CF' then 1 when 'EF' then 2 when 'IO' then 5 else 6 end tx_sortlist, sm_prodtype,0 ,sm_exchange";
-                strinsert = strinsert + " ,0,0 From #tmpfobill  , #tmpmosesdates , Series_master with (nolock),Client_master with (nolock)";
-                strinsert = strinsert + " Where tx_clientcd = cm_cd and sm_exchange = '" + strExcode + "' and sm_Segment = '" + Segment + "' And tx_seriesid = sm_seriesid  and sm_expirydt >= bd_dt and  tx_dt < bd_dt  and sm_prodtype in('IF','EF','CF')  and tx_controlflag not in ( '99','3')  group by bd_dt,tx_clientcd,tx_mainbrcd,tx_seriesid,sm_prodtype,sm_exchange  Having Sum(tx_bqty - tx_sqty) <> 0 ";
-                strinsert = strinsert + " Union All ";
-                strinsert = strinsert + " select 3 tx_controlflag,bd_dt,tx_clientcd,tx_mainbrcd, tx_seriesid,'', ";
-                strinsert = strinsert + " case sign(sum(tx_bqty - tx_sqty)) when 1 then 0 else abs(sum(tx_bqty - tx_sqty)) end tx_bqty, ";
-                strinsert = strinsert + " case sign(sum(tx_bqty - tx_sqty)) when 1 then abs(sum(tx_bqty - tx_sqty)) else 0 end  tx_sqty, ";
-                strinsert = strinsert + " 0.0000 tx_rate,0.0000 tx_mainbrrate,0.0000 tx_mainbrrate, 0.0000 tx_servicetax,0.0000 tx_closeprice, ";
-                strinsert = strinsert + " case sm_prodtype when 'IF' then 1 when 'CF' then 1 when 'EF' then 2 when 'IO' then 5 else 6 end tx_sortlist, sm_prodtype,0,sm_exchange ";
-                strinsert = strinsert + " ,0,0 From #tmpfobill  , #tmpmosesdates , Series_master with (nolock),Client_master with (nolock) ";
-                strinsert = strinsert + " Where tx_clientcd = cm_cd and sm_exchange = '" + strExcode + "' and sm_Segment = '" + Segment + "' And tx_seriesid = sm_seriesid ";
-                strinsert = strinsert + " and sm_expirydt >= bd_dt and  tx_dt <= bd_dt ";
-                strinsert = strinsert + " and sm_prodtype in('IF','EF','CF') ";
-                strinsert = strinsert + " and tx_controlflag not in ( '99','3') ";
-                strinsert = strinsert + " group by bd_dt,tx_clientcd,tx_mainbrcd,tx_seriesid,sm_prodtype,sm_exchange ";
-                strinsert = strinsert + " Having Sum(tx_bqty - tx_sqty) <> 0 ";
-                ExecuteSQLTmp(strinsert, ObjConnectionTmp);
-
-                strinsert = "Update #tmpfobill set tx_controlflag = '1' where tx_controlflag = '99' ";
-                ExecuteSQLTmp(strinsert, ObjConnectionTmp);
-
-                strinsert = "insert into #tmpfobill select case ex_eaflag when 'E' then 5 else 6 end td_controlflag,ex_dt,ex_clientcd,ex_mainbrcd, ex_seriesid,'',ex_eqty,ex_aqty, ex_diffbrokrate,ex_mainbrdiffrate,ex_mainbrdiffrate, ex_servicetax,ex_settlerate, case sm_prodtype when 'IF' then 1 when 'CF' then 1 when 'EF' then 2 when 'IO' then 5 else 6 end + 3 td_sortlist, sm_prodtype,0 ,ex_exchange";
-                strinsert = strinsert + " ,convert(decimal (15,2),ex_diffrate) as tx_marketrate1 ,convert(decimal(15,2),ex_brokerage) tx_Brokerage From Exercise with (nolock), Series_master with (nolock) ,Client_master with (nolock) ";
-                strinsert = strinsert + "Where ex_clientcd = cm_cd and ex_exchange = sm_exchange and ex_Segment = sm_Segment And ex_seriesid = sm_seriesid and sm_expirydt >= '" + StrFromDt + "' and ex_dt between '" + StrFromDt + "' and '" + StrFromDt + "' " + StrExchWhere.Replace("td_", "ex_") + " and ex_Segment = '" + Segment + "' and cm_cd = '" + strclientid + "' ";
-                ExecuteSQLTmp(strinsert, ObjConnectionTmp);
-
-                strinsert = "insert into #tmpbillcharges select tx_dt,tx_clientcd,'SERVICE TAX',round(sum(tx_servicetax),2),0,tx_exchange ";
-                strinsert = strinsert + " from #tmpfobill,#tmpmosesdates,Client_master with (nolock) ";
-                strinsert = strinsert + " where tx_clientcd = cm_cd and tx_dt = bd_dt and cm_cd = '" + strclientid + "' group by tx_dt,tx_clientcd,tx_exchange having sum(tx_servicetax) > 0 ";
-                ExecuteSQLTmp(strinsert, ObjConnectionTmp);
-
-                strinsert = "update #tmpfobill set tx_closerate = ms_lastprice ";
-                strinsert = strinsert + " from #tmpfobill, Market_summary with (nolock) ";
-                strinsert = strinsert + " where ms_seriesid = tx_seriesid and tx_controlflag in ('1','2') and ms_exchange=tx_exchange and ms_Segment = '" + Segment + "' and ms_dt = tx_dt ";
-                ExecuteSQLTmp(strinsert, ObjConnectionTmp);
-
-                strinsert = "update #tmpfobill set tx_rate = ms_prcloseprice ";
-                strinsert = strinsert + " from #tmpfobill,Market_summary with (nolock) ";
-                strinsert = strinsert + " where ms_seriesid = tx_seriesid and tx_controlflag = 1 and ms_exchange = tx_Exchange  and ms_Segment = '" + Segment + "' and ms_dt = tx_dt ";
-                ExecuteSQLTmp(strinsert, ObjConnectionTmp);
-
-                strinsert = "update #tmpfobill set tx_rate = ms_lastprice from #tmpfobill,Market_summary with (nolock) ";
-                strinsert = strinsert + " where ms_seriesid = tx_seriesid and tx_controlflag = 3";
-                strinsert = strinsert + " and ms_exchange = tx_Exchange  and ms_Segment = '" + Segment + "'";
-                strinsert = strinsert + " and ms_dt = tx_dt";
-                ExecuteSQLTmp(strinsert, ObjConnectionTmp);
-
-                strinsert = "insert into #tmpbillcharges select fc_dt,fc_clientcd,fc_desc,round(sum(fc_amount),2),0,fc_exchange ";
-                strinsert = strinsert + " from Fspecialcharges with (nolock) ,#tmpmosesdates,Client_master with (nolock) ";
-                strinsert = strinsert + " where fc_clientcd = cm_cd and fc_dt = bd_dt and cm_cd = '" + strclientid + "' " + StrExchWhere.Replace("td_", "fc_") + " and fc_Segment = '" + Segment + "' group by fc_dt,fc_clientcd,fc_desc,fc_exchange having round(sum(fc_amount),2) <> 0 ";
-                ExecuteSQLTmp(strinsert, ObjConnectionTmp);
-
-                strinsert = "insert into #tmpbillcharges select fc_dt,fc_clientcd,'SERVICE TAX',round(sum(fc_servicetax),2),0,fc_exchange ";
-                strinsert = strinsert + " from Fspecialcharges with (nolock) ,#tmpmosesdates,Client_master with (nolock) ";
-                strinsert = strinsert + " where fc_clientcd = cm_cd and fc_dt = bd_dt and cm_cd = '" + strclientid + "' " + StrExchWhere.Replace("td_", "fc_") + " and fc_Segment = '" + Segment + "' group by fc_dt,fc_clientcd,fc_desc,fc_exchange having round(sum(fc_servicetax),2) <> 0 ";
-                ExecuteSQLTmp(strinsert, ObjConnectionTmp);
-
-                strinsert = "update #tmpfobill set tx_value = round(((case tx_controlflag when 5  then (tx_bqty + tx_sqty)*-1 when 6 then (tx_bqty + tx_sqty)*-1 else (tx_bqty - tx_sqty) end) *tx_rate)*sm_multiplier,4)";
-                strinsert = strinsert + " From series_master with (nolock) ";
-                strinsert = strinsert + " Where sm_Segment = '" + Segment + "' and sm_exchange = tx_Exchange and tx_seriesid = sm_seriesid ";
-                ExecuteSQLTmp(strinsert, ObjConnectionTmp);
-
-                strinsert = "insert into #tmpfobill select 10 ,bc_dt,bc_clientcd,bc_clientcd, 1,upper(bc_desc),0 td_bqty,0 td_sqty, 0,0 td_mainbrrate,0 td_mainbrrate, 0 td_servicetax,0.0000 td_closeprice, 10 td_sortlist, 'XX',round(sum(bc_amount),2),bc_exchange,0,0 From #tmpbillcharges group by bc_dt,bc_clientcd,bc_desc,bc_exchange ";
-                ExecuteSQLTmp(strinsert, ObjConnectionTmp);
-
-                strinsert = "insert into #tmpfobill select 90 ,fb_billdt,fb_clientcd,fb_clientcd, 1,'[PREV. DAY MRGN.]',0 td_bqty,0 td_sqty, 0,0 td_mainbrrate,0 td_mainbrrate, 0 td_servicetax,0.0000 td_closeprice, 90 td_sortlist, 'XX',round(Case when fb_postmrgyn = 'Y' then fb_margin1 else 0 end + CAse When fb_postExpmrgyn = 'Y' then fb_Expmargin1 else 0 end ,2),fb_exchange ";
-                strinsert = strinsert + " ,0,0 From #tmpmosesdates,Fbills with (nolock) ,Client_master with (nolock) ";
-                strinsert = strinsert + " where fb_clientcd = cm_cd and fb_billdt = bd_dt and fb_exchange = '" + strExcode + "' and fb_Segment = '" + Segment + "' and round(Case when fb_postmrgyn = 'Y' then fb_margin1 else 0 end + CAse When fb_postExpmrgyn = 'Y' then fb_Expmargin1 else 0 end ,2) <> 0  and cm_cd = '" + strclientid + "' ";
-                ExecuteSQLTmp(strinsert, ObjConnectionTmp);
-
-                strinsert = "insert into #tmpfobill select 91 ,fb_billdt,fb_clientcd,fb_clientcd, 1,'[CURR. DAY MRGN.]',0 td_bqty,0 td_sqty, 0,0 td_mainbrrate,0 td_mainbrrate, 0 td_servicetax,0.0000 td_closeprice, 91 td_sortlist, 'XX',round(Case When fb_postmrgyn = 'Y' then fb_margin2 else 0 end + Case When fb_postExpmrgyn = 'Y' then fb_Expmargin2 else 0 end,2),fb_exchange ";
-                strinsert = strinsert + " ,0,0 From #tmpmosesdates,Fbills with (nolock) ,Client_master with (nolock) ";
-                strinsert = strinsert + " where fb_clientcd = cm_cd and fb_billdt = bd_dt and fb_exchange = '" + strExcode + "' and fb_Segment = '" + Segment + "' and round(Case When fb_postmrgyn = 'Y' then fb_margin2 else 0 end + Case When fb_postExpmrgyn = 'Y' then fb_Expmargin2 else 0 end,2) <> 0  and cm_cd = '" + strclientid + "' ";
-                ExecuteSQLTmp(strinsert, ObjConnectionTmp);
-
-                strinsert = "alter table #tmpfobill add tx_billno numeric default(0) NOT NULL ";
-                ExecuteSQLTmp(strinsert, ObjConnectionTmp);
-
-                strinsert = "update #tmpfobill set tx_billno = fb_billno from #tmpfobill,Fbills with (nolock) where fb_clientcd = tx_clientcd  and fb_exchange = tx_exchange and fb_Segment = '" + Segment + "' and fb_billdt = tx_dt  ";
-                ExecuteSQLTmp(strinsert, ObjConnectionTmp);
-
-                strinsert = "select tx_sortlist,tx_dt as dt,tx_billno,case tx_controlflag when '1' then 'b/f' when '3' then 'c/f' else convert(char,convert(datetime,tx_dt),103) end tx_dt,tx_clientcd, tx_seriesid,sm_sname as tx_desc, cast((tx_bqty)as decimal(15,0))as tx_bqty,cast((tx_sqty)as decimal(15,0))as tx_sqty,cast((tx_rate)as decimal(15,4))as tx_rate,cast((tx_closerate)as decimal(15,4))as tx_closerate,cast((tx_value)as decimal(15,2))as drcr,cast((((tx_bqty-tx_sqty) * tx_rate)) as decimal(15,2)) value,sm_sname,sm_desc,sm_productcd,sm_symbol, ";
-                strinsert = strinsert + " sm_expirydt,sm_strikeprice,sm_callput,sm_optionstyle,cm_name, ";
-                strinsert = strinsert + " cm_add1,cm_add2,cm_add3,cm_tele1,cm_tele2,cm_email,cm_sebino, cm_panno, cm_add4, cm_pincode,sm_prodtype,cm_groupcd,cm_familycd,cm_brboffcode,cm_subbroker,sm_multiplier, ";
-                strinsert = strinsert + " cm_introducer ,replicate(' ',8-len(ltrim(rtrim(tx_clientcd)))) + ltrim(rtrim(tx_clientcd)) ,case tx_controlflag when '1' then 0 when '3' then 2 else 1 end ord, '' as NetValue ";
-                strinsert = strinsert + " ,tx_marketrate1,tx_Brokerage from #tmpfobill,Series_master with (nolock) ,Client_master with (nolock) ";
-                strinsert = strinsert + " where tx_clientcd = cm_cd and tx_seriesid = sm_seriesid and tx_exchange = sm_exchange and sm_Segment = '" + Segment + "' and tx_controlflag < 10 ";
-                strinsert = strinsert + " union all ";
-                strinsert = strinsert + " select tx_sortlist,tx_dt as dt,tx_billno,case tx_controlflag when '1' then 'b/f' when '3' then 'c/f' else convert(char,convert(datetime,tx_dt),103) end tx_dt,tx_clientcd, tx_seriesid,tx_desc, cast((tx_bqty)as decimal(15,0))as tx_bqty,cast((tx_sqty)as decimal(15,0))as tx_sqty,cast((tx_rate)as decimal(15,4))as tx_rate,cast((tx_closerate)as decimal(15,4))as tx_closerate,cast((tx_value)as decimal(15,2)) as drcr,cast((((tx_bqty-tx_sqty) * tx_rate))as decimal(15,2)) value, tx_desc as sm_sname,'' sm_desc,'' sm_productcd,'' sm_symbol,'' sm_expirydt, 0 sm_strikeprice, 'X' sm_callput,'X' sm_optionstyle, cm_name,cm_add1,cm_add2,cm_add3,cm_tele1,cm_tele2,cm_email, cm_sebino, cm_panno,cm_add4, ";
-                strinsert = strinsert + " cm_pincode,'EF' as sm_prodtype,cm_groupcd,cm_familycd,cm_brboffcode, ";
-                strinsert = strinsert + " cm_subbroker,0 sm_multiplier,cm_introducer ,replicate('',8-len(ltrim(rtrim(tx_clientcd)))) + ltrim(rtrim(tx_clientcd)),case tx_controlflag when '1' then 0 when '3' then 2 else 1 end ord, '' as NetValue  ";
-                strinsert = strinsert + " ,tx_marketrate1,tx_Brokerage from #tmpfobill,Client_master with (nolock) ";
-                strinsert = strinsert + " where tx_clientcd = cm_cd and tx_controlflag >= 10 ";
-                strinsert = strinsert + " order by  replicate(' ',8-len(ltrim(rtrim(tx_clientcd)))) + ltrim(rtrim(tx_clientcd))  ,dt ,tx_sortlist,sm_symbol,tx_seriesid,tx_desc  , ord ";
-
-
-                DataSet ds = new DataSet();
-                ds = OpenDataSetTmp(strinsert, ObjConnectionTmp);
-
-                prTempFOBill(ObjConnectionTmp);
-                // ds = OpenDataSet(strinsert);
-                return strinsert;
-            }
-
-            else //MCX And NCDEX
-            {
-                prTempFOBill1(ObjConnectionTmp);
-                string strsql = string.Empty;
-
-                strsql = "insert into #tmpmosesdates values('" + StrFromDt + "') ";
-                ExecuteSQLTmp(strsql, ObjConnectionTmp);
-
-                string strDelivery = string.Empty;
-                string strSeries_master = string.Empty;
-                string strClient_master = string.Empty;
-                string strTrades = string.Empty;
-                string strMarket_summary = string.Empty;
-                string strFspecialcharges = string.Empty;
-                string strproduct_master = string.Empty;
-                string strFbills = string.Empty;
-
-                if (ConfigurationManager["IsTradeWeb"] == "O")
-                {
-                    if (ConfigurationManager["Commex"] != null || ConfigurationManager["Commex"] != string.Empty)
-                    {
-                        string StrCommexConn = "";
-                        StrCommexConn = GetCommexConnection();
-
-                        strSeries_master = StrCommexConn + ".Series_master";
-                        strClient_master = StrCommexConn + ".Client_master";
-                        strTrades = StrCommexConn + ".Trades";
-                        strDelivery = StrCommexConn + ".Delivery";
-                        strMarket_summary = StrCommexConn + ".Market_summary";
-                        strFspecialcharges = StrCommexConn + ".Fspecialcharges";
-                        strproduct_master = StrCommexConn + ".product_master";
-                        strFbills = StrCommexConn + ".Fbills";
-                    }
-                }
-                strsql = "insert into #tmpfobill select 1 td_controlflag,bd_dt,td_clientcd,td_mainbrcd, td_seriesid,'',case sign(sum(td_bqty - td_sqty)) when 1 then abs(sum(td_bqty - td_sqty)) else 0 end  td_bqty, case sign(sum(td_bqty - td_sqty)) when 1 then 0 else abs(sum(td_bqty - td_sqty)) end td_sqty, 0.0000 td_rate,0.0000 td_mainbrrate,0.0000 td_mainbrrate, 0.0000 td_servicetax,0.0000 td_closeprice, case sm_prodtype when 'CF' then 1 when 'CO' then 2 else 6 end td_sortlist, sm_prodtype,0, sm_multiplier , 0 td_tradeid, '' td_time, 0 td_orderid";
-                strsql = strsql + " From " + strTrades + ", #tmpmosesdates, " + strSeries_master + "," + strClient_master + " ";
-                strsql = strsql + "Where td_clientcd = cm_cd and td_exchange = sm_exchange And td_seriesid = sm_seriesid and sm_expirydt >= bd_dt and  td_dt < bd_dt and td_exchange = '" + strExcode + "' and sm_prodtype in('CF') and cm_cd = '" + strclientid + "' group by bd_dt,td_clientcd,td_mainbrcd,td_seriesid,sm_prodtype, sm_multiplier   having sum(td_bqty - td_sqty) <> 0 ";
-                ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
-
-                strsql = "insert into #tmpfobill select 2 td_controlflag,bd_dt,td_clientcd,td_mainbrcd, td_seriesid,'',td_bqty,td_sqty, td_rate,td_mainbrrate,td_mainbrrate, td_servicetax,0.0000 td_closeprice, case sm_prodtype when 'CF' then 1 when 'CO' then 2 else 6 end td_sortlist, sm_prodtype, 0, sm_multiplier, td_tradeid, td_time, td_orderid";
-                strsql = strsql + " From " + strTrades + ", #tmpmosesdates, " + strSeries_master + "," + strClient_master + " ";
-                strsql = strsql + "Where td_clientcd = cm_cd and td_exchange = sm_exchange and td_seriesid = sm_seriesid and sm_expirydt >= bd_dt and  td_dt = bd_dt and td_exchange = '" + strExcode + "' and cm_cd = '" + strclientid + "' ";
-                ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
-
-                strsql = " insert into #tmpfobill  select Case dl_type When 'DL' Then 7 When 'PD' Then 8 When 'SL' Then 9 When 'DS' Then 9.5 Else '' End td_controlflag, dl_BillDate,dl_clientcd,dl_mainbrcd, dl_seriesid,'',  dl_Bqty , dl_SQty ,  dl_rate , dl_mainbrrate, dl_marketrate, dl_servicetax,0,  case sm_prodtype when 'CF' then 1 when 'CO' then 2 else 6 end + 3 td_sortlist, sm_prodtype, (dl_bqty - dl_sQty) * dl_Rate * sm_multiplier  , sm_multiplier , 0 tx_tradeid, '' tx_time, 0 tx_orderid ";
-                strsql = strsql + "  From " + strDelivery + ", #tmpmosesdates, " + strSeries_master + "," + strClient_master + " ";
-                strsql = strsql + "  Where dl_clientcd = cm_cd And dl_exchange = sm_exchange And dl_seriesid = sm_seriesid  and  dl_BillDate = bd_dt  and dl_exchange = '" + strExcode + "' and dl_type In ('DL','SL','PD','DS')  and cm_cd = '" + strclientid + "' ";
-                ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
-
-                strsql = "insert into #tmpfobill select 3 td_controlflag,bd_dt,td_clientcd,td_mainbrcd, td_seriesid,'',case sign(sum(td_bqty - td_sqty)) when 1 then 0 else abs(sum(td_bqty - td_sqty)) end  td_bqty, case sign(sum(td_bqty - td_sqty)) when 1 then abs(sum(td_bqty - td_sqty)) else 0 end td_sqty, 0.0000 td_rate,0.0000 td_mainbrrate,0.0000 td_mainbrrate, 0.0000 td_servicetax,0.0000 td_closeprice, case sm_prodtype when 'CF' then 1 when 'CO' then 2 else 6 end td_sortlist, sm_prodtype,0, sm_multiplier, 0,'',0       ";
-                strsql = strsql + " From " + strTrades + ", #tmpmosesdates, " + strSeries_master + "," + strClient_master + " ";
-                strsql = strsql + " Where td_clientcd = cm_cd and td_exchange = sm_exchange And td_seriesid = sm_seriesid and sm_expirydt >= bd_dt and  td_dt <= bd_dt and td_exchange = '" + strExcode + "' and sm_prodtype in('CF') and cm_cd = '" + strclientid + "' group by bd_dt,td_clientcd,td_mainbrcd,td_seriesid,sm_prodtype, sm_multiplier having sum(td_bqty - td_sqty) <> 0";
-                ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
-
-                strsql = "insert into #tmpbillcharges select tx_dt,tx_clientcd,'SERVICE TAX',round(sum(tx_servicetax),2),0 ";
-                strsql = strsql + " from #tmpfobill,#tmpmosesdates," + strClient_master + " ";
-                strsql = strsql + "where tx_clientcd = cm_cd and tx_dt = bd_dt and cm_cd = '" + strclientid + "' group by tx_dt,tx_clientcd having sum(tx_servicetax) > 0 ";
-                ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
-
-                strsql = "update #tmpfobill set tx_closerate = ms_lastprice ";
-                strsql = strsql + " from #tmpfobill, " + strMarket_summary + " ";
-                strsql = strsql + " where ms_seriesid = tx_seriesid and tx_controlflag in ('1','2') and ms_exchange = '" + strExcode + "' and ms_dt = tx_dt ";
-                ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
-
-                strsql = "update #tmpfobill set tx_rate = ms_prcloseprice ";
-                strsql = strsql + " from #tmpfobill," + strMarket_summary + " ";
-                strsql = strsql + " where ms_seriesid = tx_seriesid and tx_controlflag = 1 and ms_exchange = '" + strExcode + "' and ms_dt = tx_dt ";
-                ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
-
-                strsql = "update #tmpfobill set tx_rate = ms_lastprice ";
-                strsql = strsql + " from #tmpfobill, " + strMarket_summary + " ";
-                strsql = strsql + " where ms_seriesid = tx_seriesid and tx_controlflag = 3 and ms_exchange = '" + strExcode + "' and ms_dt = tx_dt ";
-                ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
-
-                strsql = "insert into #tmpbillcharges select fc_dt,fc_clientcd,fc_desc,round(sum(fc_amount),2),0";
-                strsql = strsql + " from " + strFspecialcharges + ",#tmpmosesdates," + strClient_master + " ";
-                strsql = strsql + " where fc_clientcd = cm_cd and fc_dt = bd_dt and cm_cd = '" + strclientid + "' and fc_exchange = '" + strExcode + "' group by fc_dt,fc_clientcd,fc_desc having round(sum(fc_amount),2) <> 0 ";
-                ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
-
-                strsql = "insert into #tmpbillcharges select fc_dt,fc_clientcd,'SERVICE TAX',round(sum(fc_servicetax),2),0 ";
-                strsql = strsql + " from " + strFspecialcharges + ",#tmpmosesdates," + strClient_master + " ";
-                strsql = strsql + " where fc_clientcd = cm_cd and fc_dt = bd_dt and cm_cd = '" + strclientid + "' and fc_exchange = '" + strExcode + "' group by fc_dt,fc_clientcd,fc_desc having round(sum(fc_servicetax),2) <> 0 ";
-                ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
-
-                strsql = "update #tmpfobill set tx_value = round(((case tx_controlflag when 5  then (tx_bqty + tx_sqty)*0 when 6 then (tx_bqty + tx_sqty)*0 else (tx_bqty - tx_sqty) end) *tx_rate)*tx_multiplier,4) ";
-                ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
-
-                strsql = "insert into #tmpfobill select 10 ,bc_dt,bc_clientcd,bc_clientcd, 1,upper(bc_desc),0 td_bqty,0 td_sqty, 0,0 td_mainbrrate,0 td_mainbrrate, 0 td_servicetax,0.0000 td_closeprice, 10 td_sortlist, 'XX',round(sum(bc_amount),2),0,0,'',0 ";
-                strsql = strsql + " From #tmpbillcharges group by bc_dt,bc_clientcd,bc_desc ";
-                ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
-
-                strsql = "insert into #tmpfobill select 90 ,fb_billdt,fb_clientcd,fb_clientcd, 1,'[PREV. DAY MRGN.]',0 td_bqty,0 td_sqty, 0,0 td_mainbrrate,0 td_mainbrrate, 0 td_servicetax,0.0000 td_closeprice, 90 td_sortlist, 'XX',round(fb_margin1,2),0, 0,'',0 ";
-                strsql = strsql + " From #tmpmosesdates," + strFbills + "," + strClient_master + " ";
-                strsql = strsql + " where fb_clientcd = cm_cd and fb_billdt = bd_dt and fb_exchange = '" + strExcode + "' and fb_margin1 <> 0 and fb_postmrgyn = 'Y' and cm_cd = '" + strclientid + "' ";
-                ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
-
-                strsql = "insert into #tmpfobill select 91 ,fb_billdt,fb_clientcd,fb_clientcd, 1,'[CURR. DAY MRGN.]',0 td_bqty,0 td_sqty, 0,0 td_mainbrrate,0 td_mainbrrate, 0 td_servicetax,0.0000 td_closeprice, 91 td_sortlist, 'XX',round(fb_margin2,2),0, 0, '', 0 ";
-                strsql = strsql + " From #tmpmosesdates," + strFbills + "," + strClient_master + " ";
-                strsql = strsql + " where fb_clientcd = cm_cd and fb_billdt = bd_dt and fb_exchange = '" + strExcode + "' and fb_margin2 <> 0 and fb_postmrgyn = 'Y' and cm_cd = '" + strclientid + "' ";
-                ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
-
-                strsql = "alter table #tmpfobill add tx_billno numeric default(0) NOT NULL ";
-                ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
-
-                strsql = "update #tmpfobill set tx_billno = fb_billno ";
-                strsql = strsql + " from #tmpfobill," + strFbills + " ";
-                strsql = strsql + " where fb_clientcd = tx_clientcd  and fb_exchange = '" + strExcode + "' and fb_billdt = tx_dt ";
-                ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
-
-                strsql = "alter table #tmpfobill add tx_unit char (15) ";
-                ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
-
-                strsql = "update a Set tx_unit=left(rtrim(convert(char,convert(numeric,floor(pm_divisor))))+' '+pm_unitper,15) ";
-                strsql = strsql + " from #tmpfobill a, " + strSeries_master + ", " + strproduct_master + " ";
-                strsql = strsql + " where tx_seriesid = sm_seriesid and sm_exchange='" + strExcode + "' and sm_prodtype=pm_type and sm_exchange=pm_exchange and sm_symbol=pm_assetcd ";
-                ExecuteSQLTmp(strsql, ObjConnectionTmp); ;
-
-                strsql = "select tx_sortlist,tx_dt as dt,tx_billno,case tx_controlflag when '1' then 'b/f' when '3' then 'c/f' else convert(char,convert(datetime,tx_dt),103) end tx_dt,tx_clientcd, tx_seriesid,sm_sname as tx_desc,cast((tx_bqty) as decimal(15,2)) as tx_bqty,cast((tx_sqty) as decimal(15,2)) as tx_sqty,cast((tx_rate) as decimal(15,4)) as tx_rate,cast((tx_closerate) as decimal(15,4)) as tx_closerate,cast((tx_value) as decimal(15,2)) as drcr,cast((((tx_bqty-tx_sqty) * tx_rate)) as decimal(15,2))  value,tx_multiplier, sm_sname,sm_desc,sm_productcd,sm_symbol, sm_expirydt,sm_strikeprice, sm_callput,sm_optionstyle,cm_name,cm_add1, cm_add2,cm_add3,cm_tele1, cm_tele2,cm_email, cm_sebino, cm_panno, cm_add4, cm_pincode, sm_prodtype,cm_groupcd,cm_familycd, cm_brboffcode, tx_tradeid,";
-                strsql = strsql + " case tx_controlflag when '1' then 'b/f' when '3' then 'c/f' else tx_time end tx_time, tx_orderid, tx_marketrate, tx_unit,case tx_controlflag when '1' then 0 when '3' then 2 else 1 end ord , '' as NetValue";
-                strsql = strsql + " from #tmpfobill," + strSeries_master + "," + strClient_master + " ";
-                strsql = strsql + " where tx_clientcd = cm_cd and tx_seriesid = sm_seriesid and sm_exchange = '" + strExcode + "' and tx_controlflag < 10 and cm_brboffcode <> '' ";
-                strsql = strsql + "union all ";
-                strsql = strsql + "select tx_sortlist,tx_dt as dt,tx_billno,case tx_controlflag when '1' then 'b/f' when '3' then 'c/f' else convert(char,convert(datetime,tx_dt),103) end tx_dt,tx_clientcd, tx_seriesid,tx_desc, cast((tx_bqty) as decimal(15,2)) as tx_bqty, cast((tx_sqty) as decimal(15,4)) as tx_sqty,tx_rate,cast((tx_closerate) as decimal(15,4)) as tx_closerate ,cast((tx_value) as decimal(15,2)) as drcr,cast((((tx_bqty-tx_sqty) * tx_rate)) as decimal(15,2))  value,tx_multiplier, tx_desc as  sm_sname,'' sm_desc,'' sm_productcd,'' sm_symbol,'' sm_expirydt, 0 sm_strikeprice, 'X' sm_callput,'X' sm_optionstyle, cm_name,cm_add1,cm_add2,cm_add3,cm_tele1,cm_tele2,cm_email, cm_sebino, cm_panno,cm_add4, cm_pincode,'EF' as sm_prodtype,cm_groupcd,cm_familycd, cm_brboffcode, tx_tradeid,";
-                strsql = strsql + "case tx_controlflag when '1' then 'b/f' when '3' then 'c/f' else tx_time end tx_time, tx_orderid, tx_marketrate, tx_unit,case tx_controlflag when '1' then 0 when '3' then 2 else 1 end ord, '' as NetValue  ";
-                strsql = strsql + " from #tmpfobill," + strClient_master + " ";
-                strsql = strsql + " where tx_clientcd = cm_cd  and tx_controlflag >= 10 and cm_brboffcode <> ''  order by tx_clientcd,dt ,tx_sortlist,sm_symbol,tx_seriesid,tx_desc  , ord  ";
-
-                prTempFOBill1(ObjConnectionTmp);
-
-                DataSet ds = new DataSet();
-                ds = OpenDataSet(strsql);
-
-                return strsql;
-
-
-            }
-        }
-
+        //// TODO : Added for return string value;        
         public string GetPaddedString(string StringToPad, int TotalExpectedLength)
         {
 
@@ -1468,7 +889,7 @@ namespace TradeWeb.API.Repository
             return httpRequest;
         }
 
-        public decimal mfnRoundoffCashbill(string strClient, string strRefDt, decimal dblBillamount, string strExchange, string strCompanyCode)
+        public decimal mfnRoundoffCashbill(string strClient, string strRefDt, decimal dblBillamount, string strExchange)
         {
             string strGroup;
             string strFamily;
@@ -1500,7 +921,7 @@ namespace TradeWeb.API.Repository
             }
 
             strsql = "select cg_ledgercd,(case cd_ratep when 0 then 1 else cd_ratep end) cd_ratep from Client_charges,Charges_master";
-            strsql = strsql + " where cg_companycode = cd_companycode and cg_exchange = cd_exchange and cd_cd = cg_cd and cd_companycode = '" + strCompanyCode + "'";
+            strsql = strsql + " where cg_companycode = cd_companycode and cg_exchange = cd_exchange and cd_cd = cg_cd ";
             strsql = strsql + " and cd_exchange = '" + strExchange + "' and cg_cd = '00'";
             strsql = strsql + " and (cd_clientcd + cd_groupcd + cd_familycd + cd_fromdt)";
             strsql = strsql + " = (select max(cd_clientcd + cd_groupcd + cd_familycd + cd_fromdt)";
@@ -2994,6 +2415,8 @@ namespace TradeWeb.API.Repository
                     StrSql = StrSql + " and left(se_stlmnt,2) in ('BC','NZ','MZ')";
                 else
                     StrSql = StrSql + " and left(se_stlmnt,2) in ('BR','NA','MA')";
+                
+                StrSql = StrSql + " ORder by case When se_exchange = '" + strStlmnt.Substring(0,1) + "' Then 0 else 1 end ";
                 DsInterOP = OpenDataSet(StrSql);
                 if (DsInterOP.Tables[0].Rows.Count == 0)
                     strData = strStlmnt + ",";
@@ -3068,6 +2491,7 @@ namespace TradeWeb.API.Repository
                 {
                     StrSql = " select * from SEttlements Where se_stdt = '" + strSTDt + "'";
                     StrSql = StrSql + " and left(se_stlmnt,2) in ('BC','NZ','MZ')";
+                    StrSql = StrSql + " ORder by case When se_exchange = '" + strStlmnt.Substring(0, 1) + "' Then 0 else 1 end ";
                     DsInterOP = OpenDataSet(StrSql);
                     if (DsInterOP.Tables[0].Rows.Count == 0)
                         strData = strStlmnt + ",";
@@ -3088,6 +2512,7 @@ namespace TradeWeb.API.Repository
                 StrSql = " select * from SEttlements,settlement_type Where se_stdt = '" + strSTDt + "'";
                 StrSql += " and se_exchange=sy_exchange and se_type=sy_type ";
                 StrSql += " and sy_maptype = '" + fnFireQueryTradeWeb("settlements,settlement_type", "sy_maptype", "se_exchange=sy_exchange and se_type=sy_type and se_stlmnt", strStlmnt, true) + "'";
+                StrSql += " ORder by case When se_exchange = '" + strStlmnt.Substring(0, 1) + "' Then 0 else 1 end ";
                 DsInterOP = null;
                 strData = "";
                 DsInterOP = OpenDataSet(StrSql);

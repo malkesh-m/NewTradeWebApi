@@ -35,8 +35,6 @@ namespace TradeWeb.API.Repository
 
         public dynamic Login_GetPassword(string userId);
 
-        public dynamic GetDigitalDocumentDownload(string userId, string cmbProductValue, string cmbDocumentTypeValue, string cmbExchangeValue, string fromDate);
-
         public dynamic GetUserDetais(string userId);
 
         public dynamic Transaction_Summary(string userId, string type, string FromDate, string ToDate);
@@ -44,11 +42,6 @@ namespace TradeWeb.API.Repository
         public dynamic Transaction_Accounts(string userId, string type, string fromDate, string toDate);
 
         public dynamic Transaction_AGTS(string userId, string seg, string fromDate, string toDate);
-
-        public dynamic ItemWiseDetails(string cm_cd, string td_type, string LinkCode, string td_scripnm, string FromDt, string ToDt);
-
-        public dynamic DateWiseDetails(string cm_cd, string td_type, string LinkCode, string td_stlmnt, string Dt, string FromDt, string ToDt, string txtheader);
-
         public dynamic Ledger_Summary(string userId, string type, string fromdate, string toDate);
 
         public dynamic Ledger_Year();
@@ -71,23 +64,22 @@ namespace TradeWeb.API.Repository
 
         public dynamic Holding_Broker_Ason(string userid, string AsOnDt);
 
-        public dynamic Holding_Demat_Current(string userid);
+        public dynamic Holding_MyDematAct_List(string userid);
+        public dynamic Holding_MyDemat_Current(string userid, string dematActNo, string strtable);
 
-        public dynamic GetDropDownComboAsOnDataHandler(string strTable);
+        public dynamic Holding_MyDematAct_HoldingDates_Execute();
 
         public dynamic AddUnPledgeRequest(string userId, string unPledge, string dmScripcd, string txtReqQty);
-
-        public dynamic GetSettelmentType(string syExchange, string syStatus);
+        public dynamic Bills_exchSeg();
+        public dynamic Bills_cash_settTypes_list(string syExchange);
+        public dynamic Bill_data(string userId, string exchSeg, string settType, string dt);
 
         public dynamic CommonGetSysParmStHandler(string param1, string param2);
 
-        public dynamic GetBillMainData(string strClientId, string strClient, string exchangeType, string stlmntType, string fromDt, string strCompanyCode);
 
-        public dynamic GetCumulativeDetailsHandler(string td_clientcd, string StrOrder, string StrScripCode, string Strbsflag, string StrDate, string StrLookup);
+        public dynamic Confirmation(string userId, int type, string dt);
+        public dynamic Transaction_Detail(string userId, string exch, string seg, int type, string fromdate, string todate, string scripcode);
 
-        public dynamic GetConfirmationDetailsHandler(string td_clientcd, string StrOrder, string StrLoopUp);
-
-        public dynamic GetConfirmationMainDataHandler(string userId, int lstConfirmationSelectIndex, string tdDt);
 
         public dynamic GetMarginMainData(string cm_cd, string strCompanyCode);
 
@@ -199,16 +191,18 @@ namespace TradeWeb.API.Repository
         {
             try
             {
-                string qury = "select cm_cd ClientCode, cm_Name ClientName from Client_master with (nolock) where cm_cd='" + userId + "'";
-                var ds = objUtility.OpenDataSet(qury);
+                string qury = "select cm_cd ClientCode, cm_Name ClientName,cm_mobile Mobile,cm_email Email from Client_master with (nolock) where cm_cd='" + userId + "'";
+                var ds = CommonRepository.FillDataset(qury);
                 if (ds != null)
                 {
-                    if (ds.Tables[0].Rows.Count > 0)
+                    if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
                     {
-                        return "success";
+                        DataTable Dt = new DataTable();
+                        Dt = ds.Tables[0];
+                        return JsonConvert.SerializeObject(Dt);
                     }
                 }
-                return "failed";
+                return null;
             }
             catch (Exception ex)
             {
@@ -243,7 +237,7 @@ namespace TradeWeb.API.Repository
         {
             try
             {
-                string result = ResetPassword(userId); //"select cm_mobile from Client_master with (nolock) where cm_cd='" + userId + "'  and cm_pwd='" + password + "'";
+                string result = Login_GetPassword_Execute(userId); //"select cm_mobile from Client_master with (nolock) where cm_cd='" + userId + "'  and cm_pwd='" + password + "'";
                 if (result != null)
                 {
                     return JsonConvert.SerializeObject(result);
@@ -260,7 +254,7 @@ namespace TradeWeb.API.Repository
         {
             try
             {
-                string result = Method_Login_Password_GenerateOTP(userId, mode); //"select cm_mobile from Client_master with (nolock) where cm_cd='" + userId + "'  and cm_pwd='" + password + "'";
+                string result = Login_Password_GenerateOTP_SMS_Email(userId, mode); //"select cm_mobile from Client_master with (nolock) where cm_cd='" + userId + "'  and cm_pwd='" + password + "'";
                 if (result != null)
                 {
                     return JsonConvert.SerializeObject(result);
@@ -277,7 +271,7 @@ namespace TradeWeb.API.Repository
         {
             try
             {
-                Boolean result = Method_Login_Password_Update(userId, OTP, oldPassword, newPassword); //"select cm_mobile from Client_master with (nolock) where cm_cd='" + userId + "'  and cm_pwd='" + password + "'";
+                Boolean result = Login_Password_Update_execute(userId, OTP, oldPassword, newPassword); //"select cm_mobile from Client_master with (nolock) where cm_cd='" + userId + "'  and cm_pwd='" + password + "'";
 
                 return JsonConvert.SerializeObject(result);
             }
@@ -312,49 +306,6 @@ namespace TradeWeb.API.Repository
         }
 
         #region Transaction Handler methods
-        //TODO : For getting Itemwise details Transaction data
-        public dynamic ItemWiseDetails(string cm_cd, string td_type, string LinkCode, string td_scripnm, string FromDt, string ToDt)
-        {
-            List<string> EntityList = new List<string>();
-            string qury = ItemWiseDetailsQuery(cm_cd, td_type, LinkCode, td_scripnm, FromDt, ToDt);
-            try
-            {
-                var ds = CommonRepository.FillDataset(qury);
-                if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
-                {
-                    var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
-
-                    return json;
-                }
-                return EntityList.ToList();
-            }
-            catch (Exception ex)
-            {
-                throw ex;
-            }
-        }
-
-        //TODO : For getting Datewise details Transaction data
-        public dynamic DateWiseDetails(string cm_cd, string td_type, string LinkCode, string td_stlmnt, string Dt, string FromDt, string ToDt, string txtheader)
-        {
-            List<string> entityList = new List<string>();
-            string qury = DateWiseDetailsQuery(cm_cd, td_type, LinkCode, td_stlmnt, Dt, FromDt, ToDt, txtheader);
-            try
-            {
-                var ds = CommonRepository.FillDataset(qury);
-                if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
-                {
-                    var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
-                    return json;
-                }
-                return entityList.ToList();
-            }
-            catch (Exception ex)
-            {
-                throw ex;
-            }
-        }
-
         //TODO : For getting Transaction data
         public dynamic Transaction_Summary(string userId, string type, string FromDate, string ToDate)
         {
@@ -1585,14 +1536,14 @@ namespace TradeWeb.API.Repository
                 {
                     strsql = strsql + " select 'Trading' as [Type],ld_clientcd,convert(char,convert(datetime,'" + fromDate + "'),103) ld_dt,Rtrim(CES_Exchange) + '-' + CES_Segment [ExchSeg],";
                     strsql = strsql + " cast(sum(case sign(datediff(d,'" + fromDate + "',ld_dt)) when -1 then ld_amount else 0 end)as decimal(15,2)) as ld_amount,'Opening Balance' ld_particular, case sign(sum(ld_amount)) when 1 then 'D' else 'C' end as ";
-                    strsql = strsql + " ld_debitflag ,'' ld_chequeno, 'O' ld_documenttype,''ld_common ,convert(datetime,'" + fromDate + "') Ldate,ld_dpid";
+                    strsql = strsql + " ld_debitflag ,'' ld_chequeno, 'O' ld_documenttype,''ld_common ,convert(datetime,'" + fromDate + "') Ldate,ld_dpid,'' LookUp";
                     strsql = strsql + " from " + strTable + " with (nolock) , Companyexchangesegments ";
                     strsql = strsql + " where LD_DPID = CES_Cd and ld_clientcd = '" + userId + "'";
                     strsql = strsql + " and ld_dt < '" + fromDate + "' and ld_dpid = '" + type_cesCd.Split("|")[i].Split(",")[1] + "'";
                     strsql = strsql + " group by ld_clientcd,ld_dpid,CES_Exchange,CES_Segment having sum(ld_amount)<> 0 ";
                     strsql = strsql + " union all ";
                     strsql = strsql + " select 'Trading' as [Type],ld_clientcd, ltrim(rtrim(convert(char,convert(datetime,ld_dt),103))) as ld_dt,Rtrim(CES_Exchange) + '-' + CES_Segment [ExchSeg],";
-                    strsql = strsql + " cast(ld_amount as decimal(15,2)),ld_particular,ld_debitflag,ld_chequeno,ld_documenttype,ld_common,convert(datetime,ld_dt) Ldate,ld_dpid ";
+                    strsql = strsql + " cast(ld_amount as decimal(15,2)),ld_particular,ld_debitflag,ld_chequeno,ld_documenttype,ld_common,convert(datetime,ld_dt) Ldate,ld_dpid,case When ld_documentType = 'B' then substring(LD_DPID,2,1)+'/'+substring(LD_DPID,3,1)+'/'+ld_common+'/'+ld_commondt else '' end LookUp ";
                     strsql = strsql + " from " + strTable + " with (nolock), Companyexchangesegments ";
                     strsql = strsql + " where LD_DPID = CES_Cd and  ld_clientcd = '" + userId + "'";
                     strsql = strsql + "  and ld_dt between '" + fromDate + "' and '" + toDate + "' and ld_dpid = '" + type_cesCd.Split("|")[i].Split(",")[1] + "'";
@@ -1602,14 +1553,14 @@ namespace TradeWeb.API.Repository
                 {
                     strsql = strsql + " select 'Trading-Margin' as [Type],ld_clientcd,convert(char,convert(datetime,'" + fromDate + "'),103) ld_dt,Rtrim(CES_Exchange) + '-' + CES_Segment [ExchSeg],";
                     strsql = strsql + " cast(sum(case sign(datediff(d,'" + fromDate + "',ld_dt)) when -1 then ld_amount else 0 end)as decimal(15,2)) as ld_amount,'Opening Balance' ld_particular, case sign(sum(ld_amount)) when 1 then 'D' else 'C' end as ";
-                    strsql = strsql + " ld_debitflag ,'' ld_chequeno, 'O' ld_documenttype,''ld_common ,convert(datetime,'" + fromDate + "') Ldate,ld_dpid";
+                    strsql = strsql + " ld_debitflag ,'' ld_chequeno, 'O' ld_documenttype,''ld_common ,convert(datetime,'" + fromDate + "') Ldate,ld_dpid,'' LookUp";
                     strsql = strsql + " from " + strTable + " with (nolock) , Companyexchangesegments ";
                     strsql = strsql + " where LD_DPID = CES_Cd and ld_clientcd in (select distinct cm_brkggroup from client_master where cm_cd='" + userId + "' and cm_brkggroup <> '' ) ";
                     strsql = strsql + " and ld_dt < '" + fromDate + "' and ld_dpid = '" + type_cesCd.Split("|")[i].Split(",")[1] + "'";
                     strsql = strsql + " group by ld_clientcd,ld_dpid,CES_Exchange,CES_Segment having sum(ld_amount)<> 0 ";
                     strsql = strsql + " union all ";
                     strsql = strsql + " select 'Trading-Margin' as [Type],ld_clientcd, ltrim(rtrim(convert(char,convert(datetime,ld_dt),103))) as ld_dt,Rtrim(CES_Exchange) + '-' + CES_Segment [ExchSeg],";
-                    strsql = strsql + " cast(ld_amount as decimal(15,2)),ld_particular,ld_debitflag,ld_chequeno,ld_documenttype,ld_common,convert(datetime,ld_dt) Ldate,ld_dpid ";
+                    strsql = strsql + " cast(ld_amount as decimal(15,2)),ld_particular,ld_debitflag,ld_chequeno,ld_documenttype,ld_common,convert(datetime,ld_dt) Ldate,ld_dpid,'' LookUp ";
                     strsql = strsql + " from " + strTable + " with (nolock), Companyexchangesegments ";
                     strsql = strsql + " where LD_DPID = CES_Cd and ld_clientcd in (select distinct cm_brkggroup from client_master where cm_cd='" + userId + "' and cm_brkggroup <> '' ) ";
                     strsql = strsql + "  and ld_dt between '" + fromDate + "' and '" + toDate + "' and ld_dpid = '" + type_cesCd.Split("|")[i].Split(",")[1] + "'";
@@ -1620,14 +1571,14 @@ namespace TradeWeb.API.Repository
                 {
                     strsql = strsql + " select 'Trading' as [Type],ld_clientcd,convert(char,convert(datetime,'" + fromDate + "'),103) ld_dt,Rtrim(CES_Exchange) + '-Comm' [ExchSeg],";
                     strsql = strsql + " cast(sum(case sign(datediff(d,'" + fromDate + "',ld_dt)) when -1 then ld_amount else 0 end)as decimal(15,2)) as ld_amount,'Opening Balance' ld_particular, case sign(sum(ld_amount)) when 1 then 'D' else 'C' end as ";
-                    strsql = strsql + " ld_debitflag ,'' ld_chequeno, 'O' ld_documenttype,''ld_common ,convert(datetime,'" + fromDate + "') Ldate,ld_dpid";
+                    strsql = strsql + " ld_debitflag ,'' ld_chequeno, 'O' ld_documenttype,''ld_common ,convert(datetime,'" + fromDate + "') Ldate,ld_dpid,'' LookUp";
                     strsql = strsql + " from " + strCommTable + " with (nolock) , Companyexchangesegments ";
                     strsql = strsql + " where LD_DPID = CES_Cd and ld_clientcd = '" + userId + "'";
                     strsql = strsql + " and ld_dt < '" + fromDate + "' and ld_dpid = '" + type_cesCd.Split("|")[i].Split(",")[1] + "'";
                     strsql = strsql + " group by ld_clientcd,ld_dpid,CES_Exchange,CES_Segment having sum(ld_amount)<> 0 ";
                     strsql = strsql + " union all ";
                     strsql = strsql + " select 'Trading' as [Type],ld_clientcd, ltrim(rtrim(convert(char,convert(datetime,ld_dt),103))) as ld_dt,Rtrim(CES_Exchange) + '-Comm' [ExchSeg],";
-                    strsql = strsql + " cast(ld_amount as decimal(15,2)),ld_particular,ld_debitflag,ld_chequeno,ld_documenttype,ld_common,convert(datetime,ld_dt) Ldate,ld_dpid ";
+                    strsql = strsql + " cast(ld_amount as decimal(15,2)),ld_particular,ld_debitflag,ld_chequeno,ld_documenttype,ld_common,convert(datetime,ld_dt) Ldate,ld_dpid, case when ld_documentType = 'B' then substring(LD_DPID,2,1)+'/'+substring(LD_DPID,3,1)+'/'+ld_common+'/'+ld_commondt else 0 end LookUp ";
                     strsql = strsql + " from " + strCommTable + " with (nolock), Companyexchangesegments ";
                     strsql = strsql + " where LD_DPID = CES_Cd and  ld_clientcd = '" + userId + "'";
                     strsql = strsql + "  and ld_dt between '" + fromDate + "' and '" + toDate + "' and ld_dpid = '" + type_cesCd.Split("|")[i].Split(",")[1] + "'";
@@ -1637,14 +1588,14 @@ namespace TradeWeb.API.Repository
                 {
                     strsql = strsql + " select 'Commodity-Margin' as [Type],ld_clientcd,convert(char,convert(datetime,'" + fromDate + "'),103) ld_dt,Rtrim(CES_Exchange) + '-Comm' [ExchSeg],";
                     strsql = strsql + " cast(sum(case sign(datediff(d,'" + fromDate + "',ld_dt)) when -1 then ld_amount else 0 end)as decimal(15,2)) as ld_amount,'Opening Balance' ld_particular, case sign(sum(ld_amount)) when 1 then 'D' else 'C' end as ";
-                    strsql = strsql + " ld_debitflag ,'' ld_chequeno, 'O' ld_documenttype,''ld_common ,convert(datetime,'" + fromDate + "') Ldate,ld_dpid";
+                    strsql = strsql + " ld_debitflag ,'' ld_chequeno, 'O' ld_documenttype,''ld_common ,convert(datetime,'" + fromDate + "') Ldate,ld_dpid,'' LookUp";
                     strsql = strsql + " from " + strCommTable + " with (nolock) , Companyexchangesegments ";
                     strsql = strsql + " where LD_DPID = CES_Cd and ld_clientcd in (select distinct cm_brkggroup from client_master where cm_cd='" + userId + "' and cm_brkggroup <> '' ) ";
                     strsql = strsql + " and ld_dt < '" + fromDate + "' and ld_dpid = '" + type_cesCd.Split("|")[i].Split(",")[1] + "'";
                     strsql = strsql + " group by ld_clientcd,ld_dpid,CES_Exchange,CES_Segment having sum(ld_amount)<> 0 ";
                     strsql = strsql + " union all ";
                     strsql = strsql + " select 'Commodity-Margin' as [Type],ld_clientcd, ltrim(rtrim(convert(char,convert(datetime,ld_dt),103))) as ld_dt,Rtrim(CES_Exchange) + '-Comm' [ExchSeg],";
-                    strsql = strsql + " cast(ld_amount as decimal(15,2)),ld_particular,ld_debitflag,ld_chequeno,ld_documenttype,ld_common,convert(datetime,ld_dt) Ldate,ld_dpid ";
+                    strsql = strsql + " cast(ld_amount as decimal(15,2)),ld_particular,ld_debitflag,ld_chequeno,ld_documenttype,ld_common,convert(datetime,ld_dt) Ldate,ld_dpid,'' LookUp ";
                     strsql = strsql + " from " + strCommTable + " with (nolock), Companyexchangesegments ";
                     strsql = strsql + " where LD_DPID = CES_Cd and ld_clientcd in (select distinct cm_brkggroup from client_master where cm_cd='" + userId + "' and cm_brkggroup <> '' ) ";
                     strsql = strsql + "  and ld_dt between '" + fromDate + "' and '" + toDate + "' and ld_dpid = '" + type_cesCd.Split("|")[i].Split(",")[1] + "'";
@@ -1654,14 +1605,14 @@ namespace TradeWeb.API.Repository
                 {
                     strsql = strsql + " select 'MTF' as [Type],ld_clientcd,convert(char,convert(datetime,'" + fromDate + "'),103) ld_dt,Rtrim(CES_Exchange) + '-MTF' [ExchSeg],";
                     strsql = strsql + " cast(sum(case sign(datediff(d,'" + fromDate + "',ld_dt)) when -1 then ld_amount else 0 end)as decimal(15,2)) as ld_amount,'Opening Balance' ld_particular, case sign(sum(ld_amount)) when 1 then 'D' else 'C' end as ";
-                    strsql = strsql + " ld_debitflag ,'' ld_chequeno, 'O' ld_documenttype,''ld_common ,convert(datetime,'" + fromDate + "') Ldate,ld_dpid";
+                    strsql = strsql + " ld_debitflag ,'' ld_chequeno, 'O' ld_documenttype,''ld_common ,convert(datetime,'" + fromDate + "') Ldate,ld_dpid,'' LookUp";
                     strsql = strsql + " from " + strTable + " with (nolock) , Companyexchangesegments ";
                     strsql = strsql + " where LD_DPID = CES_Cd and ld_clientcd in (select distinct MTFC_FillerB from MrgTdgFin_Clients where MTFC_CMCD ='" + userId + "') ";
                     strsql = strsql + " and ld_dt < '" + fromDate + "' and ld_dpid = '" + type_cesCd.Split("|")[i].Split(",")[1] + "'";
                     strsql = strsql + " group by ld_clientcd,ld_dpid,CES_Exchange,CES_Segment having sum(ld_amount)<> 0 ";
                     strsql = strsql + " union all ";
                     strsql = strsql + " select 'MTF' as [Type],ld_clientcd, ltrim(rtrim(convert(char,convert(datetime,ld_dt),103))) as ld_dt,Rtrim(CES_Exchange) + '-MTF' [ExchSeg],";
-                    strsql = strsql + " cast(ld_amount as decimal(15,2)),ld_particular,ld_debitflag,ld_chequeno,ld_documenttype,ld_common,convert(datetime,ld_dt) Ldate,ld_dpid ";
+                    strsql = strsql + " cast(ld_amount as decimal(15,2)),ld_particular,ld_debitflag,ld_chequeno,ld_documenttype,ld_common,convert(datetime,ld_dt) Ldate,ld_dpid,'' LookUp ";
                     strsql = strsql + " from " + strTable + " with (nolock), Companyexchangesegments ";
                     strsql = strsql + " where LD_DPID = CES_Cd and ld_clientcd in (select distinct cm_brkggroup from client_master where cm_cd='" + userId + "' and cm_brkggroup <> '' ) ";
                     strsql = strsql + "  and ld_dt between '" + fromDate + "' and '" + toDate + "' and ld_dpid = '" + type_cesCd.Split("|")[i].Split(",")[1] + "'";
@@ -1672,21 +1623,21 @@ namespace TradeWeb.API.Repository
                 {
                     strsql = strsql + " select 'Trading-Margin' as [Type],ld_clientcd,convert(char,convert(datetime,'" + fromDate + "'),103) ld_dt,'NBFC' [ExchSeg],";
                     strsql = strsql + " cast(sum(case sign(datediff(d,'" + fromDate + "',ld_dt)) when -1 then ld_amount else 0 end)as decimal(15,2)) as ld_amount,'Opening Balance' ld_particular, case sign(sum(ld_amount)) when 1 then 'D' else 'C' end as ";
-                    strsql = strsql + " ld_debitflag ,'' ld_chequeno, 'O' ld_documenttype,''ld_common ,convert(datetime,'" + fromDate + "') Ldate,ld_dpid";
+                    strsql = strsql + " ld_debitflag ,'' ld_chequeno, 'O' ld_documenttype,''ld_common ,convert(datetime,'" + fromDate + "') Ldate,ld_dpid,'' LookUp";
                     strsql = strsql + " from NBFC_Ledger with (nolock) ";
                     strsql = strsql + " where ld_clientcd = '" + userId + "'";
                     strsql = strsql + " and ld_dt < '" + fromDate + "'";
                     strsql = strsql + " group by ld_clientcd,ld_dpid having sum(ld_amount)<> 0 ";
                     strsql = strsql + " union all ";
                     strsql = strsql + " select 'MTF' as [Type],ld_clientcd, ltrim(rtrim(convert(char,convert(datetime,ld_dt),103))) as ld_dt,'NBFC' [ExchSeg],";
-                    strsql = strsql + " cast(ld_amount as decimal(15,2)),ld_particular,ld_debitflag,ld_chequeno,ld_documenttype,ld_common,convert(datetime,ld_dt) Ldate,ld_dpid ";
+                    strsql = strsql + " cast(ld_amount as decimal(15,2)),ld_particular,ld_debitflag,ld_chequeno,ld_documenttype,ld_common,convert(datetime,ld_dt) Ldate,ld_dpid,'' LookUp ";
                     strsql = strsql + " from NBFC_Ledger with (nolock) ";
                     strsql = strsql + " where ld_clientcd = '" + userId + "'";
                     strsql = strsql + " and ld_dt between '" + fromDate + "' and '" + toDate + "' and ld_dpid = '" + type_cesCd.Split("|")[i].Split(",")[1] + "'";
                 }
 
             }
-            strsql = " select Type [Type],ld_clientcd [ClientCode],ld_dt [Date],ExchSeg,ld_amount Amount,ld_particular Particular,ld_debitflag Debitflag,ld_chequeno Chequeno,ld_documenttype Documenttype,ld_common Common,Ldate,ld_dpid CESCD from (" + strsql + ") a ";
+            strsql = " select Type [Type],ld_clientcd [ClientCode],ld_dt [Date],ExchSeg,ld_amount Amount,ld_particular Particular,ld_debitflag Debitflag,ld_chequeno Chequeno,ld_documenttype Documenttype,ld_common Common,Ldate,ld_dpid CESCD,LookUp from (" + strsql + ") a ";
             strsql = strsql + " order by Type,Ldate";
             try
             {
@@ -1804,10 +1755,40 @@ namespace TradeWeb.API.Repository
         //For getting Outstanding details data
         public dynamic OutStandingPosition_Detail(string userId, string seriesid, string CESCd, string AsOnDt)
         {
-            var qury = "";
             try
             {
-                var ds = CommonRepository.FillDataset(qury);
+                string StrTradesIndex = "";
+
+                string Strsql = string.Empty;
+
+                if (CESCd.Substring(2, 1) == "X")
+                {
+                    Strsql = " select td_dt tradedt, sum(td_bqty) Buy, convert(decimal(15,2),sum(td_bqty*td_rate*sm_multiplier)) BuyAmount, sum(td_sqty) Sell, ";
+                    Strsql = Strsql + " convert(decimal(15,2),sum(td_sqty*td_rate* sm_multiplier)) SellAmount, sum(td_bqty-td_sqty) Net, ";
+                    Strsql = Strsql + "  convert(decimal(15,2), (sum((td_bqty-td_sqty)*td_rate* sm_multiplier)))  NetAmount ";
+                    Strsql = Strsql + " from trades with (" + StrTradesIndex + "nolock), series_master with (nolock) where td_clientcd='" + userId + "' ";
+                    Strsql = Strsql + " and td_exchange=sm_exchange and td_seriesid=sm_seriesid ";
+                    Strsql = Strsql + " and td_seriesid='" + seriesid + "' and td_exchange='" + CESCd.Substring(1, 1) + "' ";
+                    Strsql = Strsql + " and td_companycode='" + CESCd.Substring(0, 1) + "' ";
+                    Strsql = Strsql + " group by td_dt";
+                }
+                else
+                {
+
+                    if (Convert.ToInt16(objUtility.fnFireQueryTradeWeb("sysobjects a, sysindexes b", "COUNT(0)", "a.id = b.id and a.name = 'trades' and b.name", "idx_trades_clientcd", true)) == 1)
+                    { StrTradesIndex = "index(idx_trades_clientcd),"; }
+
+                    Strsql = " select td_dt tradedt, sum(td_bqty) Buy, convert(decimal(15,2),sum(td_bqty*td_rate* sm_multiplier)) BuyAmount, sum(td_sqty) Sell, ";
+                    Strsql = Strsql + " convert(decimal(15,2),sum(td_sqty*td_rate* sm_multiplier)) SellAmount, sum(td_bqty-td_sqty) Net, ";
+                    Strsql = Strsql + "  convert(decimal(15,2), (sum((td_bqty-td_sqty)*td_rate*sm_multiplier)))  NetAmount ";
+                    Strsql = Strsql + " from trades with (" + StrTradesIndex + "nolock), series_master with (nolock) where td_clientcd='" + userId + "' ";
+                    Strsql = Strsql + " and td_exchange=sm_exchange and td_Segment=sm_Segment and td_seriesid=sm_seriesid ";
+                    Strsql = Strsql + " and td_seriesid='" + seriesid + "' and td_exchange='" + CESCd.Substring(1, 1) + "' ";
+                    Strsql = Strsql + " and td_Segment='" + CESCd.Substring(2, 1) + "' ";
+                    Strsql = Strsql + " and td_companycode='" + CESCd.Substring(0, 1) + "' ";
+                    Strsql = Strsql + " group by td_dt";
+                }
+                var ds = CommonRepository.FillDataset(Strsql);
                 if (ds != null)
                 {
                     if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
@@ -2346,7 +2327,35 @@ namespace TradeWeb.API.Repository
             }
         }
 
-        public dynamic Holding_Demat_Current(string userid)
+        public dynamic Holding_MyDematAct_List(string userid)
+        {
+            string strsql = string.Empty;
+
+            if (_configuration["Cross"] != "")
+            {
+                string[] ArrCross = _configuration["Cross"].Split("/");
+                strsql = "select cm_blsavingcd ClientCode ,cm_cd DematActNo from ";
+                strsql = strsql + " " + ArrCross[0].Trim() + "." + ArrCross[1].Trim() + "." + ArrCross[2].Trim() + ".Client_master c ";
+                strsql = strsql + " where cm_blsavingcd = '" + userid + "'";
+            }
+            try
+            {
+                var ds = objUtility.OpenDataSet(strsql);
+                if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                {
+                    var data = ds.Tables[0];
+                    return JsonConvert.SerializeObject(data, Formatting.Indented);
+                }
+                return new List<string>();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+
+        public dynamic Holding_MyDemat_Current(string userid,string dematActNo,string strtable)
         {
             string strsql = string.Empty;
 
@@ -2356,11 +2365,11 @@ namespace TradeWeb.API.Repository
                 strsql = "select cm_blsavingcd ClientCode ,hld_ac_code DematAc, a.hld_isin_code ISIN,b.sc_company_name CompanyName,b.sc_isinname ISINName,cast((a.hld_ac_pos) as decimal(15,3)) Quantity, ";
                 strsql = strsql + " d.bt_description BalanceType ,cast((sc_rate) as decimal(15,2)) as Rate, ";
                 strsql = strsql + " cast(( ( a.hld_ac_pos * sc_Rate)) as decimal(15,2))  as Value ";
-                strsql = strsql + " from " + ArrCross[0].Trim() + "." + ArrCross[1].Trim() + "." + ArrCross[2].Trim() + ".Holding a,";
+                strsql = strsql + " from " + ArrCross[0].Trim() + "." + ArrCross[1].Trim() + "." + ArrCross[2].Trim() + "." + strtable + " a,";
                 strsql = strsql + " " + ArrCross[0].Trim() + "." + ArrCross[1].Trim() + "." + ArrCross[2].Trim() + ".Security b ,";
                 strsql = strsql + " " + ArrCross[0].Trim() + "." + ArrCross[1].Trim() + "." + ArrCross[2].Trim() + ".Client_master c ,";
                 strsql = strsql + "" + ArrCross[0].Trim() + "." + ArrCross[1].Trim() + "." + ArrCross[2].Trim() + ".Beneficiary_type d ";
-                strsql = strsql + " where a.hld_ac_code = cm_cd and cm_blsavingcd = '" + userid + "' and a.hld_isin_code = b.sc_isincode ";
+                strsql = strsql + " where a.hld_ac_code = cm_cd and cm_blsavingcd = '" + userid + "' and a.hld_ac_code = '" + dematActNo + "' and a.hld_isin_code = b.sc_isincode ";
                 strsql = strsql + " and d.bt_code = a.hld_ac_type order by a.hld_ac_code,b.sc_company_name ";
             }
             try
@@ -2380,37 +2389,24 @@ namespace TradeWeb.API.Repository
         }
 
         // Get data for bind dropdownlist combo as on
-        public dynamic GetDropDownComboAsOnDataHandler(string strTable)
+        public dynamic Holding_MyDematAct_HoldingDates_Execute()
         {
             string strX = string.Empty;
-            if (_configuration["IsTradeWeb"] == "O")
-            {
-                if (strTable == "Holding")
-                {
-                    char[] ArrSeparators = new char[1];
-                    ArrSeparators[0] = '/';
-                    if (objUtility.GetWebParameter("Cross") != "") // strBoid  LEft 2 <>IN
-                    {
-                        string[] ArrCross = objUtility.GetWebParameter("Cross").Split(ArrSeparators);
-                        strX = " select name from [" + ArrCross[0].Trim() + "].[" + ArrCross[1].Trim() + "].[" + ArrCross[2].Trim() + "].sysobjects where xtype = 'U' and name like ('Holding_%') and ISDATE(RIGHT(name,8))=1 ";
-                    }
-                    if (objUtility.GetWebParameter("Estro") != "")
-                    {
-                        if (strX != "")
-                        { strX += "  Union All "; }
-                        string[] ArrEstro = objUtility.GetWebParameter("Estro").Split(ArrSeparators);
-                        strX += " select name from [" + ArrEstro[0].Trim() + "].[" + ArrEstro[1].Trim() + "].[" + ArrEstro[2].Trim() + "].sysobjects where xtype = 'U' and name like ('Holding_%') and ISDATE(RIGHT(name,8))=1 ";
-                    }
-                }
-            }
-            else
-            {
-                if (strTable == "Holding")
-                    strX = "Select Name From SysObjects where xtype = 'U' and name like 'Holding_%' and ISDATE(RIGHT(name,8))=1  order by name desc";
-                else
-                    strX = "Select Name From SysObjects where xtype = 'U' and name like 'BenHolding_%' and ISDATE(RIGHT(name,8))=1  order by name desc";
-            }
 
+            char[] ArrSeparators = new char[1];
+            ArrSeparators[0] = '/';
+            if (objUtility.GetWebParameter("Cross") != "") // strBoid  LEft 2 <>IN
+            {
+                string[] ArrCross = objUtility.GetWebParameter("Cross").Split(ArrSeparators);
+                strX = " select replace(name,'Holding_','') name from [" + ArrCross[0].Trim() + "].[" + ArrCross[1].Trim() + "].[" + ArrCross[2].Trim() + "].sysobjects where xtype = 'U' and name like ('Holding_%') and ISDATE(RIGHT(name,8))=1 ";
+            }
+            if (objUtility.GetWebParameter("Estro") != "")
+            {
+                if (strX != "")
+                { strX += "  Union All "; }
+                string[] ArrEstro = objUtility.GetWebParameter("Estro").Split(ArrSeparators);
+                strX += " select replace(name,'Holding_','') name from [" + ArrEstro[0].Trim() + "].[" + ArrEstro[1].Trim() + "].[" + ArrEstro[2].Trim() + "].sysobjects where xtype = 'U' and name like ('Holding_%') and ISDATE(RIGHT(name,8))=1 ";
+            }
             try
             {
                 if (strX != "")
@@ -3307,10 +3303,29 @@ namespace TradeWeb.API.Repository
 
         #region Bill Handler Method
 
-        // get settlement type for dropdown
-        public dynamic GetSettelmentType(string syExchange, string syStatus)
+        public dynamic Bills_exchSeg()
         {
-            var query = "select sy_desc,sy_type from Settlement_type with (nolock) where sy_exchange='" + syExchange + "' and sy_Status = '" + syStatus + "' Order by case sy_maptype  when 'N' Then 1 When 'C' Then 2 else 3 end,sy_desc";
+            var query = "select CES_Cd CESCd ,CES_Exchange exchange,CES_Segment segment from CompanyExchangeSegments";
+            try
+            {
+                var ds = objUtility.OpenDataSet(query);
+                if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                {
+                    var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
+                    return json;
+                }
+                return new List<string>();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        // get settlement type for dropdown
+        public dynamic Bills_cash_settTypes_list(string exch)
+        {
+            var query = "select sy_type type,sy_desc description from Settlement_type with (nolock) where sy_exchange='" + exch + "' and sy_Status = 'A' Order by case sy_maptype  when 'N' Then 1 When 'C' Then 2 else 3 end,sy_desc";
             try
             {
                 var ds = objUtility.OpenDataSet(query);
@@ -3341,11 +3356,11 @@ namespace TradeWeb.API.Repository
         }
 
         // get bill main data
-        public dynamic GetBillMainData(string strClientId, string strClient, string exchangeType, string stlmntType, string fromDt, string strCompanyCode)
+        public dynamic Bill_data(string userId,string exchSeg,string settType,string dt)
         {
             try
             {
-                var ds = GetBillMainDataMehod(strClientId, strClient, exchangeType, stlmntType, fromDt, strCompanyCode);
+                var ds = Bill_Process(userId, exchSeg, settType, dt);
                 if (ds != null)
                 {
                     if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
@@ -3363,379 +3378,25 @@ namespace TradeWeb.API.Repository
         }
 
         #region Bill usefull methods
-        public DataSet GetBillMainDataMehod(string clientId, string strClient, string exchangeType, string stlmntType, string fromDt, string strCompanyCode)
+        public DataSet Bill_Process(string userId,string exchSeg, string stlmntType, string dt)
         {
-            string StrTradesIndex = "";
             Boolean blnInterOP = new Boolean();
             List<string> arrexchange = new List<string>();
             List<string> arrStlmnt = new List<string>();
-            string Excode = exchangeType;
+
             DataSet ObjDataSet = new DataSet();
 
-            var result = objUtility.fnFireQueryTradeWeb("sysobjects a, sysindexes b", "COUNT(0)", "a.id = b.id and a.name = 'trades' and b.name", "idx_trades_clientcd", true);
-
-            if (Convert.ToInt16(result.Trim()) == 1)
-            { StrTradesIndex = "index(idx_trades_clientcd),"; }
-
-            if ((exchangeType == "MCX") || (exchangeType == "NCDEX") || (exchangeType == "ICEX") || (exchangeType == "NCME") || (exchangeType == "NSEL") || (exchangeType == "NSX")) // 5-MCX  6-NCDEX  7-ICEX   8-NCME
+            if (exchSeg.Substring(1, 1) == "C")
             {
-                string exchange = string.Empty;
-                string Segment = string.Empty;
-                if (exchangeType == "MCX")
-                { exchange = "M"; }
-                else if (exchangeType == "NCDEX")
-                {
-                    exchange = (objUtility.GetSysParmStComm("CHGNCDEXCD", "") == "Y" ? "F" : "N");
-                }
-                else if ((exchangeType == "ICEX"))
-                { exchange = "C"; }
-                else if ((exchangeType == "NCME"))
-                { exchange = "A"; }
-                else if ((exchangeType == "NSEL"))
-                { exchange = "S"; }
-                else if ((exchangeType == "NSX"))
-                { exchange = "D"; }
-
-                if (_configuration["IsTradeWeb"] == "O")//live database
-                {
-                    string StrConn = _configuration.GetConnectionString("DefaultConnection");
-                    using (SqlConnection ObjConnectionTmp = new SqlConnection(StrConn))
-                    {
-                        ObjConnectionTmp.Open();
-                        ObjDataSet = objUtility.fnForBill(clientId, exchange, fromDt, fromDt, Excode, Segment, ObjConnectionTmp);
-                    }
-
-                    if (ObjDataSet.Tables[0].Rows.Count == 0)
-                    {
-                        return ObjDataSet;
-                    }
-                    else
-                    {
-                        string strCharges = "";
-                        decimal TotalDrCr = 0;
-                        for (int i = 0; i <= ObjDataSet.Tables[0].Rows.Count - 1; i++)
-                        {
-                            if (strCharges == "")
-                            {
-                                if (Conversion.Val(ObjDataSet.Tables[0].Rows[i]["tx_sortlist"].ToString().Trim()) >= 10)
-                                {
-                                    strCharges = "Charges";
-                                    DataRow ObjRow1 = ObjDataSet.Tables[0].NewRow();
-                                    ObjRow1["sm_sname"] = "Value Before Adding Charges :";
-                                    //ObjRow1["dt"] = ObjDataSet.Tables[0].Rows[i]["dt"].ToString().Trim();
-                                    ObjRow1["NetValue"] = objUtility.mfnFormatCurrency(TotalDrCr, 2);
-                                    ObjDataSet.Tables[0].Rows.InsertAt(ObjRow1, i);
-                                    i = i + 1;
-                                }
-                            }
-                            TotalDrCr = TotalDrCr + (decimal)ObjDataSet.Tables[0].Rows[i]["drcr"];
-                        }
-                        DataRow ObjRow2 = ObjDataSet.Tables[0].NewRow();
-
-                        //ObjRow2["dt"] = ObjDataSet.Tables[0].Rows[ObjDataSet.Tables[0].Rows.Count - 1]["dt"].ToString().Trim();
-                        ObjRow2["NetValue"] = objUtility.mfnFormatCurrency(TotalDrCr, 2);
-                        ObjDataSet.Tables[0].Rows.InsertAt(ObjRow2, ObjDataSet.Tables[0].Rows.Count);
-                        ObjDataSet.AcceptChanges();
-                    }
-                }
-                else
-                {
-                    if (Convert.ToInt16(objUtility.fnFireQueryTradeWeb("sysobjects a, sysindexes b", "COUNT(0)", "a.id = b.id and a.name = 'Ctrades' and b.name", "idx_Ctrades_clientcd", true)) == 1)
-                    { StrTradesIndex = "index(idx_Ctrades_clientcd),"; }
-
-                    strsql = " Select 'Bill For : ' + ltrim(rtrim(convert(char,convert(datetime,td_dt),103))) as  dt,td_orderid as [Order#], td_tradeid [Trade#], left(case td_trxflag when 'O' then 'b/f' else '' end,5) Time,";
-                    strsql = strsql + " sm_symbol, left(sm_desc,3)+' '+rtrim(sm_symbol)+' Exp:'+ convert(char(5),";
-                    strsql = strsql + " convert(datetime,sm_expirydt),103)+ case sm_strikeprice when 0 then '' else ' '+ltrim(convert(char(10),sm_strikeprice))+";
-                    strsql = strsql + " lower(sm_callput) end as sm_sname,  convert(decimal(15,2),td_lastclose)td_lastclose,td_bqty,td_sqty,";
-                    strsql = strsql + " convert(decimal(15,2),td_marketrate) td_marketrate,";
-                    strsql = strsql + " convert(decimal(15,2),td_brokerage*(td_bqty+td_sqty)*sm_multiplier) Brokerage, convert(decimal(15,2),td_rate) td_rate,";
-                    strsql = strsql + " convert(decimal(15,2),case right(sm_prodtype,1) when 'F' then (((td_bqty-td_sqty)*td_rate*sm_multiplier)-((td_bqty-td_sqty)*td_lastclose*sm_multiplier)) else ((td_bqty-td_sqty)*td_rate*sm_multiplier) end) drcr,";
-                    strsql = strsql + " convert(decimal(15,2),((td_bqty-td_sqty) * td_rate*sm_multiplier)) value,td_trxflag,td_seriesid,td_exchange as exchange,td_servicetax stax,'' as NetValue";
-                    strsql = strsql + " from ctrades with (nolock), cseries_master with (nolock) ";
-                    strsql = strsql + " where td_seriesid=sm_seriesid and td_clientcd=@clcd and td_exchange = sm_exchange and td_dt between @FromDt and @ToDt and td_exchange=@Exch";
-                    strsql = strsql + " Union all ";
-                    strsql = strsql + " Select 'Bill For : ' + ltrim(rtrim(convert(char,convert(datetime,fc_dt),103)))  as dt,'0','0','Charges','zzzyy',fc_desc sm_sname,0 td_lastclose, 0 td_bqty,0 td_sqty,0,0,0 td_rate,convert(decimal(15,2),sum(fc_amount)) drcr,0 value,'C' td_trxflag,0 td_seriesid,fc_exchange as exchange,0 stax ,'' as NetValue";
-                    strsql = strsql + " from cfspecialcharges with (nolock) ";
-                    strsql = strsql + " where fc_clientcd=@clcd and fc_exchange=@Exch and fc_dt between @FromDt and @ToDt group by fc_dt,fc_dt,fc_desc,fc_exchange ";
-                    strsql = strsql + " Union all ";
-                    strsql = strsql + " Select 'Bill For : ' + ltrim(rtrim(convert(char,convert(datetime,fb_billdt),103)))  as dt ,'0','0','OpnMrg','zzzzz','[Prev. Day Mrgn.]' sm_sname, 0 td_lastclose,0 td_bqty,0 td_sqty,0,0,0 td_rate,convert(decimal(15,2),fb_margin1) drcr,0 value,'-2' td_trxflag,0 td_seriesid,fb_exchange  as exchange,0 stax,'' as NetValue ";
-                    strsql = strsql + " from cFbills with (nolock) ";
-                    strsql = strsql + " where fb_clientcd=@clcd and fb_exchange=@Exch and fb_billdt between @FromDt and @ToDt and fb_postmrgyn = 'Y' and fb_margin1 <> 0  ";
-                    strsql = strsql + " Union all ";
-                    strsql = strsql + " Select 'Bill For : ' + ltrim(rtrim(convert(char,convert(datetime,fb_billdt),103)))  as dt,'0','0','CurrMrgn','zzzzz', '[Curr. Day Mrgn.]' sm_sname, 0 td_lastclose,0 td_bqty,0 td_sqty,0,0,0 td_rate,convert(decimal(15,2),fb_margin2) drcr,0 value,'-1' td_trxflag,0 td_seriesid,fb_exchange as exchange,0 stax,'' as NetValue ";
-                    strsql = strsql + " from cFbills with (nolock) ";
-                    strsql = strsql + " where fb_clientcd=@clcd and fb_exchange=@Exch and fb_billdt between @FromDt and @ToDt and fb_postmrgyn = 'Y' and fb_margin2 <> 0 ";
-                    strsql = strsql + " order by dt,sm_symbol, sm_sname,td_trxflag desc, td_seriesid ";
-
-                    strsql = strsql.Replace("@FromDt", "'" + fromDt + "'").Replace("@clcd", "'" + clientId + "'").Replace("@Exch", "'" + exchange + "'").Replace("@ToDt", "'" + fromDt + "'");
-                    ObjDataSet = objUtility.OpenDataSet(strsql);
-
-                    if (ObjDataSet.Tables[0].Rows.Count == 0)
-                    {
-                        return ObjDataSet;
-                    }
-                    else
-                    {
-                        string strCharges = "";
-                        decimal TotalDrCr = 0;
-                        for (int i = 0; i <= ObjDataSet.Tables[0].Rows.Count - 1; i++)
-                        {
-                            if (strCharges == "")
-                            {
-                                if (ObjDataSet.Tables[0].Rows[i]["Time"].ToString().Trim() == "Charges" || ObjDataSet.Tables[0].Rows[i]["Time"].ToString().Trim() == "OpnMrg" || ObjDataSet.Tables[0].Rows[i]["Time"].ToString().Trim() == "CurrMrgn")
-                                {
-                                    strCharges = "Charges";
-                                    DataRow ObjRow1 = ObjDataSet.Tables[0].NewRow();
-                                    ObjRow1["sm_sname"] = "Value Before Adding Charges :";
-                                    ObjRow1["dt"] = ObjDataSet.Tables[0].Rows[i]["dt"].ToString().Trim();
-                                    ObjRow1["NetValue"] = objUtility.mfnFormatCurrency(TotalDrCr, 2);
-                                    ObjDataSet.Tables[0].Rows.InsertAt(ObjRow1, i);
-                                    i = i + 1;
-                                }
-                            }
-                            TotalDrCr = TotalDrCr + (decimal)ObjDataSet.Tables[0].Rows[i]["drcr"];
-                        }
-                    }
-                }
-            }
-            if ((exchangeType == "MCXFX") || (exchangeType == "BSEFX") || (exchangeType == "NSEFX") || (exchangeType == "NSEDERV") || (exchangeType == "MCXDERV") || (exchangeType == "BSEDERV"))
-            {
-                string exchange = string.Empty;
-                string Segment = string.Empty;
-                string StrExchWhere = string.Empty;
-
-                if (exchangeType == "NSEDERV")
-                { exchange = "N"; Segment = "F"; }
-                else if (exchangeType == "MCXFX")
-                { exchange = "M"; Segment = "K"; }
-                else if (exchangeType == "BSEFX")
-                { exchange = "B"; Segment = "K"; }
-                else if (exchangeType == "NSEFX")
-                { exchange = "N"; Segment = "K"; }
-                else if (exchangeType == "MCXDERV")
-                { exchange = "M"; Segment = "F"; }
-                else if (exchangeType == "BSEDERV")
-                { exchange = "B"; Segment = "F"; }
-
-
-                string StrMsg;
-                StrMsg = objUtility.fnCheckInterOperability(fromDt, Segment);
-
-                if (StrMsg.ToUpper().Trim() == "TRUE")
-                {
-                    string apiRes7 = objUtility.fnGetInterOpExchange(Segment);
-
-                    blnInterOP = true;
-                    arrexchange = apiRes7.Split(',').ToList();
-                    StrExchWhere += "('" + arrexchange[0] + "'";
-                    for (int j = 1; j < arrexchange.Count; j++)
-                    {
-                        StrExchWhere += ",'" + arrexchange[j] + "'";
-                    }
-                    StrExchWhere += ")";
-                }
-
-
-                if (_configuration["IsTradeWeb"] == "O")//live database
-                {
-                    if (blnInterOP)
-                    { exchange = "IOP" + exchange; }
-
-                    string StrConn = _configuration.GetConnectionString("DefaultConnection");
-                    using (SqlConnection ObjConnectionTmp = new SqlConnection(StrConn))
-                    {
-                        ObjConnectionTmp.Open();
-                        ObjDataSet = objUtility.fnForBill(clientId, exchange, fromDt, fromDt, Excode, Segment, ObjConnectionTmp);
-                    }
-
-                    if (ObjDataSet.Tables[0].Rows.Count == 0)
-                    {
-                        return ObjDataSet;
-                    }
-                    else
-                    {
-                        string strCharges = "";
-                        decimal TotalDrCr = 0;
-                        for (int i = 0; i <= ObjDataSet.Tables[0].Rows.Count - 1; i++)
-                        {
-                            if (strCharges == "")
-                            {
-                                if (Conversion.Val(ObjDataSet.Tables[0].Rows[i]["tx_sortlist"].ToString().Trim()) >= 10)
-                                {
-                                    strCharges = "Charges";
-
-                                    DataRow ObjRow1 = ObjDataSet.Tables[0].NewRow();
-                                    ObjRow1["tx_desc"] = "Value Before Adding Charges :";
-                                    ObjRow1["dt"] = ObjDataSet.Tables[0].Rows[i]["dt"].ToString().Trim();
-                                    ObjRow1["NetValue"] = objUtility.mfnFormatCurrency(TotalDrCr, 2);
-                                    ObjDataSet.Tables[0].Rows.InsertAt(ObjRow1, i);
-                                    i = i + 1;
-                                }
-                            }
-                            TotalDrCr = TotalDrCr + (decimal)ObjDataSet.Tables[0].Rows[i]["drcr"];
-                        }
-                        DataRow ObjRow2 = ObjDataSet.Tables[0].NewRow();
-
-                        ObjRow2["dt"] = ObjDataSet.Tables[0].Rows[ObjDataSet.Tables[0].Rows.Count - 1]["dt"].ToString().Trim();
-                        ObjRow2["NetValue"] = objUtility.mfnFormatCurrency(TotalDrCr, 2);
-                        ObjDataSet.Tables[0].Rows.InsertAt(ObjRow2, ObjDataSet.Tables[0].Rows.Count);
-                        ObjDataSet.AcceptChanges();
-
-                        return ObjDataSet;
-                    }
-                }
-                else
-                {
-                    if (blnInterOP)
-                    {
-                        strsql = " Select 'Bill For : ' + ltrim(rtrim(convert(char,convert(datetime,td_dt),103))) as  dt,td_orderid as [Order#], td_tradeid [Trade#], left(case td_trxflag when 'O' then 'b/f' else '' end,5) Time, ";
-                        strsql = strsql + " sm_symbol, left(sm_desc,3)+' '+rtrim(sm_symbol)+' Exp:'+ convert(char(5),convert(datetime,sm_expirydt),103)+ ";
-                        strsql = strsql + " case sm_strikeprice when 0 then '' else ' '+ltrim(convert(char(10),sm_strikeprice))+lower(sm_callput) end as sm_sname,";
-                        strsql = strsql + " convert(decimal(15,2),td_lastclose) td_lastclose,td_bqty,td_sqty,convert(decimal(15,2),td_marketrate) td_marketrate,";
-                        strsql = strsql + "  convert(decimal(15,2),td_brokerage*(td_bqty+td_sqty)*sm_multiplier) Brokerage, convert(decimal(15,2),td_rate)td_rate,";
-                        strsql = strsql + " convert(decimal(15,2),case right(sm_prodtype,1) when 'F' then (((td_bqty-td_sqty)*td_rate*sm_multiplier)-((td_bqty-td_sqty)*td_lastclose*";
-                        strsql = strsql + " sm_multiplier)) else ((td_bqty-td_sqty)*td_rate) end) drcr, convert(decimal(15,2),((td_bqty-td_sqty) * td_rate*sm_multiplier)) value,";
-                        strsql = strsql + " td_trxflag,td_seriesid,td_exchange as exchange,td_Segment as Segment,convert(decimal(15,2),td_servicetax) stax,'' NetValue  ";
-                        strsql = strsql + " from trades with(" + StrTradesIndex + "nolock), series_master with (nolock) ";
-                        strsql = strsql + " where td_seriesid=sm_seriesid and td_clientcd=@clcd and td_exchange = sm_exchange and td_Segment = sm_Segment and td_dt = @FromDt  and td_exchange=@Exch  and td_Segment=@Seg";
-
-                        strsql = strsql + " union all";
-                        strsql = strsql + " select 'Bill For : ' + ltrim(rtrim(convert(char,convert(datetime,ex_dt),103))) as  dt,0,0,case ex_eaflag when 'E' then 'Exercise' else 'Assignment' end ,sm_symbol,  ";
-                        strsql = strsql + "left(sm_desc,3)+' '+rtrim(sm_symbol)+' Exp:'+ convert(char(5),convert(char,convert(decimal(15,2), convert(datetime,sm_expirydt),103))+ case sm_strikeprice when 0 then '' else ' '+  ltrim(convert(char(10),sm_strikeprice))+lower(sm_callput) end), ";
-                        //strsql = strsql + " left(sm_desc,3)+' '+rtrim(sm_symbol)+' Exp:'+ convert(char(5),convert(decimal(15,2),convert(datetime,sm_expirydt),103)+ case sm_strikeprice when 0 then '' else ' '+ltrim(convert(char(10),sm_strikeprice))+lower(sm_callput) end),";
-                        strsql = strsql + "  0  ,ex_aqty as td_bqty,ex_eqty as td_sqty, 0, convert(decimal(15,2),ex_brokerage*(ex_eqty+ex_aqty)), ";
-                        strsql = strsql + " convert(decimal(15,2),ex_diffbrokrate )as td_rate,convert(decimal(15,2),(-(ex_eqty+ex_aqty) * ex_diffbrokrate)) drcr, ";
-                        strsql = strsql + " convert(decimal(15,2),((ex_eqty+ex_aqty) * ex_diffbrokrate)) as value, '' as td_trxflag, ex_seriesid as td_seriesid,";
-                        strsql = strsql + " ex_exchange as exchange,ex_Segment as Segment,0 stax,'' NetValue  ";
-                        strsql = strsql + " from exercise with (nolock),series_master with (nolock)  ";
-                        strsql = strsql + " where ex_seriesid=sm_seriesid and ex_clientcd=@clcd and ex_exchange = sm_exchange and ex_Segment = sm_Segment and ex_dt = @FromDt  and ex_exchange=@Exch and ex_Segment=@Seg ";
-
-                        strsql = strsql + " Union all  ";
-                        strsql = strsql + " Select 'Bill For : ' + ltrim(rtrim(convert(char,convert(datetime,fc_dt),103))) as  dt,0,0,'Charges','zzzyy',fc_desc sm_sname,0 td_lastclose, 0 td_bqty,0 td_sqty,0,0,0 td_rate,";
-                        strsql = strsql + " convert(decimal(15,2),convert(decimal(15,2),sum(fc_amount))) drcr,0 value,'C' td_trxflag,0 td_seriesid,fc_exchange as exchange,fc_Segment as Segment,0 stax,'' NetValue  ";
-                        strsql = strsql + " from fspecialcharges with (nolock)  ";
-                        strsql = strsql + " where fc_clientcd=@clcd and fc_exchange=@Exch and fc_Segment=@Seg and fc_dt = @FromDt";
-                        strsql = strsql + " group by fc_dt,fc_dt,fc_desc,fc_exchange,fc_Segment ";
-
-                        strsql = strsql + " Union all";
-                        strsql = strsql + " Select  'Bill For : ' + ltrim(rtrim(convert(char,convert(datetime,fb_billdt),103))) as  dt,0,0,'OpnMrg','zzzzz','[Prev. Day Mrgn.]' sm_sname, 0 td_lastclose,0 td_bqty,0 td_sqty,0,0,";
-                        strsql = strsql + " 0 td_rate,convert(decimal(15,2),fb_margin1) drcr,0 value,'-2' td_trxflag,0 td_seriesid,fb_exchange  as exchange,fb_Segment  as Segment,0 stax,'' NetValue  ";
-                        strsql = strsql + " from Fbills with (nolock)  ";
-                        strsql = strsql + " where fb_clientcd=@clcd and fb_exchange=@Exch and fb_Segment=@Seg and fb_billdt = @FromDt  and fb_postmrgyn = 'Y' and fb_margin1 <> 0";
-
-                        strsql = strsql + " Union all  ";
-                        strsql = strsql + " Select 'Bill For : ' + ltrim(rtrim(convert(char,convert(datetime,fb_billdt),103))) as  dt,0,0,'CurrMrgn','zzzzz', '[Curr. Day Mrgn.]' sm_sname, 0 td_lastclose,0 td_bqty,0 td_sqty,0,0,";
-                        strsql = strsql + " 0 td_rate,convert(decimal(15,2),fb_margin2) drcr,0 value,'-1' td_trxflag,0 td_seriesid,fb_exchange as exchange,fb_Segment as Segment,0 stax,'' NetValue  ";
-                        strsql = strsql + " from Fbills with (nolock)  ";
-                        strsql = strsql + " where fb_clientcd=@clcd and fb_exchange=@Exch and fb_Segment=@Seg and fb_billdt = @FromDt  and fb_postmrgyn = 'Y' and fb_margin2 <> 0  ";
-                        strsql = strsql + " order by dt,sm_symbol, sm_sname,td_trxflag desc, td_seriesid ";
-
-                        strsql = strsql.Replace("@FromDt", "'" + fromDt + "'").Replace("@clcd", "'" + clientId + "'").Replace("=@Exch", " in " + StrExchWhere).Replace("@Seg", "'" + Segment + "'");
-                    }
-                    else
-                    {
-                        strsql = " Select 'Bill For : ' + ltrim(rtrim(convert(char,convert(datetime,td_dt),103))) as  dt,td_orderid as [Order#], td_tradeid [Trade#], left(case td_trxflag when 'O' then 'b/f' else '' end,5) Time, ";
-                        strsql = strsql + " sm_symbol, left(sm_desc,3)+' '+rtrim(sm_symbol)+' Exp:'+ convert(char(5),convert(datetime,sm_expirydt),103)+ ";
-                        strsql = strsql + " case sm_strikeprice when 0 then '' else ' '+ltrim(convert(char(10),sm_strikeprice))+lower(sm_callput) end as sm_sname,";
-                        strsql = strsql + " convert(decimal(15,2),td_lastclose) td_lastclose,td_bqty,td_sqty,convert(decimal(15,2),td_marketrate) td_marketrate,";
-                        strsql = strsql + "  convert(decimal(15,2),td_brokerage*(td_bqty+td_sqty)*sm_multiplier) Brokerage, convert(decimal(15,2),td_rate)td_rate,";
-                        strsql = strsql + " convert(decimal(15,2),case right(sm_prodtype,1) when 'F' then (((td_bqty-td_sqty)*td_rate*sm_multiplier)-((td_bqty-td_sqty)*td_lastclose*";
-                        strsql = strsql + " sm_multiplier)) else ((td_bqty-td_sqty)*td_rate) end) drcr, convert(decimal(15,2),((td_bqty-td_sqty) * td_rate*sm_multiplier)) value,";
-                        strsql = strsql + " td_trxflag,td_seriesid,td_exchange as exchange,td_Segment as Segment,convert(decimal(15,2),td_servicetax) stax,'' NetValue  ";
-                        strsql = strsql + " from trades with(" + StrTradesIndex + "nolock), series_master with (nolock) ";
-                        strsql = strsql + " where td_seriesid=sm_seriesid and td_clientcd=@clcd and td_exchange = sm_exchange and td_Segment = sm_Segment and td_dt = @FromDt  and td_exchange=@Exch  and td_Segment=@Seg";
-
-                        strsql = strsql + " union all";
-                        strsql = strsql + " select 'Bill For : ' + ltrim(rtrim(convert(char,convert(datetime,ex_dt),103))) as  dt,0,0,case ex_eaflag when 'E' then 'Exercise' else 'Assignment' end ,sm_symbol,  ";
-                        strsql = strsql + "left(sm_desc,3)+' '+rtrim(sm_symbol)+' Exp:'+ convert(char(5),convert(char,convert(decimal(15,2), convert(datetime,sm_expirydt),103))+ case sm_strikeprice when 0 then '' else ' '+  ltrim(convert(char(10),sm_strikeprice))+lower(sm_callput) end), ";
-                        //strsql = strsql + " left(sm_desc,3)+' '+rtrim(sm_symbol)+' Exp:'+ convert(char(5),convert(decimal(15,2),convert(datetime,sm_expirydt),103)+ case sm_strikeprice when 0 then '' else ' '+ltrim(convert(char(10),sm_strikeprice))+lower(sm_callput) end),";
-                        strsql = strsql + "  0  ,ex_aqty as td_bqty,ex_eqty as td_sqty, 0, convert(decimal(15,2),ex_brokerage*(ex_eqty+ex_aqty)), ";
-                        strsql = strsql + " convert(decimal(15,2),ex_diffbrokrate )as td_rate,convert(decimal(15,2),(-(ex_eqty+ex_aqty) * ex_diffbrokrate)) drcr, ";
-                        strsql = strsql + " convert(decimal(15,2),((ex_eqty+ex_aqty) * ex_diffbrokrate)) as value, '' as td_trxflag, ex_seriesid as td_seriesid,";
-                        strsql = strsql + " ex_exchange as exchange,ex_Segment as Segment,0 stax,'' NetValue  ";
-                        strsql = strsql + " from exercise with (nolock),series_master with (nolock)  ";
-                        strsql = strsql + " where ex_seriesid=sm_seriesid and ex_clientcd=@clcd and ex_exchange = sm_exchange and ex_Segment = sm_Segment and ex_dt = @FromDt  and ex_exchange=@Exch and ex_Segment=@Seg ";
-
-                        strsql = strsql + " Union all  ";
-                        strsql = strsql + " Select 'Bill For : ' + ltrim(rtrim(convert(char,convert(datetime,fc_dt),103))) as  dt,0,0,'Charges','zzzyy',fc_desc sm_sname,0 td_lastclose, 0 td_bqty,0 td_sqty,0,0,0 td_rate,";
-                        strsql = strsql + " convert(decimal(15,2),convert(decimal(15,2),sum(fc_amount))) drcr,0 value,'C' td_trxflag,0 td_seriesid,fc_exchange as exchange,fc_Segment as Segment,0 stax,'' NetValue  ";
-                        strsql = strsql + " from fspecialcharges with (nolock)  ";
-                        strsql = strsql + " where fc_clientcd=@clcd and fc_exchange=@Exch and fc_Segment=@Seg and fc_dt = @FromDt";
-                        strsql = strsql + " group by fc_dt,fc_dt,fc_desc,fc_exchange,fc_Segment ";
-
-                        strsql = strsql + " Union all";
-                        strsql = strsql + " Select  'Bill For : ' + ltrim(rtrim(convert(char,convert(datetime,fb_billdt),103))) as  dt,0,0,'OpnMrg','zzzzz','[Prev. Day Mrgn.]' sm_sname, 0 td_lastclose,0 td_bqty,0 td_sqty,0,0,";
-                        strsql = strsql + " 0 td_rate,convert(decimal(15,2),fb_margin1) drcr,0 value,'-2' td_trxflag,0 td_seriesid,fb_exchange  as exchange,fb_Segment  as Segment,0 stax,'' NetValue  ";
-                        strsql = strsql + " from Fbills with (nolock)  ";
-                        strsql = strsql + " where fb_clientcd=@clcd and fb_exchange=@Exch and fb_Segment=@Seg and fb_billdt = @FromDt  and fb_postmrgyn = 'Y' and fb_margin1 <> 0";
-
-                        strsql = strsql + " Union all  ";
-                        strsql = strsql + " Select 'Bill For : ' + ltrim(rtrim(convert(char,convert(datetime,fb_billdt),103))) as  dt,0,0,'CurrMrgn','zzzzz', '[Curr. Day Mrgn.]' sm_sname, 0 td_lastclose,0 td_bqty,0 td_sqty,0,0,";
-                        strsql = strsql + " 0 td_rate,convert(decimal(15,2),fb_margin2) drcr,0 value,'-1' td_trxflag,0 td_seriesid,fb_exchange as exchange,fb_Segment as Segment,0 stax,'' NetValue  ";
-                        strsql = strsql + " from Fbills with (nolock)  ";
-                        strsql = strsql + " where fb_clientcd=@clcd and fb_exchange=@Exch and fb_Segment=@Seg and fb_billdt = @FromDt  and fb_postmrgyn = 'Y' and fb_margin2 <> 0  ";
-                        strsql = strsql + " order by dt,sm_symbol, sm_sname,td_trxflag desc, td_seriesid ";
-
-                        strsql = strsql.Replace("@FromDt", "'" + fromDt + "'").Replace("@clcd", "'" + clientId + "'").Replace("@Exch", "'" + exchange + "'").Replace("@Seg", "'" + Segment + "'");
-
-                    }
-                    ObjDataSet = objUtility.OpenDataSet(strsql);
-
-                    if (ObjDataSet.Tables[0].Rows.Count == 0)
-                    {
-                        return ObjDataSet;
-                    }
-                    else
-                    {
-                        string strCharges = "";
-                        decimal TotalDrCr = 0;
-                        for (int i = 0; i <= ObjDataSet.Tables[0].Rows.Count - 1; i++)
-                        {
-                            if (strCharges == "")
-                            {
-                                if (ObjDataSet.Tables[0].Rows[i]["Time"].ToString().Trim() == "Charges" || ObjDataSet.Tables[0].Rows[i]["Time"].ToString().Trim() == "OpnMrg" || ObjDataSet.Tables[0].Rows[i]["Time"].ToString().Trim() == "CurrMrgn")
-                                {
-                                    strCharges = "Charges";
-                                    DataRow ObjRow1 = ObjDataSet.Tables[0].NewRow();
-                                    ObjRow1["sm_sname"] = "Value Before Adding Charges :";
-                                    ObjRow1["dt"] = ObjDataSet.Tables[0].Rows[i]["dt"].ToString().Trim();
-                                    ObjRow1["NetValue"] = objUtility.mfnFormatCurrency(TotalDrCr, 2);
-                                    ObjDataSet.Tables[0].Rows.InsertAt(ObjRow1, i);
-                                    i = i + 1;
-                                }
-                            }
-                            TotalDrCr = TotalDrCr + (decimal)ObjDataSet.Tables[0].Rows[i]["drcr"];
-                        }
-                    }
-                }
-            }
-            if ((exchangeType == "BSE Cash") || (exchangeType == "NSE Cash") || (exchangeType == "MCX Cash"))  //0-BSE CASH  1-NSE CASH
-            {
-                string exchange = exchangeType;
-                string Stlmnt = string.Empty;
-                string strRefDt = "";
                 string StrStlmntWhere = string.Empty;
-
-                if (exchangeType == "BSE Cash")
-                {
-                    Stlmnt = "B" + stlmntType.Trim();
-                }
-                else if (exchangeType == "NSE Cash")
-                {
-                    Stlmnt = "N" + stlmntType.Trim();
-                }
-                else if (exchangeType == "MCX Cash")
-                {
-                    Stlmnt = "M" + stlmntType.Trim();
-                }
+                string Stlmnt = objUtility.fnFireQuery("settlements", "se_stlmnt", "se_stdt = '" + dt + "' and se_exchange+se_type", exchSeg.Substring(0, 1)+ stlmntType, true);
 
                 string StrMsg;
-
-                StrMsg = objUtility.fnCheckInterOperability(fromDt, "C");
+                StrMsg = objUtility.fnCheckInterOperability(dt, "C");
 
                 if (StrMsg.ToUpper().Trim() == "TRUE")
                 {
-                    string apiRes6 = objUtility.fnGetInterOpStlmnts(Stlmnt, fromDt, false);
+                    string apiRes6 = objUtility.fnGetInterOpStlmnts(Stlmnt, dt, false);
                     blnInterOP = true;
                     arrStlmnt = apiRes6.Split(',').ToList();
                     StrStlmntWhere += "('" + arrStlmnt[0] + "'";
@@ -3744,12 +3405,11 @@ namespace TradeWeb.API.Repository
                         StrStlmntWhere += ",'" + arrStlmnt[j] + "'";
                     }
                     StrStlmntWhere += ")";
-
                 }
-                else if (StrMsg.Trim() != "")
+                else
                 {
-                    //ShowMessage(StrMsg.Trim(), MessageType.Info);
-                    //return;
+                    arrStlmnt.Add(Stlmnt);
+                    StrStlmntWhere += "'" + Stlmnt + "'";
                 }
 
                 string StrTRXIndex = "";
@@ -3762,19 +3422,19 @@ namespace TradeWeb.API.Repository
                 {
                     if (blnInterOP)
                     {
-                        strsql = " select '" + arrStlmnt[0] + "' as td_stlmnt, '" + arrStlmnt[0] + "' +'['+ ltrim(rtrim(convert(char,convert(datetime,td_dt),103))) + ']' Heading ,";
-                        strsql = strsql + " td_scripcd,td_orderid as [Order#], td_tradeid [Trade#],";
-                        strsql = strsql + " case td_ssrno when -1 then 'b/f' else td_time end Time, ";
-                        strsql = strsql + " rtrim(ss_name)+' ('+td_scripcd+')' Security, td_bqty Buy, ";
+                        strsql = " select '" + arrStlmnt[0] + "' as Stlmnt, '" + arrStlmnt[0] + "' +'['+ ltrim(rtrim(convert(char,convert(datetime,td_dt),103))) + ']' Heading ,";
+                        strsql = strsql + " td_scripcd ScripCode,td_orderid as [OrderID], td_tradeid [TradeID],";
+                        strsql = strsql + " case td_ssrno when -1 then 'b/f' else td_time end TradeTime, ";
+                        strsql = strsql + " rtrim(ss_name) ScripName, td_bqty Buy, ";
                         strsql = strsql + " td_sqty Sell, ";
-                        strsql = strsql + " convert(decimal (15,2),td_marketrate) as [Market Rate], ";
+                        strsql = strsql + " convert(decimal (15,2),td_marketrate) as [MarketRate], ";
                         strsql = strsql + " convert(decimal (15,4),td_brokerage*(td_bqty+td_sqty)) [Brokerage], ";
-                        strsql = strsql + " convert(decimal (15,4),convert(money, case left(td_stlmnt,1) when 'N' then  case sr_nodelyn when 'Y' then 0 else td_rate end else td_rate end *td_bqty)) [Buy Value], ";
-                        strsql = strsql + " convert(decimal (15,4),convert(money, case left(td_stlmnt,1) when 'N' then case sr_nodelyn when 'Y' then 0 else td_rate  end else td_rate end *td_sqty)) [Sell Value] ,";
-                        strsql = strsql + " case sr_nodelyn when 'Y' then 'NoDelv' else '' end [_], ";
-                        strsql = strsql + " rtrim(ss_name)+case td_ssrno when -1 then 'a' else 'b' end [Ordr] ,td_dt BDate,'' [Net Value]";
+                        strsql = strsql + " convert(decimal (15,4),convert(money, case left(td_stlmnt,1) when 'N' then  case sr_nodelyn when 'Y' then 0 else td_rate end else td_rate end *td_bqty)) [BuyValue], ";
+                        strsql = strsql + " convert(decimal (15,4),convert(money, case left(td_stlmnt,1) when 'N' then case sr_nodelyn when 'Y' then 0 else td_rate  end else td_rate end *td_sqty)) [SellValue] ,";
+                        strsql = strsql + " case sr_nodelyn when 'Y' then 'NoDelv' else '' end [NoDelv], ";
+                        strsql = strsql + " rtrim(ss_name)+case td_ssrno when -1 then 'a' else 'b' end [Ordr] ,td_dt tdDt,'' [NetValue]";
                         strsql = strsql + " from trx with(" + StrTRXIndex + "nolock) left outer join std_rates with (nolock) on td_stlmnt = sr_stlmnt and td_scripcd = sr_scripcd and sr_nodelyn='Y' ,securities with (nolock) ";
-                        strsql = strsql + " where td_clientcd =@clcd and td_stlmnt=@stlmnt  and  td_Dt between '" + fromDt + "' and '" + fromDt + "'  ";
+                        strsql = strsql + " where td_clientcd =@clcd and td_stlmnt=@stlmnt  and  td_Dt between '" + dt + "' and '" + dt + "'  ";
                         strsql = strsql + " and td_scripcd = ss_cd ";
 
                         strsql = strsql + " union All  ";
@@ -3790,7 +3450,7 @@ namespace TradeWeb.API.Repository
                         strsql = strsql + " case sr_nodelyn when 'Y' then 'NoDelv' else '' end [_], ";
                         strsql = strsql + " rtrim(ss_name)+case td_ssrno when -1 then 'a' else 'b' end [Ordr] ,td_dt BDate,'' [Net Value]";
                         strsql = strsql + " from trx with(" + StrTRXIndex + "nolock) left outer join std_rates with (nolock) on td_stlmnt = sr_stlmnt and td_scripcd = sr_scripcd and sr_nodelyn='Y' ,securities with (nolock) ";
-                        strsql = strsql + " where td_clientcd =@clcd and td_stlmnt=@stlmnt  and  td_Dt between '" + fromDt + "' and '" + fromDt + "'  ";
+                        strsql = strsql + " where td_clientcd =@clcd and td_stlmnt=@stlmnt  and  td_Dt between '" + dt + "' and '" + dt + "'  ";
                         strsql = strsql + " and td_scripcd = ss_cd and td_marginyn='B'";
 
                         strsql = strsql + " union All  ";
@@ -3804,7 +3464,7 @@ namespace TradeWeb.API.Repository
                         strsql = strsql + " 'c/f', rtrim(ss_name)+'z' ,td_dt BDate,'' [Net Value] ";
                         strsql = strsql + " from trx with(" + StrTRXIndex + "nolock) ,securities with (nolock),std_rates with (nolock) ";
                         strsql = strsql + " where td_clientcd =@clcd and td_stlmnt=@stlmnt and left(td_stlmnt,1)='B' ";
-                        strsql = strsql + " and  td_Dt between '" + fromDt + "' and '" + fromDt + "'  and td_stlmnt = sr_stlmnt and td_scripcd = sr_scripcd  ";
+                        strsql = strsql + " and  td_Dt between '" + dt + "' and '" + dt + "'  and td_stlmnt = sr_stlmnt and td_scripcd = sr_scripcd  ";
                         strsql = strsql + " and sr_nodelyn='Y' and td_scripcd = ss_cd ";
                         strsql = strsql + " group by ss_name, td_scripcd,td_stlmnt,td_dt ";
                         strsql = strsql + "  having sum(td_bqty-td_sqty)<>0 ";
@@ -3818,7 +3478,7 @@ namespace TradeWeb.API.Repository
                         strsql = strsql + " select '" + arrStlmnt[0] + "' as td_stlmnt, '" + arrStlmnt[0] + "' +'['+ ltrim(rtrim(convert(char,convert(datetime,se_stdt),103))) + ']' sh_stlmnt, rtrim(sh_desc) sh_desc ,sh_amount, se_stdt BDate";
                         strsql = strsql + " from Specialcharges with (nolock),settlements with (nolock) ";
                         strsql = strsql + " where sh_clientcd=@clcd and sh_stlmnt=@stlmnt and sh_stlmnt = se_Stlmnt ";
-                        strsql = strsql + " and se_stdt between '" + fromDt + "' and '" + fromDt + "' ";
+                        strsql = strsql + " and se_stdt between '" + dt + "' and '" + dt + "' ";
 
                         strsql = strsql + " union all   ";
 
@@ -3826,7 +3486,7 @@ namespace TradeWeb.API.Repository
                         strsql = strsql + " from Cbilled_charges with (nolock),settlements with (nolock),charges_master with (nolock)  ";
                         strsql = strsql + " where bc_clientcd=@clcd and bc_stlmnt=@stlmnt and bc_stlmnt = se_Stlmnt  ";
                         strsql = strsql + " and bc_companycode = cg_companycode and Left(bc_stlmnt,1) = cg_exchange and  bc_chargecode =cg_cd ";
-                        strsql = strsql + " and se_stdt between '" + fromDt + "' and '" + fromDt + "'  ";
+                        strsql = strsql + " and se_stdt between '" + dt + "' and '" + dt + "'  ";
 
                         strsql = strsql + " union all ";
 
@@ -3834,32 +3494,32 @@ namespace TradeWeb.API.Repository
                         strsql = strsql + " from Specialcharges with (nolock),settlements with (nolock),charges_master with (nolock)  ";
                         strsql = strsql + " where sh_clientcd=@clcd and sh_stlmnt=@stlmnt and sh_stlmnt = se_Stlmnt  ";
                         strsql = strsql + " and sh_companycode = cg_companycode and Left(sh_stlmnt,1) = cg_exchange and  cg_cd = '01' ";
-                        strsql = strsql + " and se_stdt between '" + fromDt + "' and '" + fromDt + "'  and sh_servicetax > 0 ) A";
-                        strsql = strsql + " gROUP bY sh_stlmnt,rtrim(sh_desc),BDate,td_stlmnt order by  Heading,ordr, Security,Time";
-                        strsql = strsql.Replace("=@stlmnt", " in " + StrStlmntWhere + "").Replace("@clcd", "'" + clientId + "'");
+                        strsql = strsql + " and se_stdt between '" + dt + "' and '" + dt + "'  and sh_servicetax > 0 ) A";
+                        strsql = strsql + " gROUP bY sh_stlmnt,rtrim(sh_desc),BDate,td_stlmnt ";
+                        strsql = strsql.Replace("=@stlmnt", " in " + StrStlmntWhere + "").Replace("@clcd", "'" + userId + "'");
                     }
                     else
                     {
-                        strsql = " select td_stlmnt, td_stlmnt +'['+ ltrim(rtrim(convert(char,convert(datetime,td_dt),103))) + ']' Heading ,";
-                        strsql = strsql + " td_scripcd,td_orderid as [Order#], td_tradeid [Trade#],";
-                        strsql = strsql + " case td_ssrno when -1 then 'b/f' else td_time end Time, ";
-                        strsql = strsql + " rtrim(ss_name)+' ('+td_scripcd+')' Security, td_bqty Buy, ";
+                        strsql = " select td_stlmnt stlmnt, td_stlmnt +'['+ ltrim(rtrim(convert(char,convert(datetime,td_dt),103))) + ']' Heading ,";
+                        strsql = strsql + " td_scripcd ScripCode,td_orderid as [OrderID], td_tradeid [TradeID],";
+                        strsql = strsql + " case td_ssrno when -1 then 'b/f' else td_time end TradeTime, ";
+                        strsql = strsql + " rtrim(ss_name) ScripName, td_bqty Buy, ";
                         strsql = strsql + " td_sqty Sell, ";
-                        strsql = strsql + " convert(decimal (15,2),td_marketrate) as [Market Rate], ";
+                        strsql = strsql + " convert(decimal (15,2),td_marketrate) as MarketRate , ";
                         strsql = strsql + " convert(decimal (15,4),td_brokerage*(td_bqty+td_sqty)) [Brokerage], ";
-                        strsql = strsql + " convert(decimal (15,4),convert(money, case left(td_stlmnt,1) when 'N' then  case sr_nodelyn when 'Y' then 0 else td_rate end else td_rate end *td_bqty)) [Buy Value], ";
-                        strsql = strsql + " convert(decimal (15,4),convert(money, case left(td_stlmnt,1) when 'N' then case sr_nodelyn when 'Y' then 0 else td_rate  end else td_rate end *td_sqty)) [Sell Value] ,";
-                        strsql = strsql + " case sr_nodelyn when 'Y' then 'NoDelv' else '' end [_], ";
-                        strsql = strsql + " rtrim(ss_name)+case td_ssrno when -1 then 'a' else 'b' end [Ordr] ,td_dt BDate,'' [Net Value]";
+                        strsql = strsql + " convert(decimal (15,4),convert(money, case left(td_stlmnt,1) when 'N' then  case sr_nodelyn when 'Y' then 0 else td_rate end else td_rate end *td_bqty)) BuyValue, ";
+                        strsql = strsql + " convert(decimal (15,4),convert(money, case left(td_stlmnt,1) when 'N' then case sr_nodelyn when 'Y' then 0 else td_rate  end else td_rate end *td_sqty)) SellValue ,";
+                        strsql = strsql + " case sr_nodelyn when 'Y' then 'NoDelv' else '' end [NoDelv], ";
+                        strsql = strsql + " rtrim(ss_name)+case td_ssrno when -1 then 'a' else 'b' end [Ordr] ,td_dt tdDt,'' [NetValue]";
                         strsql = strsql + " from trx with(" + StrTRXIndex + "nolock) left outer join std_rates with (nolock) on td_stlmnt = sr_stlmnt and td_scripcd = sr_scripcd and sr_nodelyn='Y' ,securities with (nolock) ";
-                        strsql = strsql + " where td_clientcd =@clcd and td_stlmnt=@stlmnt  and  td_Dt between '" + fromDt + "' and '" + fromDt + "'  ";
+                        strsql = strsql + " where td_clientcd =@clcd and td_stlmnt=@stlmnt  and  td_Dt between '" + dt + "' and '" + dt + "'  ";
                         strsql = strsql + " and td_scripcd = ss_cd ";
 
                         strsql = strsql + " union All  ";
                         strsql = strsql + " select td_stlmnt, td_stlmnt +'['+ ltrim(rtrim(convert(char,convert(datetime,td_dt),103))) + ']' Heading ,";
                         strsql = strsql + " td_scripcd,td_orderid as [Order#], td_tradeid [Trade#],";
                         strsql = strsql + " case td_ssrno when -1 then 'b/f' else td_time end Time, ";
-                        strsql = strsql + " rtrim(ss_name)+' ('+td_scripcd+')' Security, td_sqty  Buy, ";
+                        strsql = strsql + " ss_name Security, td_sqty  Buy, ";
                         strsql = strsql + " td_bqty Sell, ";
                         strsql = strsql + " convert(decimal (15,2),td_marketrate) as [Market Rate], ";
                         strsql = strsql + " convert(decimal (15,4),0) [Brokerage], ";
@@ -3868,12 +3528,12 @@ namespace TradeWeb.API.Repository
                         strsql = strsql + " case sr_nodelyn when 'Y' then 'NoDelv' else '' end [_], ";
                         strsql = strsql + " rtrim(ss_name)+case td_ssrno when -1 then 'a' else 'b' end [Ordr] ,td_dt BDate,'' [Net Value]";
                         strsql = strsql + " from trx with(" + StrTRXIndex + "nolock) left outer join std_rates with (nolock) on td_stlmnt = sr_stlmnt and td_scripcd = sr_scripcd and sr_nodelyn='Y' ,securities with (nolock) ";
-                        strsql = strsql + " where td_clientcd =@clcd and td_stlmnt=@stlmnt  and  td_Dt between '" + fromDt + "' and '" + fromDt + "'  ";
+                        strsql = strsql + " where td_clientcd =@clcd and td_stlmnt=@stlmnt  and  td_Dt between '" + dt + "' and '" + dt + "'  ";
                         strsql = strsql + " and td_scripcd = ss_cd and td_marginyn='B'";
 
                         strsql = strsql + " union All  ";
                         strsql = strsql + " select td_stlmnt, td_stlmnt +'['+ ltrim(rtrim(convert(char,convert(datetime,td_dt),103))) + ']' Heading,";
-                        strsql = strsql + " '0',0 , 0, 'C/F', rtrim(ss_name)+' ('+td_scripcd+')' Security, ";
+                        strsql = strsql + " '0',0 , 0, 'C/F', rtrim(ss_name) Security, ";
                         strsql = strsql + " case sign(sum(td_bqty-td_sqty)) when 1 then 0 else sum(td_bqty-td_sqty) end , ";
                         strsql = strsql + " case sign(sum(td_sqty-td_bqty)) when 1 then 0 else sum(td_bqty-td_sqty) end ,  ";
                         strsql = strsql + " convert(decimal(15,2),max(sr_makingrate)),convert(decimal (15,4),0), ";
@@ -3882,7 +3542,7 @@ namespace TradeWeb.API.Repository
                         strsql = strsql + " 'c/f', rtrim(ss_name)+'z' ,td_dt BDate,'' [Net Value] ";
                         strsql = strsql + " from trx with(" + StrTRXIndex + "nolock) ,securities with (nolock),std_rates with (nolock) ";
                         strsql = strsql + " where td_clientcd =@clcd and td_stlmnt=@stlmnt and left(td_stlmnt,1)='B' ";
-                        strsql = strsql + " and  td_Dt between '" + fromDt + "' and '" + fromDt + "'  and td_stlmnt = sr_stlmnt and td_scripcd = sr_scripcd  ";
+                        strsql = strsql + " and  td_Dt between '" + dt + "' and '" + dt + "'  and td_stlmnt = sr_stlmnt and td_scripcd = sr_scripcd  ";
                         strsql = strsql + " and sr_nodelyn='Y' and td_scripcd = ss_cd ";
                         strsql = strsql + " group by ss_name, td_scripcd,td_stlmnt,td_dt ";
                         strsql = strsql + "  having sum(td_bqty-td_sqty)<>0 ";
@@ -3896,7 +3556,7 @@ namespace TradeWeb.API.Repository
                         strsql = strsql + " select sh_stlmnt td_stlmnt, sh_stlmnt +'['+ ltrim(rtrim(convert(char,convert(datetime,se_stdt),103))) + ']' sh_stlmnt, rtrim(sh_desc) sh_desc ,sh_amount, se_stdt BDate";
                         strsql = strsql + " from Specialcharges with (nolock),settlements with (nolock) ";
                         strsql = strsql + " where sh_clientcd=@clcd and sh_stlmnt=@stlmnt and sh_stlmnt = se_Stlmnt ";
-                        strsql = strsql + " and se_stdt between '" + fromDt + "' and '" + fromDt + "' ";
+                        strsql = strsql + " and se_stdt between '" + dt + "' and '" + dt + "' ";
 
                         strsql = strsql + " union all   ";
 
@@ -3904,7 +3564,7 @@ namespace TradeWeb.API.Repository
                         strsql = strsql + " from Cbilled_charges with (nolock),settlements with (nolock),charges_master with (nolock)  ";
                         strsql = strsql + " where bc_clientcd=@clcd and bc_stlmnt=@stlmnt and bc_stlmnt = se_Stlmnt  ";
                         strsql = strsql + " and bc_companycode = cg_companycode and Left(bc_stlmnt,1) = cg_exchange and  bc_chargecode =cg_cd ";
-                        strsql = strsql + " and se_stdt between '" + fromDt + "' and '" + fromDt + "'  ";
+                        strsql = strsql + " and se_stdt between '" + dt + "' and '" + dt + "'  ";
 
                         strsql = strsql + " union all ";
 
@@ -3912,10 +3572,12 @@ namespace TradeWeb.API.Repository
                         strsql = strsql + " from Specialcharges with (nolock),settlements with (nolock),charges_master with (nolock)  ";
                         strsql = strsql + " where sh_clientcd=@clcd and sh_stlmnt=@stlmnt and sh_stlmnt = se_Stlmnt  ";
                         strsql = strsql + " and sh_companycode = cg_companycode and Left(sh_stlmnt,1) = cg_exchange and  cg_cd = '01' ";
-                        strsql = strsql + " and se_stdt between '" + fromDt + "' and '" + fromDt + "'  and sh_servicetax > 0 ) A";
-                        strsql = strsql + " gROUP bY sh_stlmnt,rtrim(sh_desc),BDate,td_stlmnt order by  Heading,ordr, Security,Time";
-                        strsql = strsql.Replace("=@stlmnt", " like '" + Stlmnt + "%'").Replace("@clcd", "'" + clientId + "'");
+                        strsql = strsql + " and se_stdt between '" + dt + "' and '" + dt + "'  and sh_servicetax > 0 ) A";
+                        strsql = strsql + " gROUP bY sh_stlmnt,rtrim(sh_desc),BDate,td_stlmnt";
+                        strsql = strsql.Replace("=@stlmnt", " like '" + Stlmnt + "%'").Replace("@clcd", "'" + userId + "'");
                     }
+                    strsql = " select Stlmnt,ScripCode,OrderID,TradeID,TradeTime,ScripName,Buy,Sell,MarketRate,Brokerage,BuyValue,SellValue,Ordr,tdDt,NetValue from (" + strsql + ") a ";
+                    strsql = strsql + " Order by Ordr,ScripName,TradeTime ";
                     ObjDataSet = objUtility.OpenDataSet(strsql);
                     if (ObjDataSet.Tables[0].Rows.Count == 0)
                     {
@@ -3935,28 +3597,25 @@ namespace TradeWeb.API.Repository
 
                         for (i = 0; i <= ObjDataSet.Tables[0].Rows.Count - 1; i++)
                         {
-                            strRefDt = ObjDataSet.Tables[0].Rows[i]["BDate"].ToString().Trim();
-                            if (strstlmnt != string.Empty && strstlmnt != ObjDataSet.Tables[0].Rows[i]["td_stlmnt"].ToString().Trim())
+                            if (strstlmnt != string.Empty && strstlmnt != ObjDataSet.Tables[0].Rows[i]["Stlmnt"].ToString().Trim())
                             {
-                                strstlmnt = ObjDataSet.Tables[0].Rows[i]["td_stlmnt"].ToString().Trim();
+                                strstlmnt = ObjDataSet.Tables[0].Rows[i]["Stlmnt"].ToString().Trim();
                                 DataRow ObjRow1 = ObjDataSet.Tables[0].NewRow();
                                 TotalDiff = Math.Round((decimal)(TotalSval - TotalBval), strparmcd == "Y" ? 0 : 2);
                                 if (TotalBval < TotalSval)
                                 {
-                                    ObjRow1["Security"] = "Due To You :";
-                                    ObjRow1["Heading"] = strHeading;
+                                    ObjRow1["ScripName"] = "Due To You :";
                                     ObjDataSet.Tables[0].Rows.InsertAt(ObjRow1, i);
                                     i = i + 1;
                                 }
                                 else
                                 {
-                                    ObjRow1["Security"] = "Due To Us :";
-                                    ObjRow1["Heading"] = strHeading;
+                                    ObjRow1["ScripName"] = "Due To Us :";
                                     ObjDataSet.Tables[0].Rows.InsertAt(ObjRow1, i);
                                     i = i + 1;
                                 }
 
-                                var apiRes2 = objUtility.mfnRoundoffCashbill(strClient, strRefDt, TotalDiff, Strings.Left(strstlmnt, 1), strCompanyCode);
+                                var apiRes2 = objUtility.mfnRoundoffCashbill(userId, dt, TotalDiff, Strings.Left(strstlmnt, 1));
 
                                 ObjRow1["Net Value"] = objUtility.mfnFormatCurrency(Convert.ToDecimal(apiRes2), 2);
                                 TotalBval = 0;
@@ -3965,34 +3624,31 @@ namespace TradeWeb.API.Repository
                             }
                             if (strstlmnt == string.Empty)
                             {
-                                strstlmnt = ObjDataSet.Tables[0].Rows[i]["td_stlmnt"].ToString().Trim();
+                                strstlmnt = ObjDataSet.Tables[0].Rows[i]["Stlmnt"].ToString().Trim();
                             }
-                            if (strstlmnt == ObjDataSet.Tables[0].Rows[i]["td_stlmnt"].ToString().Trim())
+                            if (strstlmnt == ObjDataSet.Tables[0].Rows[i]["Stlmnt"].ToString().Trim())
                             {
-                                TotalBval = TotalBval + (decimal)ObjDataSet.Tables[0].Rows[i]["Buy Value"];
-                                TotalSval = TotalSval + (decimal)ObjDataSet.Tables[0].Rows[i]["Sell Value"];
+                                TotalBval = TotalBval + (decimal)ObjDataSet.Tables[0].Rows[i]["BuyValue"];
+                                TotalSval = TotalSval + (decimal)ObjDataSet.Tables[0].Rows[i]["SellValue"];
                                 TotalSval = System.Math.Abs(TotalSval);
                                 TotalBval = System.Math.Abs(TotalBval);
                             }
 
-                            strHeading = ObjDataSet.Tables[0].Rows[i]["Heading"].ToString().Trim();
-
                             if (strCharges == "")
                             {
-                                if (ObjDataSet.Tables[0].Rows[i]["td_scripcd"].ToString().Trim() == "Charges")
+                                if (ObjDataSet.Tables[0].Rows[i]["ScripCode"].ToString().Trim() == "Charges")
                                 {
                                     strCharges = "Charges";
                                     DataRow ObjRow1 = ObjDataSet.Tables[0].NewRow();
 
                                     TotalDiff = Math.Round((decimal)(TotalSval - TotalBval), strparmcd == "Y" ? 0 : 2);
 
-                                    var apiRes2 = objUtility.mfnRoundoffCashbill(strClient, strRefDt, TotalDiff, Strings.Left(strstlmnt, 1), strCompanyCode);
+                                    var apiRes2 = objUtility.mfnRoundoffCashbill(userId, dt, TotalDiff, Strings.Left(strstlmnt, 1));
 
                                     TotalDiff = Convert.ToDecimal(apiRes2);
 
-                                    ObjRow1["Security"] = "Net Item Amount (Sale-Buy) :";
-                                    ObjRow1["Net Value"] = objUtility.mfnFormatCurrency(TotalDiff, 2);
-                                    ObjRow1["Heading"] = strHeading;
+                                    ObjRow1["ScripName"] = "Net Item Amount (Sale-Buy) :";
+                                    ObjRow1["NetValue"] = objUtility.mfnFormatCurrency(TotalDiff, 2);
                                     ObjDataSet.Tables[0].Rows.InsertAt(ObjRow1, i);
                                     i = i + 1;
                                 }
@@ -4001,20 +3657,19 @@ namespace TradeWeb.API.Repository
                         DataRow ObjRow2 = ObjDataSet.Tables[0].NewRow();
                         TotalDiff = Math.Round((decimal)(TotalSval - TotalBval), strparmcd == "Y" ? 0 : 2);
 
-                        var apiRes3 = objUtility.mfnRoundoffCashbill(strClient, strRefDt, TotalDiff, Strings.Left(strstlmnt, 1), strCompanyCode);
+                        var apiRes3 = objUtility.mfnRoundoffCashbill(userId, dt, TotalDiff, Strings.Left(strstlmnt, 1));
 
                         TotalDiff = Convert.ToDecimal(apiRes3);
 
                         if (TotalBval < TotalSval)
                         {
-                            ObjRow2["Security"] = "Due To You :";
+                            ObjRow2["ScripName"] = "Due To You :";
                         }
                         else
                         {
-                            ObjRow2["Security"] = "Due To Us :";
+                            ObjRow2["ScripName"] = "Due To Us :";
                         }
-                        ObjRow2["Net Value"] = objUtility.mfnFormatCurrency(TotalDiff, 2);
-                        ObjRow2["Heading"] = strHeading;
+                        ObjRow2["NetValue"] = objUtility.mfnFormatCurrency(TotalDiff, 2);
                         ObjDataSet.Tables[0].Rows.InsertAt(ObjRow2, ObjDataSet.Tables[0].Rows.Count);
                         ObjDataSet.AcceptChanges();
 
@@ -4022,224 +3677,111 @@ namespace TradeWeb.API.Repository
                         TotalSval = 0;
                     }
                 }
-                else
+            }
+
+            if (exchSeg.Substring(1, 1) == "F" || exchSeg.Substring(1, 1) == "K")
+            {
+                string StrTradesIndex = "";
+                var result = objUtility.fnFireQueryTradeWeb("sysobjects a, sysindexes b", "COUNT(0)", "a.id = b.id and a.name = 'trades' and b.name", "idx_trades_clientcd", true);
+                if (Convert.ToInt16(result.Trim()) == 1)
+                { StrTradesIndex = "index(idx_trades_clientcd),"; }
+
+
+                string StrMsg;
+                StrMsg = objUtility.fnCheckInterOperability(dt, exchSeg.Substring(1,1));
+
+                if (StrMsg.ToUpper().Trim() == "TRUE")
                 {
-                    if (blnInterOP) //Offline
+                    exchSeg = "X" + exchSeg.Substring(1, 1);
+                }
+
+
+                if (_configuration["IsTradeWeb"] == "O")//live database
+                {
+
+                    string StrConn = _configuration.GetConnectionString("DefaultConnection");
+                    using (SqlConnection ObjConnectionTmp = new SqlConnection(StrConn))
                     {
-                        strsql = "select '1' Odr,'" + arrStlmnt[0] + "' as td_stlmnt,'" + arrStlmnt[0] + "' +' [ '+ ltrim(rtrim(convert(char,convert(datetime,td_dt),103))) + ' ]' Heading ,ltrim(rtrim(convert(char,convert(datetime,td_dt),103))) as td_dt,td_scripcd,max(td_orderid) as [Order#], max(td_tradeid) [Trade#], max(case td_ssrno when -1 then 'b/f' else td_time end) Time, rtrim(td_scripnm)+' ('+td_scripcd+')' Security, ";
-                        strsql = strsql + " Case td_bsflag when 'B' then sum(td_bqty) else 0 end as Buy, Case td_bsflag when 'S' then sum(td_sqty) else 0 end as Sell, convert(decimal (15,2),sum((td_bqty+td_sqty)*td_rate)/sum(td_bqty+td_sqty)) as [Market Rate], convert(decimal (15,2),sum(td_brokerage*(td_bqty+td_sqty))) [Brokerage], ";
-                        strsql = strsql + " case td_bsflag when 'B' then sum(convert(decimal(15,2), case left(td_stlmnt,1) when 'N' then case td_Nodel when 'Y' then 0 else td_rate end else td_rate end *td_bqty)) else 0 end [Buy Value], ";
-                        strsql = strsql + " case td_bsflag when 'S' then sum(convert(decimal(15,2), case left(td_stlmnt,1) when 'N' then case td_Nodel when 'Y' then 0 else td_rate end else td_rate end *td_sqty)) else 0 end [Sell Value] ,";
-                        strsql = strsql + " max(case td_nodel when 'Y' then 'NoDelv' else '' end) [_], rtrim(td_scripnm)+ max(case td_ssrno when -1 then 'a' else 'b' end) [Ordr],td_scripnm ";
-                        strsql = strsql + " ,0 'Net Qty' ,0 'Net Value' ,0 'Net Rate'";
-                        strsql = strsql + " from trx with(" + StrTRXIndex + "nolock) where td_clientcd =@clcd ";
-                        strsql = strsql + " and td_Dt between @FromDt and @ToDt ";
-                        strsql = strsql + " and  td_stlmnt=@stlmnt";
-                        strsql = strsql + " group by td_stlmnt,td_dt,td_scripcd,td_scripnm,td_bsflag ";
+                        ObjConnectionTmp.Open();
+                        ObjDataSet = objUtility.fnForBill(userId, exchSeg, dt, ObjConnectionTmp);
+                    }
 
-                        strsql = strsql + " union All ";
-                        strsql = strsql + " select '2' Odr,'" + arrStlmnt[0] + "' as td_stlmnt,'" + arrStlmnt[0] + "' +' [ '+ ltrim(rtrim(convert(char,convert(datetime,td_dt),103))) + ' ]' Heading ,";
-                        strsql = strsql + " ltrim(rtrim(convert(char,convert(datetime,td_dt),103))) as td_dt,td_scripcd,";
-                        strsql = strsql + " '0' as [Order#], '0' [Trade#], 'T' Time, ";
-                        strsql = strsql + " rtrim(td_scripnm)+' ('+td_scripcd+')' Security, ";
-                        strsql = strsql + " 0 as Buy, 0 as Sell, 0 [Market Rate], 0 [Brokerage], 0 [Buy Value], 0 [Sell Value] ,";
-                        strsql = strsql + " max(case td_nodel when 'Y' then 'NoDelv' else '' end) [_], ";
-                        strsql = strsql + " rtrim(td_scripnm)+ max(case td_ssrno when -1 then 'a' else 'b' end) [Ordr],";
-                        strsql = strsql + " td_scripnm ,";
-                        strsql = strsql + " Sum(td_bqty-td_sqty) 'Net Qty',";
-                        strsql = strsql + " Convert(decimal(15,2),Sum((td_bqty-td_sqty)* td_rate)) 'Net Value',";
-                        strsql = strsql + " Convert(decimal(15,2),Round(case When Sum(td_bqty-td_sqty) <> 0 Then Sum((td_bqty-td_sqty)* td_rate)/Sum(td_bqty-td_sqty) else 0 end,2)) 'Net Rate'";
-                        strsql = strsql + " from trx with(" + StrTRXIndex + "nolock) where td_clientcd =@clcd ";
-                        strsql = strsql + " and td_Dt between @FromDt and @ToDt ";
-                        strsql = strsql + " and  td_stlmnt=@stlmnt";
-                        strsql = strsql + " group by td_stlmnt, td_dt,td_scripcd,td_scripnm  ";
-                        strsql = strsql + " having count(distinct td_bsflag) > 1";
-
-                        strsql = strsql + " union All ";
-                        strsql = strsql + " select '3' Odr, '" + arrStlmnt[0] + "' as td_stlmnt,'" + arrStlmnt[0] + "' +' [ '+ ltrim(rtrim(convert(char,convert(datetime,td_dt),103))) + ' ]',ltrim(rtrim(convert(char,convert(datetime,td_dt),103))) as td_dt,'0',0 , 0, 'C/F', rtrim(td_scripnm)+' ('+td_scripcd+')' Security, ";
-                        strsql = strsql + " case sign(sum(td_bqty-td_sqty)) when 1 then 0 else sum(td_bqty-td_sqty) end , ";
-                        strsql = strsql + " case sign(sum(td_sqty-td_bqty)) when 1 then 0 else sum(td_bqty-td_sqty) end , convert(decimal(15,2),max(td_makingrt)), 0, ";
-                        strsql = strsql + " case sign(sum(td_bqty-td_sqty)) when 1 then 0 else sum((td_bqty-td_sqty)*td_makingrt) end , ";
-                        strsql = strsql + " case sign(sum(td_sqty-td_bqty)) when 1 then 0 else sum((td_bqty-td_sqty)*td_makingrt) end ,  'c/f', rtrim(td_scripnm)+'z', td_scripnm";
-                        strsql = strsql + " ,0,0,0";
-                        strsql = strsql + " from trx with(" + StrTRXIndex + "nolock) ";
-                        strsql = strsql + " where td_clientcd =@clcd ";
-                        strsql = strsql + " and td_Dt between @FromDt and @ToDt ";
-                        strsql = strsql + " and td_stlmnt=@stlmnt";
-                        strsql = strsql + " and td_nodel='Y' and left(td_stlmnt,1)='B' ";
-                        strsql = strsql + " group by td_stlmnt,td_dt,td_scripnm, td_scripcd having sum(td_bqty-td_sqty)<>0";//td_stlmnt='" + Stlmnt + "'
-
-                        strsql = strsql + " union all ";
-                        strsql = strsql + " select  '4' Odr,'" + arrStlmnt[0] + "' as sh_stlmnt,'" + arrStlmnt[0] + "' +' [ '+ ltrim(rtrim(convert(char,convert(datetime,se_stdt),103))) + ' ]',ltrim(rtrim(convert(char,convert(datetime,se_stdt),103))),'Charges',0,0,'Charges', rtrim(sh_desc), 0,0,convert(decimal(15,2),0),0,convert(decimal(15,2),sum(sh_amount)),0 ,'','zzz','' ";
-                        strsql = strsql + " ,0,0,0";
-                        strsql = strsql + " from Specialcharges with(nolock),settlements with(nolock)  where sh_clientcd=@clcd and sh_stlmnt = se_Stlmnt ";
-                        strsql = strsql + " and se_stdt between  @FromDt and @ToDt";
-                        strsql = strsql + " and sh_stlmnt=@stlmnt";
-                        strsql = strsql + " group by sh_stlmnt,se_stdt,sh_desc ";
-                        strsql = strsql + " order by  Heading,ordr, Security,Odr ";
-                        strsql = strsql.Replace("=@stlmnt", " in " + StrStlmntWhere + "").Replace("@clcd", "'" + clientId + "'").Replace("@FromDt", "'" + fromDt + "'").Replace("@ToDt", "'" + fromDt + "'");
+                    if (ObjDataSet.Tables[0].Rows.Count == 0)
+                    {
+                        return ObjDataSet;
                     }
                     else
                     {
-                        strsql = "select '1' Odr,td_stlmnt,td_stlmnt +' [ '+ ltrim(rtrim(convert(char,convert(datetime,td_dt),103))) + ' ]' Heading ,ltrim(rtrim(convert(char,convert(datetime,td_dt),103))) as td_dt,td_scripcd,max(td_orderid) as [Order#], max(td_tradeid) [Trade#], max(case td_ssrno when -1 then 'b/f' else td_time end) Time, rtrim(td_scripnm)+' ('+td_scripcd+')' Security, ";
-                        strsql = strsql + " Case td_bsflag when 'B' then sum(td_bqty) else 0 end as Buy, Case td_bsflag when 'S' then sum(td_sqty) else 0 end as Sell, convert(decimal (15,2),sum((td_bqty+td_sqty)*td_rate)/sum(td_bqty+td_sqty)) as [Market Rate], convert(decimal (15,2),sum(td_brokerage*(td_bqty+td_sqty))) [Brokerage], ";
-                        strsql = strsql + " case td_bsflag when 'B' then sum(convert(decimal(15,2), case left(td_stlmnt,1) when 'N' then case td_Nodel when 'Y' then 0 else td_rate end else td_rate end *td_bqty)) else 0 end [Buy Value], ";
-                        strsql = strsql + " case td_bsflag when 'S' then sum(convert(decimal(15,2), case left(td_stlmnt,1) when 'N' then case td_Nodel when 'Y' then 0 else td_rate end else td_rate end *td_sqty)) else 0 end [Sell Value] ,";
-                        strsql = strsql + " max(case td_nodel when 'Y' then 'NoDelv' else '' end) [_], rtrim(td_scripnm)+ max(case td_ssrno when -1 then 'a' else 'b' end) [Ordr],td_scripnm ";
-                        strsql = strsql + " ,0 'Net Qty' ,0 'Net Value' ,0 'Net Rate'";
-                        strsql = strsql + " from trx with(" + StrTRXIndex + "nolock) where td_clientcd =@clcd ";
-                        strsql = strsql + " and td_Dt between @FromDt and @ToDt ";
-                        strsql = strsql + " and  left(td_stlmnt,2)  = '" + Stlmnt + "'";
-                        strsql = strsql + " group by td_stlmnt,td_dt,td_scripcd,td_scripnm,td_bsflag ";
-
-                        strsql = strsql + " union All ";
-                        strsql = strsql + " select '2' Odr,td_stlmnt,td_stlmnt +' [ '+ ltrim(rtrim(convert(char,convert(datetime,td_dt),103))) + ' ]' Heading ,";
-                        strsql = strsql + " ltrim(rtrim(convert(char,convert(datetime,td_dt),103))) as td_dt,td_scripcd,";
-                        strsql = strsql + " '0' as [Order#], '0' [Trade#], 'T' Time, ";
-                        strsql = strsql + " rtrim(td_scripnm)+' ('+td_scripcd+')' Security, ";
-                        strsql = strsql + " 0 as Buy, 0 as Sell, 0 [Market Rate], 0 [Brokerage], 0 [Buy Value], 0 [Sell Value] ,";
-                        strsql = strsql + " max(case td_nodel when 'Y' then 'NoDelv' else '' end) [_], ";
-                        strsql = strsql + " rtrim(td_scripnm)+ max(case td_ssrno when -1 then 'a' else 'b' end) [Ordr],";
-                        strsql = strsql + " td_scripnm ,";
-                        strsql = strsql + " Sum(td_bqty-td_sqty) 'Net Qty',";
-                        strsql = strsql + " Convert(decimal(15,2),Sum((td_bqty-td_sqty)* td_rate)) 'Net Value',";
-                        strsql = strsql + " Convert(decimal(15,2),Round(case When Sum(td_bqty-td_sqty) <> 0 Then Sum((td_bqty-td_sqty)* td_rate)/Sum(td_bqty-td_sqty) else 0 end,2)) 'Net Rate'";
-                        strsql = strsql + " from trx with(" + StrTRXIndex + "nolock) where td_clientcd =@clcd ";
-                        strsql = strsql + " and td_Dt between @FromDt and @ToDt ";
-                        strsql = strsql + " and  left(td_stlmnt,2)  = '" + Stlmnt + "'";
-                        strsql = strsql + " group by td_stlmnt, td_dt,td_scripcd,td_scripnm  ";
-                        strsql = strsql + " having count(distinct td_bsflag) > 1";
-
-                        strsql = strsql + " union All ";
-                        strsql = strsql + " select '3' Odr, td_stlmnt,td_stlmnt +' [ '+ ltrim(rtrim(convert(char,convert(datetime,td_dt),103))) + ' ]',ltrim(rtrim(convert(char,convert(datetime,td_dt),103))) as td_dt,'0',0 , 0, 'C/F', rtrim(td_scripnm)+' ('+td_scripcd+')' Security, ";
-                        strsql = strsql + " case sign(sum(td_bqty-td_sqty)) when 1 then 0 else sum(td_bqty-td_sqty) end , ";
-                        strsql = strsql + " case sign(sum(td_sqty-td_bqty)) when 1 then 0 else sum(td_bqty-td_sqty) end , convert(decimal(15,2),max(td_makingrt)), 0, ";
-                        strsql = strsql + " case sign(sum(td_bqty-td_sqty)) when 1 then 0 else sum((td_bqty-td_sqty)*td_makingrt) end , ";
-                        strsql = strsql + " case sign(sum(td_sqty-td_bqty)) when 1 then 0 else sum((td_bqty-td_sqty)*td_makingrt) end ,  'c/f', rtrim(td_scripnm)+'z', td_scripnm";
-                        strsql = strsql + " ,0,0,0";
-                        strsql = strsql + " from trx with(" + StrTRXIndex + "nolock) ";
-                        strsql = strsql + " where td_clientcd =@clcd ";
-                        strsql = strsql + " and td_Dt between @FromDt and @ToDt ";
-                        strsql = strsql + " and  left(td_stlmnt,2)  = '" + Stlmnt + "'";
-
-                        strsql = strsql + " and td_nodel='Y' and left(td_stlmnt,1)='B' ";
-                        strsql = strsql + " group by td_stlmnt,td_dt,td_scripnm, td_scripcd having sum(td_bqty-td_sqty)<>0";//td_stlmnt='" + Stlmnt + "'
-
-                        strsql = strsql + " union all ";
-                        strsql = strsql + " select  '4' Odr,sh_stlmnt,sh_stlmnt +' [ '+ ltrim(rtrim(convert(char,convert(datetime,se_stdt),103))) + ' ]',ltrim(rtrim(convert(char,convert(datetime,se_stdt),103))),'Charges',0,0,'Charges', rtrim(sh_desc), 0,0,convert(decimal(15,2),0),0,convert(decimal(15,2),sum(sh_amount)),0 ,'','zzz','' ";
-                        strsql = strsql + " ,0,0,0";
-                        strsql = strsql + " from Specialcharges with(nolock),settlements with(nolock)  where sh_clientcd=@clcd and sh_stlmnt = se_Stlmnt ";
-                        strsql = strsql + " and se_stdt between  @FromDt and @ToDt";
-                        strsql = strsql + " and left(sh_stlmnt,2) = '" + Stlmnt + "'";
-
-                        strsql = strsql + " group by sh_stlmnt,se_stdt,sh_desc ";
-                        strsql = strsql + " order by  Heading,ordr, Security,Odr ";
-                        strsql = strsql.Replace("@clcd", "'" + clientId + "'").Replace("@FromDt", "'" + fromDt + "'").Replace("@ToDt", "'" + fromDt + "'");
-
-                    }
-                    ObjDataSet = objUtility.OpenDataSet(strsql);
-
-                    if (ObjDataSet.Tables[0].Rows.Count > 0)
-                    {
-                        int i = 0;
-                        string strstlmnt = string.Empty;
-                        decimal TotalBval = 0;
-                        decimal TotalSval = 0;
-                        decimal TotalDiff = 0;
-                        decimal TotalNet = 0;
-                        string strHeading = string.Empty;
                         string strCharges = "";
-
-                        string strparmcd = objUtility.GetSysParmSt("ROUNDOFF", "");
-
-                        for (i = 0; i <= ObjDataSet.Tables[0].Rows.Count - 1; i++)
+                        decimal TotalDrCr = 0;
+                        for (int i = 0; i <= ObjDataSet.Tables[0].Rows.Count - 1; i++)
                         {
-                            strRefDt = ObjDataSet.Tables[0].Rows[i]["td_dt"].ToString().Trim();
-
-                            if (strstlmnt != string.Empty && strstlmnt != ObjDataSet.Tables[0].Rows[i]["td_stlmnt"].ToString().Trim())
-                            {
-                                strstlmnt = ObjDataSet.Tables[0].Rows[i]["td_stlmnt"].ToString().Trim();
-                                DataRow ObjRow1 = ObjDataSet.Tables[0].NewRow();
-                                TotalDiff = Math.Round((decimal)(TotalSval - TotalBval), strparmcd == "Y" ? 0 : 2);
-                                if (TotalBval < TotalSval)
-                                {
-                                    ObjRow1["Security"] = "Due To You :";
-                                    ObjRow1["Heading"] = strHeading;
-                                    ObjDataSet.Tables[0].Rows.InsertAt(ObjRow1, i);
-                                    i = i + 1;
-                                }
-                                else
-                                {
-                                    ObjRow1["Security"] = "Due To Us :";
-                                    ObjRow1["Heading"] = strHeading;
-                                    ObjDataSet.Tables[0].Rows.InsertAt(ObjRow1, i);
-                                    i = i + 1;
-                                }
-
-                                var apiRes4 = objUtility.mfnRoundoffCashbill(strClient, strRefDt, TotalDiff, Strings.Left(strstlmnt, 1), strCompanyCode);
-
-                                ObjRow1["Net Value"] = objUtility.mfnFormatCurrency(Convert.ToDecimal(apiRes4), 2);
-
-                                TotalBval = 0;
-                                TotalSval = 0;
-                                TotalDiff = 0;
-                            }
-                            if (strstlmnt == string.Empty)
-                            {
-                                strstlmnt = ObjDataSet.Tables[0].Rows[i]["td_stlmnt"].ToString().Trim();
-                            }
-                            if (strstlmnt == ObjDataSet.Tables[0].Rows[i]["td_stlmnt"].ToString().Trim())
-                            {
-                                TotalBval = TotalBval + (decimal)ObjDataSet.Tables[0].Rows[i]["Buy Value"];
-                                TotalSval = TotalSval + (decimal)ObjDataSet.Tables[0].Rows[i]["Sell Value"];
-                                TotalSval = System.Math.Abs(TotalSval);
-                                TotalBval = System.Math.Abs(TotalBval);
-                            }
-                            strHeading = ObjDataSet.Tables[0].Rows[i]["Heading"].ToString().Trim();
-
                             if (strCharges == "")
                             {
-                                if (Conversion.Val(ObjDataSet.Tables[0].Rows[i]["Odr"].ToString().Trim()) == 4)
+                                if (Conversion.Val(ObjDataSet.Tables[0].Rows[i]["SortOrder"].ToString().Trim()) >= 10)
                                 {
                                     strCharges = "Charges";
 
                                     DataRow ObjRow1 = ObjDataSet.Tables[0].NewRow();
-                                    ObjRow1["Heading"] = strHeading;
-                                    ObjRow1["Security"] = "Value Before Adding Charges :";
-                                    ObjRow1["Net Value"] = objUtility.mfnFormatCurrency(TotalNet, 2);
+                                    ObjRow1["seriesname"] = "Value Before Adding Charges :";
+                                    ObjRow1["tddt"] = ObjDataSet.Tables[0].Rows[i]["tddt"].ToString().Trim();
+                                    ObjRow1["NetValue"] = objUtility.mfnFormatCurrency(TotalDrCr, 2);
                                     ObjDataSet.Tables[0].Rows.InsertAt(ObjRow1, i);
                                     i = i + 1;
                                 }
                             }
-
-                            TotalNet = TotalNet + (decimal)ObjDataSet.Tables[0].Rows[i]["Net Value"];
+                            TotalDrCr = TotalDrCr + (decimal)ObjDataSet.Tables[0].Rows[i]["drcr"];
                         }
-
                         DataRow ObjRow2 = ObjDataSet.Tables[0].NewRow();
-                        TotalDiff = Math.Round((decimal)(TotalSval - TotalBval), strparmcd == "Y" ? 0 : 2);
 
-                        var apiRes3 = objUtility.mfnRoundoffCashbill(strClient, strRefDt, TotalDiff, Strings.Left(strstlmnt, 1), strCompanyCode);
-
-                        TotalDiff = Convert.ToDecimal(apiRes3);
-
-                        if (TotalBval < TotalSval)
-                        {
-                            ObjRow2["Security"] = "Due To You :";
-                        }
-                        else
-                        {
-                            ObjRow2["Security"] = "Due To Us :";
-                        }
-
-                        ObjRow2["Net Value"] = objUtility.mfnFormatCurrency(TotalDiff, 2);
-                        ObjRow2["Heading"] = strHeading;
+                        ObjRow2["tddt"] = ObjDataSet.Tables[0].Rows[ObjDataSet.Tables[0].Rows.Count - 1]["tddt"].ToString().Trim();
+                        ObjRow2["NetValue"] = objUtility.mfnFormatCurrency(TotalDrCr, 2);
                         ObjDataSet.Tables[0].Rows.InsertAt(ObjRow2, ObjDataSet.Tables[0].Rows.Count);
                         ObjDataSet.AcceptChanges();
+                    }
+                }
+            }
 
+            if (exchSeg.Substring(1, 1) == "X")
+            {
+                if (_configuration["IsTradeWeb"] == "O")//live database
+                {
+                    string StrConn = _configuration.GetConnectionString("DefaultConnection");
+                    using (SqlConnection ObjConnectionTmp = new SqlConnection(StrConn))
+                    {
+                        ObjConnectionTmp.Open();
+                        ObjDataSet = objUtility.fnForBill(userId, exchSeg, dt, ObjConnectionTmp);
+                    }
+
+                    if (ObjDataSet.Tables[0].Rows.Count == 0)
+                    {
+                        return ObjDataSet;
                     }
                     else
                     {
-                        return ObjDataSet;
+                        string strCharges = "";
+                        decimal TotalDrCr = 0;
+                        for (int i = 0; i <= ObjDataSet.Tables[0].Rows.Count - 1; i++)
+                        {
+                            if (strCharges == "")
+                            {
+                                if (Conversion.Val(ObjDataSet.Tables[0].Rows[i]["SortOrder"].ToString().Trim()) >= 10)
+                                {
+                                    strCharges = "Charges";
+                                    DataRow ObjRow1 = ObjDataSet.Tables[0].NewRow();
+                                    ObjRow1["seriesname"] = "Value Before Adding Charges :";
+                                    ObjRow1["NetValue"] = objUtility.mfnFormatCurrency(TotalDrCr, 2);
+                                    ObjDataSet.Tables[0].Rows.InsertAt(ObjRow1, i);
+                                    i = i + 1;
+                                }
+                            }
+                            TotalDrCr = TotalDrCr + (decimal)ObjDataSet.Tables[0].Rows[i]["drcr"];
+                        }
+                        DataRow ObjRow2 = ObjDataSet.Tables[0].NewRow();
+
+                        ObjRow2["NetValue"] = objUtility.mfnFormatCurrency(TotalDrCr, 2);
+                        ObjDataSet.Tables[0].Rows.InsertAt(ObjRow2, ObjDataSet.Tables[0].Rows.Count);
+                        ObjDataSet.AcceptChanges();
                     }
                 }
             }
@@ -4251,29 +3793,9 @@ namespace TradeWeb.API.Repository
 
         #region Confirmation Handler Method
         // get dropdown menu cumulative details data
-        public dynamic GetCumulativeDetailsHandler(string td_clientcd, string StrOrder, string StrScripCode, string Strbsflag, string StrDate, string StrLookup)
+        public dynamic Transaction_Detail(string userId, string exch, string seg, int type, string fromdate, string todate, string scripcode)
         {
-            var query = GetQueryCumulativeDetails(td_clientcd, StrOrder, StrScripCode, Strbsflag, StrDate, StrLookup);
-            try
-            {
-                var ds = CommonRepository.OpenDataSetTmp(query);
-                if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
-                {
-                    var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
-                    return json;
-                }
-                return new List<string>();
-            }
-            catch (Exception ex)
-            {
-                throw ex;
-            }
-        }
-
-        // get dropdown menu confirmation details data
-        public dynamic GetConfirmationDetailsHandler(string td_clientcd, string StrOrder, string StrLoopUp)
-        {
-            var query = GetQueryConfirmationDetails(td_clientcd, StrOrder, StrLoopUp);
+            var query = Transaction_Detail_Query(userId, exch, seg, type, fromdate, todate, scripcode);
             try
             {
                 var ds = CommonRepository.OpenDataSetTmp(query);
@@ -4291,11 +3813,11 @@ namespace TradeWeb.API.Repository
         }
 
         //get confirmation main data
-        public dynamic GetConfirmationMainDataHandler(string userId, int lstConfirmationSelectIndex, string tdDt)
+        public dynamic Confirmation(string userId, int type, string tdDt)
         {
             try
             {
-                var ds = GetConfirmationMainData(userId, lstConfirmationSelectIndex, tdDt);
+                var ds = Confirmation_Process(userId, type, tdDt);
                 if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
                 {
                     var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
@@ -4312,7 +3834,7 @@ namespace TradeWeb.API.Repository
 
         #region Confirmation usefull methods
         //Get confirmation main data
-        private DataSet GetConfirmationMainData(string userId, int lstConfirmationSelectIndex, string tdDt)
+        private DataSet Confirmation_Process(string userId, int type, string dt)
         {
             DataSet ObjDataSet = new DataSet();
             string StrComTradesIndex = "";
@@ -4324,40 +3846,21 @@ namespace TradeWeb.API.Repository
             if (Convert.ToInt16(objUtility.fnFireQueryTradeWeb("sysobjects a, sysindexes b", "COUNT(0)", "a.id = b.id and a.name = 'Trx' and b.name", "idx_Trx_Clientcd", true)) == 1)
             { StrTRXIndex = "index(idx_trx_clientcd),"; }
 
-            if (lstConfirmationSelectIndex == 0)
+            if (type == 0)
             {
                 string strsql = string.Empty;
 
-                if (_configuration["IsTradeWeb"] == "O")
-                {
-                    //If IsTradeWeb is false means it will connect to TradePlus Database(Live)
-                    strsql = " Select 1 as td_order,'Equity : ' + td_stlmnt as td_type, td_stlmnt,td_scripcd,replace(rtrim(ss_Name)+' ('+td_scripcd+')','&','') td_scripnm, ";
-                    strsql = strsql + " sum(td_bqty) 'bqty',sum(convert(decimal(15,2),convert(money,td_bqty * td_rate))) 'bvalue', sum(td_sqty) 'sqty', ";
-                    strsql = strsql + " sum(convert(decimal(15,4),convert(money,td_sqty * td_rate))) 'svalue', sum(td_bqty - td_sqty) 'netqty', ";
-                    strsql = strsql + " sum(convert(decimal(15,4),convert(money,(td_sqty - td_bqty)*td_rate))) 'netvalue', ";
-                    strsql = strsql + " cast(convert(money,case when sum(td_bqty - td_sqty)=0 then 0 else sum((td_bqty-td_sqty)*td_rate)/sum(td_bqty-td_sqty) ";
-                    strsql = strsql + " end) as decimal(15,2)) 'average', ";
-                    strsql = strsql + " cast(sum(td_brokerage*(td_bqty+td_sqty)) as decimal(15,4)) td_Brokerage, ";
-                    strsql = strsql + " replace(td_stlmnt+td_dt+td_scripcd,'&','-') 'td_Lookup' ";
-                    strsql = strsql + " from trx with(" + StrTRXIndex + "nolock) , securities with (nolock), Settlements with (nolock) ";
-                    strsql = strsql + " where td_clientcd= '" + userId + "'  and td_stlmnt = se_stlmnt and td_scripcd = ss_cd and td_dt='" + tdDt + "' ";
-                    strsql = strsql + " group by 'Equity : ' + td_stlmnt ,td_stlmnt,td_scripcd,ss_Name ,td_dt";
-                }
-                else
-                {
-                    //If IsTradeWeb is true means it will connect to TradeWeb Database
-                    strsql = " Select 1 as td_order,'Equity : ' + td_stlmnt as td_type, td_stlmnt,td_scripcd,replace(rtrim(td_scripnm)+' ('+td_scripcd+')','&','') td_scripnm, ";
-                    strsql = strsql + " sum(td_bqty) 'bqty',sum(convert(decimal(15,2),convert(money,td_bqty * td_rate))) 'bvalue', sum(td_sqty) 'sqty', ";
-                    strsql = strsql + " sum(convert(decimal(15,4),convert(money,td_sqty * td_rate))) 'svalue', sum(td_bqty - td_sqty) 'netqty', ";
-                    strsql = strsql + " sum(convert(decimal(15,4),convert(money,(td_sqty - td_bqty)*td_rate))) 'netvalue', ";
-                    strsql = strsql + " cast(convert(money,case when sum(td_bqty - td_sqty)=0 then 0 else sum((td_bqty-td_sqty)*td_rate)/sum(td_bqty-td_sqty) ";
-                    strsql = strsql + " end) as decimal(15,2)) 'average', ";
-                    strsql = strsql + " cast(sum(td_brokerage*(td_bqty+td_sqty)) as decimal(15,4)) td_Brokerage, ";
-                    strsql = strsql + " replace(td_stlmnt+td_dt+td_scripcd,'&','-') 'td_Lookup' ";
-                    strsql = strsql + " from trx with(" + StrTRXIndex + "nolock), Settlements with (nolock) ";
-                    strsql = strsql + " where td_clientcd= '" + userId + "'  and td_stlmnt = se_stlmnt and td_dt='" + tdDt + "' ";
-                    strsql = strsql + " group by td_stlmnt,td_scripcd,td_scripnm ,td_dt";
-                }
+                strsql = " Select 1 as SortOrder,'Equity : ' + td_stlmnt as type, td_stlmnt stlmnt,td_scripcd scripcode,replace(rtrim(ss_Name)+' ('+td_scripcd+')','&','') scripname, ";
+                strsql = strsql + " sum(td_bqty) 'Buy',sum(convert(decimal(15,2),convert(money,td_bqty * td_rate))) 'BuyAmount', sum(td_sqty) 'Sell', ";
+                strsql = strsql + " sum(convert(decimal(15,4),convert(money,td_sqty * td_rate))) 'SellAmount', sum(td_bqty - td_sqty) 'Net', ";
+                strsql = strsql + " sum(convert(decimal(15,4),convert(money,(td_sqty - td_bqty)*td_rate))) 'NetAmount', ";
+                strsql = strsql + " cast(convert(money,case when sum(td_bqty - td_sqty)=0 then 0 else sum((td_bqty-td_sqty)*td_rate)/sum(td_bqty-td_sqty) ";
+                strsql = strsql + " end) as decimal(15,2)) 'AvgRate', ";
+                strsql = strsql + " cast(sum(td_brokerage*(td_bqty+td_sqty)) as decimal(15,4)) Brokerage, ";
+                strsql = strsql + " left(td_stlmnt,1)+'/C/'+td_scripcd 'Lookup' ";
+                strsql = strsql + " from trx with(" + StrTRXIndex + "nolock) , securities with (nolock), Settlements with (nolock) ";
+                strsql = strsql + " where td_clientcd= '" + userId + "'  and td_stlmnt = se_stlmnt and td_scripcd = ss_cd and td_dt='" + dt + "' ";
+                strsql = strsql + " group by 'Equity : ' + td_stlmnt ,td_stlmnt,td_scripcd,ss_Name ,td_dt";
                 strsql = strsql + " Union All";
                 strsql = strsql + " select case right(sm_prodtype,1) when 'F' then 2 else 3 end, 'Equity '+ ";
                 strsql = strsql + " case right(sm_prodtype,1) when 'F' then 'Future' else 'Option' end td_type, 'Exp: '+";
@@ -4370,15 +3873,10 @@ namespace TradeWeb.API.Repository
                 strsql = strsql + " cast(convert(money,case when sum(td_bqty - td_sqty)=0 then 0 else sum((td_bqty-td_sqty)*td_rate)/sum(td_bqty-td_sqty)";
                 strsql = strsql + " end) as decimal(15,2)) 'average' ,";
                 strsql = strsql + " cast(sum(td_brokerage*(td_bqty+td_sqty)) as decimal(15,4)) td_brokerage,";
-                strsql = strsql + " replace(td_Exchange+td_Segment+td_dt+sm_expirydt+right(sm_prodtype,1)+sm_symbol+'/'+convert(char(9),sm_strikeprice)+sm_callput,'&','-') ";
-
-                if (_configuration["IsTradeWeb"] == "O")
-                    strsql = strsql + " from trades with(" + StrTradesIndex + "nolock), series_master with (nolock) ";
-                else
-                    strsql = strsql + " from trades with(" + StrTradesIndex + "nolock), series_master with (nolock) ";
-
-                strsql = strsql + " where td_clientcd='" + userId + "' and td_seriesid=sm_seriesid and td_Exchange = sm_exchange and td_Segment = sm_Segment and td_dt ='" + tdDt + "' and td_segment in ('F') ";
-                strsql = strsql + " group by sm_prodtype,sm_symbol,sm_desc, sm_expirydt, sm_strikeprice, sm_callput,sm_optionstyle,td_dt,td_Exchange,td_Segment";
+                strsql = strsql + " td_Exchange+'/'+td_Segment+'/'+Ltrim(convert(char,td_seriesid)) ";
+                strsql = strsql + " from trades with(" + StrTradesIndex + "nolock), series_master with (nolock) ";
+                strsql = strsql + " where td_clientcd='" + userId + "' and td_seriesid=sm_seriesid and td_Exchange = sm_exchange and td_Segment = sm_Segment and td_dt ='" + dt + "' and td_segment in ('F') ";
+                strsql = strsql + " group by sm_prodtype,sm_symbol,sm_desc, sm_expirydt, sm_strikeprice, sm_callput,sm_optionstyle,td_dt,td_Exchange,td_Segment,td_seriesid";
                 strsql = strsql + " Union All";
 
                 strsql = strsql + " select case ex_eaflag when 'E' then 4 else 5 end ,case ex_eaflag when 'E' then 'Exercise' else 'Assignment' ";
@@ -4387,11 +3885,11 @@ namespace TradeWeb.API.Repository
                 strsql = strsql + " ltrim( convert(char(8),sm_strikeprice))+sm_callput+sm_optionstyle+')','&',''), sum(ex_aqty) Bqty,  sum(ex_aqty*ex_diffrate) BAmt,";
                 strsql = strsql + " sum(ex_eqty) Sqty, sum(ex_eqty*ex_diffrate) SAmt, sum(ex_aqty-ex_eqty) NQty,  sum((ex_aqty-ex_eqty)*ex_diffrate) NAmt,";
                 strsql = strsql + " cast(convert(money,case when sum(ex_aqty-ex_eqty)=0 then 0 else sum((ex_aqty-ex_eqty)*ex_diffrate)/sum(ex_aqty-ex_eqty) end) as decimal(15,2)) 'average',";
-                strsql = strsql + " cast(sum(ex_brokerage*(ex_eqty+ex_aqty)) as decimal(15,4)) td_Brokerage,replace(ex_exchange+ex_Segment+ex_dt+sm_expirydt+right(sm_prodtype,1)+sm_symbol,'&','-') ";
+                strsql = strsql + " cast(sum(ex_brokerage*(ex_eqty+ex_aqty)) as decimal(15,4)) td_Brokerage,ex_exchange+'/'+ex_Segment+'/'+Ltrim(convert(char,ex_seriesid)) ";
 
                 strsql = strsql + " from exercise with (nolock), series_master with (nolock)";
-                strsql = strsql + " where ex_clientcd='" + userId + "' and ex_exchange=sm_exchange and ex_Segment=sm_Segment and ex_seriesid=sm_seriesid and ex_dt ='" + tdDt + "'";
-                strsql = strsql + " group by ex_eaflag, sm_symbol,sm_desc, sm_expirydt, sm_strikeprice, sm_callput,sm_optionstyle,ex_exchange,ex_Segment,ex_dt,sm_prodtype";
+                strsql = strsql + " where ex_clientcd='" + userId + "' and ex_exchange=sm_exchange and ex_Segment=sm_Segment and ex_seriesid=sm_seriesid and ex_dt ='" + dt + "'";
+                strsql = strsql + " group by ex_eaflag, sm_symbol,sm_desc, sm_expirydt, sm_strikeprice, sm_callput,sm_optionstyle,ex_exchange,ex_Segment,ex_dt,sm_prodtype,ex_seriesid";
                 strsql = strsql + " Union All";
 
                 strsql = strsql + " select case right(sm_prodtype,1) when 'F' then 6 else 7 end, case right(sm_prodtype,1) when 'F' then 'Currency Future'";
@@ -4401,156 +3899,73 @@ namespace TradeWeb.API.Repository
                 strsql = strsql + " sum(round(convert(money,td_sqty * td_rate*sm_multiplier),2)) , sum(td_bqty - td_sqty) ,";
                 strsql = strsql + " sum(round(convert(money,(td_sqty - td_bqty)*td_rate*sm_multiplier),4)) , ";
                 strsql = strsql + " cast(convert(money,case when sum(td_bqty - td_sqty)=0 then 0 else sum((td_sqty - td_bqty)*td_rate*sm_multiplier)/sum(td_bqty-td_sqty) end) as decimal(15,2)) ,";
-                strsql = strsql + " cast(sum(td_brokerage*(td_bqty+td_sqty)) as decimal(15,4)) td_brokerage, replace(td_exchange+td_Segment+td_dt+sm_expirydt+right(sm_prodtype,1)+sm_symbol+'/'+convert(char(9),sm_strikeprice)+sm_callput,'&','-')";
+                strsql = strsql + " cast(sum(td_brokerage*(td_bqty+td_sqty)) as decimal(15,4)) td_brokerage, td_Exchange+'/'+td_Segment+'/'+Ltrim(convert(char,td_seriesid)) ";
+                strsql = strsql + " from trades with(" + StrTradesIndex + "nolock), series_master with (nolock)";
+                strsql = strsql + " where td_clientcd='" + userId + "' and td_seriesid=sm_seriesid and td_Exchange = sm_exchange and td_Segment = sm_Segment and td_dt ='" + dt + "' and td_Segment in ('K')";
+                strsql = strsql + " group by sm_prodtype,sm_symbol,sm_desc, sm_expirydt, sm_callput, sm_strikeprice, td_exchange,td_Segment,td_dt,td_seriesid ";
 
-                if (_configuration["IsTradeWeb"] == "O")
-                    strsql = strsql + " from trades with(" + StrTradesIndex + "nolock), series_master with (nolock)";
-                else
-                    strsql = strsql + " from trades with(" + StrTradesIndex + "nolock), series_master with (nolock)";
-
-                strsql = strsql + " where td_clientcd='" + userId + "' and td_seriesid=sm_seriesid and td_Exchange = sm_exchange and td_Segment = sm_Segment and td_dt ='" + tdDt + "' and td_Segment in ('K')";
-                strsql = strsql + " group by sm_prodtype,sm_symbol,sm_desc, sm_expirydt, sm_callput, sm_strikeprice, td_exchange,td_Segment,td_dt  ";
-
-                if (_configuration["IsTradeWeb"] == "T" || (_configuration["IsTradeWeb"] == "O" && _configuration["Commex"] != string.Empty))
+                if (_configuration["Commex"] != string.Empty)
                 {
+
+                    string StrCommexConn = "";
+                    StrCommexConn = objUtility.GetCommexConnection();
+                    if (Convert.ToInt16(objUtility.fnFireQueryTradeWeb(StrCommexConn + ".sysobjects a, " + StrCommexConn + ".sysindexes b", "COUNT(0)", "a.id = b.id and a.name = 'trades' and b.name", "idx_trades_clientcd", true)) == 1)
+                    { StrComTradesIndex = "index(idx_trades_clientcd),"; }
+
                     strsql = strsql + " Union All";
-                    strsql = strsql + " select 8, 'Commodity Futures' as  td_type, 'Exp: ' +convert(char(10),convert(datetime,sm_expirydt),105),'', ";
-                    strsql = strsql + " replace(sm_symbol,'&',''),sum(td_bqty) ,sum(round(convert(money,td_bqty * td_rate),4)) , sum(td_sqty) ,  ";
+
+                    strsql = strsql + " select case right(sm_prodtype,1) when 'F' then 8 else 9 end, case right(sm_prodtype,1) when 'F' then 'Commodity Future'";
+                    strsql = strsql + " else 'Commodity Option' end td_type, 'Exp: ' +convert(char(10),convert(datetime,sm_expirydt),105), case right(sm_prodtype,1)";
+                    strsql = strsql + " when 'F' then '' else convert(char(8),sm_strikeprice)+sm_callput end,replace(sm_symbol,'&',''), sum(td_bqty) ,";
+                    strsql = strsql + " sum(round(convert(money,td_bqty * td_rate),4)) , sum(td_sqty) ,  ";
                     strsql = strsql + " sum(round(convert(money,td_sqty * td_rate),4)) , sum(td_bqty - td_sqty) ,  ";
                     strsql = strsql + " sum(round(convert(money,(td_sqty - td_bqty)*td_rate),4)) , ";
                     strsql = strsql + " cast(convert(money,case when sum(td_bqty - td_sqty)=0 then 0 else sum((td_sqty - td_bqty)*td_rate)/sum(td_bqty-td_sqty) end) as decimal(15,4)),";
-                    strsql = strsql + " cast(sum(td_brokerage*(td_bqty+td_sqty)*sm_multiplier) as decimal(15,4)), replace(td_exchange+td_dt+sm_expirydt+right(sm_prodtype,1)+sm_symbol,'&','-')";
-
-
-                    if (_configuration["IsTradeWeb"] == "O")
-                    {
-                        if (_configuration["Commex"] != null && _configuration["Commex"] != string.Empty)
-                        {
-
-                            string StrCommexConn = "";
-                            StrCommexConn = objUtility.GetCommexConnection();
-                            if (Convert.ToInt16(objUtility.fnFireQueryTradeWeb(StrCommexConn + ".sysobjects a, " + StrCommexConn + ".sysindexes b", "COUNT(0)", "a.id = b.id and a.name = 'trades' and b.name", "idx_trades_clientcd", true)) == 1)
-                            { StrComTradesIndex = "index(idx_trades_clientcd),"; }
-                            strsql = strsql + " from " + StrCommexConn + ".trades with(" + StrComTradesIndex + "nolock)  ," + StrCommexConn + ".Series_master with (nolock) ";
-                        }
-                    }
-                    else
-                    {
-                        string StrCTradesIndex = "";
-                        if (Convert.ToInt16(objUtility.fnFireQueryTradeWeb("sysobjects a, sysindexes b", "COUNT(0)", "a.id = b.id and a.name = 'Ctrades' and b.name", "idx_Ctrades_clientcd", true)) == 1)
-                        { StrCTradesIndex = "index(idx_Ctrades_clientcd),"; }
-                        strsql = strsql + " from Ctrades with (" + StrCTradesIndex + "nolock),Cseries_master with (nolock)";
-                    }
+                    strsql = strsql + " cast(sum(td_brokerage*(td_bqty+td_sqty)*sm_multiplier) as decimal(15,4)),td_Exchange+'/'+'X'+'/'+Ltrim(convert(char,td_seriesid)) ";
+                    strsql = strsql + " from " + StrCommexConn + ".trades with(" + StrComTradesIndex + "nolock)  ," + StrCommexConn + ".Series_master with (nolock) ";
                     strsql = strsql + " where td_clientcd='" + userId + "' and td_seriesid=sm_seriesid and td_Exchange = sm_exchange ";
-                    strsql = strsql + " and td_dt ='" + tdDt + "'";
-                    strsql = strsql + " group by sm_prodtype,sm_symbol,sm_desc, sm_expirydt, td_exchange ";
-                    strsql = strsql + " ,td_dt";
+                    strsql = strsql + " and td_dt ='" + dt + "'";
+                    strsql = strsql + " group by sm_prodtype,sm_symbol,sm_desc, sm_expirydt, sm_callput, sm_strikeprice, td_exchange,td_dt,td_seriesid";
                 }
-                strsql = strsql + " Order by td_order,td_stlmnt,td_scripnm ";
+                strsql = " select * from (" + strsql + ") a Order by SortORder,stlmnt,scripname ";
 
                 ObjDataSet = objUtility.OpenDataSet(strsql);
             }
-            else if (lstConfirmationSelectIndex == 1) //confirmation
+            else if (type == 1) //confirmation
             {
                 string Strsql = string.Empty;
 
-                if (_configuration["IsTradeWeb"] == "O")//live
-                {
-                    Strsql = " SELECT 1 as orderid,1 as td_order,'Equity : ' + td_stlmnt as td_type,td_stlmnt, td_scripcd,replace(ss_name,'&','') as td_scripnm, td_bqty as bqty, td_sqty as sqty, cast((td_marketrate) as decimal(15,4)) as rate, cast((td_rate) as decimal(15,4)) as netrate,cast((((td_bqty + td_sqty) * td_rate)) * (Case td_bsflag when 'S' then '-1' else '1' end ) as decimal(15,2)) amount,cast((td_brokerage)as decimal(15,4)) td_brokerage,replace(td_stlmnt+td_dt+td_scripcd,'&','-') as td_lookup,td_bsflag ";
-                    Strsql = Strsql + " FROM trx with(" + StrTRXIndex + "nolock), Settlements with (nolock),securities with (nolock) ";
-                    Strsql = Strsql + " WHERE td_clientcd='" + userId + "'  and td_stlmnt = se_stlmnt and td_dt='" + tdDt + "' and td_scripcd=ss_cd";
-                }
-                else
-                {
-                    Strsql = " SELECT   1 as orderid,1 as td_order,'Equity : ' + td_stlmnt as td_type,td_stlmnt, td_scripcd,  replace(td_scripnm,'&','') td_scripnm, td_bqty as bqty, td_sqty as sqty, cast((td_marketrate) as decimal(15,4)) as rate, cast((td_rate) as decimal(15,4)) as netrate,cast((((td_bqty + td_sqty) * td_rate)) * (Case td_bsflag when 'S' then '-1' else '1' end )  as decimal(15,2)) amount,cast((td_brokerage)as decimal(15,4)) td_brokerage,replace(td_stlmnt+td_dt+td_scripcd,'&','-') as td_lookup,td_bsflag ";
-                    Strsql = Strsql + " FROM trx with(" + StrTRXIndex + "nolock), Settlements with (nolock)   ";
-                    Strsql = Strsql + " WHERE td_clientcd='" + userId + "'  and td_stlmnt = se_stlmnt and td_dt='" + tdDt + "' "; //and td_scripcd=ss_cd
-
-                    //ADDED at 23-May-2011
-
-                    Strsql = Strsql + " union all ";
-                    Strsql = Strsql + " select 2 as orderid,1,'Equity : ' + sh_stlmnt,sh_stlmnt,'', replace(rtrim(sh_desc),'&','') ,0,0 as sqty,0 as rate,0 as netrate,cast((sh_amount) as decimal(15,2))   as amount,";
-                    Strsql = Strsql + " 0 as brokerage, '' as lookup,'' ";
-                    Strsql = Strsql + " from Specialcharges with (nolock),settlements with (nolock) where sh_clientcd='" + userId + "' ";
-                    Strsql = Strsql + " and se_stdt='" + tdDt + "' ";
-                    Strsql = Strsql + " and sh_stlmnt = se_Stlmnt   ";
-                    Strsql = Strsql + " group by sh_stlmnt ,sh_amount,sh_desc  ";
-                    /////------------------------
-                }
-
+                Strsql = " SELECT 1 as SorORder,'Equity : ' + td_stlmnt as type,td_stlmnt stlmnt, td_scripcd scripcode,replace(ss_name,'&','') as scripname, td_bqty as buy, td_sqty as sell, cast((td_marketrate) as decimal(15,4)) as marketrate, cast((td_rate) as decimal(15,4)) as netrate,cast((((td_bqty + td_sqty) * td_rate)) * (Case td_bsflag when 'S' then '-1' else '1' end ) as decimal(15,2)) netamount,cast((td_brokerage)as decimal(15,4)) brokerage,td_stlmnt+'/'+td_scripcd as lookup ";
+                Strsql = Strsql + " FROM trx with(" + StrTRXIndex + "nolock), Settlements with (nolock),securities with (nolock) ";
+                Strsql = Strsql + " WHERE td_clientcd='" + userId + "'  and td_stlmnt = se_stlmnt and td_dt='" + dt + "' and td_scripcd=ss_cd";
                 Strsql = Strsql + " union all ";
-                //Strsql = Strsql + " Select  3,2 as td_order,case right(sm_prodtype,1) when 'F' then 'Future' else 'Option' end td_type,'',sm_symbol,sm_desc,td_bqty as bqty, ";
-                Strsql = Strsql + " Select  3,2 as td_order,Case td_segment when 'F' then case TD_EXCHANGE When 'N' Then 'NSE F&O' When 'B' Then 'BSE F&O' end  when 'K' then case TD_EXCHANGE When 'M' Then 'MCX FX' When 'N' Then 'NSE FX' end end td_type,'',sm_symbol,replace(sm_desc,'&',''),td_bqty as bqty, ";
-                Strsql = Strsql + " td_sqty as sqty, cast((td_marketrate)as decimal(15,4)) as diffrate,cast((td_rate)as decimal(15,4)) as netrate,convert(decimal(15,2),(td_bqty - td_sqty) * td_rate * sm_multiplier)  as amount,cast((td_brokerage)as decimal(15,4)),replace((td_exchange+td_Segment+td_dt+sm_expirydt+right(sm_prodtype,1)+sm_symbol+'/'+convert(char(9),sm_strikeprice)+sm_callput),'&','-') as td_lookup,td_bsflag from trades with(" + StrTradesIndex + "nolock),series_master with (nolock) where td_seriesid=sm_seriesid and td_Exchange = sm_exchange and td_Segment = sm_Segment and td_clientcd='" + userId + "'  and  ";
-                Strsql = Strsql + " td_dt ='" + tdDt + "' and td_trxflag='N' ";
+                Strsql = Strsql + " Select 2 as td_order,Case td_segment when 'F' then case TD_EXCHANGE When 'N' Then 'NSE F&O' When 'B' Then 'BSE F&O' end  when 'K' then case TD_EXCHANGE When 'M' Then 'MCX FX' When 'N' Then 'NSE FX' end end td_type,'',sm_symbol,replace(sm_desc,'&',''),td_bqty as bqty, ";
+                Strsql = Strsql + " td_sqty as sqty, cast((td_marketrate)as decimal(15,4)) as diffrate,cast((td_rate)as decimal(15,4)) as netrate,convert(decimal(15,2),(td_bqty - td_sqty) * td_rate * sm_multiplier)  as amount,cast((td_brokerage)as decimal(15,4)),td_exchange+'/'+td_Segment+'/'+ convert(char,td_seriesid)  as td_lookup from trades with(" + StrTradesIndex + "nolock),series_master with (nolock) where td_seriesid=sm_seriesid and td_Exchange = sm_exchange and td_Segment = sm_Segment and td_clientcd='" + userId + "'  and  ";
+                Strsql = Strsql + " td_dt ='" + dt + "' and td_trxflag='N' ";
 
-                if (_configuration["IsTradeWeb"] == "T")//
+                if (_configuration["Commex"] != null && _configuration["Commex"] != string.Empty)
                 {
-                    //ADDED at 23-May-2011
-                    Strsql = Strsql + " union all ";
-                    //Strsql = Strsql + " select 4,2, '', '','' as symbol, ";
-                    Strsql = Strsql + " select 4,2,";
-                    Strsql = Strsql + " Case fc_Segment  ";
-                    Strsql = Strsql + "    when 'F' then case fc_exchange When 'N' Then 'NSE F&O' When 'B' Then 'BSE F&O' end  ";
-                    Strsql = Strsql + "    when 'K' then case fc_exchange When 'M' Then 'MCX FX' When 'N' Then 'NSE FX' end ";
-                    Strsql = Strsql + " end td_type , '','' as symbol, ";
-                    Strsql = Strsql + " replace(fc_desc,'&',''),0,0,0,0,cast((sum(fc_amount)) as decimal (15,4)),0,'',''";
-                    Strsql = Strsql + " from fspecialcharges with (nolock) where fc_clientcd='" + userId + "' and fc_exchange in ('B','N','M') ";
-                    Strsql = Strsql + " and fc_dt='" + tdDt + "' group by fc_dt,fc_dt,fc_desc,fc_exchange,fc_Segment ";
-                    /////------------------------
-                }
 
-                if (_configuration["IsTradeWeb"] == "O")
-                {
-                    if (_configuration["Commex"] != null && _configuration["Commex"] != string.Empty)
-                    {
+                    string StrCommexConn = "";
+                    StrCommexConn = objUtility.GetCommexConnection();
 
-                        string StrCommexConn = "";
-                        StrCommexConn = objUtility.GetCommexConnection();
-
-                        if (Convert.ToInt16(objUtility.fnFireQueryTradeWeb(StrCommexConn + ".sysobjects a, " + StrCommexConn + ".sysindexes b", "COUNT(0)", "a.id = b.id and a.name = 'trades' and b.name", "idx_trades_clientcd", true)) == 1)
-                        { StrComTradesIndex = "index(idx_trades_clientcd),"; }
-
-                        Strsql = Strsql + " union all ";
-                        Strsql = Strsql + " Select 5,3,case ex_eaflag when 'E' then 'Exercise' else 'Assignment' end td_type,'',sm_symbol,replace(sm_desc,'&',''), (ex_eqty * (-1)) as bqty, (ex_aqty * (-1)) as sqty, cast((ex_diffrate) as decimal(15,4)) as diffrate, ";
-                        Strsql = Strsql + " cast((ex_mainbrdiffrate) as decimal(15,4)) as netrate,0,cast((ex_brokerage) as decimal(15,4)),replace((ex_exchange+ex_Segment+ex_dt+sm_expirydt+right(sm_prodtype,1)+sm_symbol+'/'+convert(char(9),sm_strikeprice)+sm_callput),'&','-') as td_lookup,'' from exercise with (nolock),series_master with (nolock) where ex_exchange=sm_exchange and sm_Segment=ex_Segment and  sm_seriesid=ex_seriesid and ex_clientcd='" + userId + "'  and ex_dt ='" + tdDt + "' ";
-                        Strsql = Strsql + " union all ";
-                        Strsql = Strsql + " Select 6,4 as td_order,CASE TD_EXCHANGE When 'N' Then 'NCDX Commodities' When 'M' Then 'MCX Commodities' When 'S' Then 'NSEL Commodities' When 'D' Then 'NSX Commodities' end as td_type,'',sm_symbol,replace(sm_desc,'&',''),td_bqty as bqty, ";
-                        Strsql = Strsql + " td_sqty as sqty,cast((td_marketrate) as decimal(15,4)) as diffrate,cast((td_rate)as decimal(15,4)) as netrate,convert(decimal(15,2),td_rate*(td_bqty-td_sqty)*sm_multiplier),cast((td_brokerage)as decimal(15,4)),replace(td_exchange+td_dt+sm_expirydt+right(sm_prodtype,1)+sm_symbol,'&','-') as td_lookup,td_bsflag ";
-                        Strsql = Strsql + " from " + StrCommexConn + ".trades with(" + StrComTradesIndex + "nolock) ," + StrCommexConn + ".series_master with (nolock) ";
-                        Strsql = Strsql + " where sm_seriesid=td_seriesid and sm_exchange=td_exchange ";
-                    }
-                }
-                else
-                {
-                    string StrCTradesIndex = "";
-                    if (Convert.ToInt16(objUtility.fnFireQueryTradeWeb("sysobjects a, sysindexes b", "COUNT(0)", "a.id = b.id and a.name = 'Ctrades' and b.name", "idx_Ctrades_clientcd", true)) == 1)
-                    { StrCTradesIndex = "index(idx_Ctrades_clientcd),"; }
+                    if (Convert.ToInt16(objUtility.fnFireQueryTradeWeb(StrCommexConn + ".sysobjects a, " + StrCommexConn + ".sysindexes b", "COUNT(0)", "a.id = b.id and a.name = 'trades' and b.name", "idx_trades_clientcd", true)) == 1)
+                    { StrComTradesIndex = "index(idx_trades_clientcd),"; }
 
                     Strsql = Strsql + " union all ";
-                    Strsql = Strsql + " Select 5,3,case ex_eaflag when 'E' then 'Exercise' else 'Assignment' end td_type,'',sm_symbol,replace(sm_desc,'&',''), (ex_eqty * (-1)) as bqty, (ex_aqty * (-1)) as sqty, cast((ex_diffrate) as decimal(15,4)) as diffrate, ";
-                    Strsql = Strsql + " cast((ex_mainbrdiffrate) as decimal(15,4)) as netrate,0,cast((ex_brokerage) as decimal(15,2)),replace((ex_exchange+ex_Segment+ex_dt+sm_expirydt+right(sm_prodtype,1)+sm_symbol+'/'+convert(char(9),sm_strikeprice)+sm_callput),'&','-') as td_lookup,'' from exercise with (nolock),series_master with (nolock) where ex_exchange=sm_exchange and sm_Segment=ex_Segment and  sm_seriesid=ex_seriesid and ex_clientcd='" + userId + "'  and ex_dt ='" + tdDt + "' ";
+                    Strsql = Strsql + " Select 3,case ex_eaflag when 'E' then 'Exercise' else 'Assignment' end td_type,'',sm_symbol,replace(sm_desc,'&',''), (ex_eqty * (-1)) as bqty, (ex_aqty * (-1)) as sqty, cast((ex_diffrate) as decimal(15,4)) as diffrate, ";
+                    Strsql = Strsql + " cast((ex_mainbrdiffrate) as decimal(15,4)) as netrate,0,cast((ex_brokerage) as decimal(15,4)),ex_exchange+'/'+ex_Segment+ Ltrim(convert(char,ex_seriesid)) as td_lookup from exercise with (nolock),series_master with (nolock) where ex_exchange=sm_exchange and sm_Segment=ex_Segment and  sm_seriesid=ex_seriesid and ex_clientcd='" + userId + "'  and ex_dt ='" + dt + "' ";
                     Strsql = Strsql + " union all ";
-                    Strsql = Strsql + " Select 6,4 as td_order,CASE TD_EXCHANGE When 'N' Then 'NCDX Commodities' When 'M' Then 'MCX Commodities' When 'S' Then 'NSEL Commodities' When 'D' Then 'NSX Commodities' end as td_type,'',sm_symbol,replace(sm_desc,'&',''),td_bqty as bqty, ";
-                    Strsql = Strsql + " td_sqty as sqty,cast((td_marketrate) as decimal(15,4)) as diffrate,cast((td_rate)as decimal(15,4)) as netrate,convert(decimal(15,2),td_rate*(td_bqty-td_sqty)*sm_multiplier),cast((td_brokerage)as decimal(15,4)),replace(td_exchange+td_dt+sm_expirydt+right(sm_prodtype,1)+sm_symbol,'&','-') as td_lookup,td_bsflag ";
-                    Strsql = Strsql + " from ctrades with (" + StrCTradesIndex + "nolock),cseries_master with (nolock) where sm_seriesid=td_seriesid and sm_exchange=td_exchange  ";
+                    Strsql = Strsql + " Select 4 as td_order,CASE TD_EXCHANGE When 'N' Then 'NCDX Commodities' When 'M' Then 'MCX Commodities' When 'S' Then 'NSEL Commodities' When 'D' Then 'NSX Commodities' end as td_type,'',sm_symbol,replace(sm_desc,'&',''),td_bqty as bqty, ";
+                    Strsql = Strsql + " td_sqty as sqty,cast((td_marketrate) as decimal(15,4)) as diffrate,cast((td_rate)as decimal(15,4)) as netrate,convert(decimal(15,2),td_rate*(td_bqty-td_sqty)*sm_multiplier),cast((td_brokerage)as decimal(15,4)),td_exchange+'/X/'+ convert(char,td_seriesid) as td_lookup ";
+                    Strsql = Strsql + " from " + StrCommexConn + ".trades with(" + StrComTradesIndex + "nolock) ," + StrCommexConn + ".series_master with (nolock) ";
+                    Strsql = Strsql + " where sm_seriesid=td_seriesid and sm_exchange=td_exchange ";
                 }
-                // Strsql = Strsql + " from Ctrades with (nolock),Cseries_master with (nolock) ";
+
                 Strsql = Strsql + " and td_clientcd='" + userId + "'  and  ";
-                Strsql = Strsql + " td_dt ='" + tdDt + "' and td_trxflag='N' ";
+                Strsql = Strsql + " td_dt ='" + dt + "' and td_trxflag='N' ";
 
-                if (_configuration["IsTradeWeb"] == "T")//
-                {
-                    //ADDED at 23-May-2011
-                    Strsql = Strsql + " union all ";
-                    Strsql = Strsql + " select 7,4 as td_order, CASE fc_exchange When 'N' Then 'NCDX Commodities' When 'M' Then 'MCX Commodities' When 'S' Then 'NSEL Commodities' When 'D' Then 'NSX Commodities' end as td_type,'','',replace(fc_desc,'&',''),0,";
-                    Strsql = Strsql + " 0,0,0,0,cast((fc_amount) as decimal(15,2)),'','' ";
-                    Strsql = Strsql + " from cfspecialcharges with (nolock) where fc_clientcd = '" + userId + "' and fc_dt = '" + tdDt + "' ";
-                    Strsql = Strsql + " group by fc_exchange,fc_amount,fc_desc ";
-                    /////------------------------
-                }
-
-                Strsql = Strsql + " order by td_type,orderid,td_order,td_stlmnt,td_scripnm ";
+                Strsql = "select * from (" + Strsql  + ") a order by SorORder,type,stlmnt,scripname ";
 
                 ObjDataSet = objUtility.OpenDataSet(Strsql);
             }
@@ -4559,7 +3974,7 @@ namespace TradeWeb.API.Repository
         }
 
         // get dropdown menu cumulative details data
-        public string GetQueryCumulativeDetails(string td_clientcd, string StrOrder, string StrScripCode, string Strbsflag, string StrDate, string StrLookup)
+        public string Transaction_Detail_Query(string userId, string exch, string seg, int type, string fromdate, string todate, string scripcode)
         {
             string Strsql = "";
             string StrTRXIndex = string.Empty;
@@ -4571,196 +3986,113 @@ namespace TradeWeb.API.Repository
             { StrTradesIndex = "index(idx_trades_clientcd),"; }
 
 
-            if (StrOrder == "1")
+            if (seg == "C")
             {
-                if (_configuration["IsTradeWeb"] == "O")
+                if (type == 0 || type == 1)
                 {
-                    //If IsTradeWeb is false means it will connect to TradePlus Database(Live)
-                    Strsql = " Select 1 as td_order,'Equity' as td_type, td_stlmnt,td_scripcd,rtrim(ss_Name)+' ('+td_scripcd+')' td_scripnm, ";
-                    Strsql = Strsql + " sum(td_bqty) 'bqty',sum(round(convert(money,td_bqty * td_rate),4)) 'bvalue', sum(td_sqty) 'sqty', ";
-                    Strsql = Strsql + " sum(round(convert(money,td_sqty * td_rate),4)) 'svalue', sum(td_bqty - td_sqty) 'netqty', ";
-                    Strsql = Strsql + " sum(round(convert(money,(td_sqty - td_bqty)*td_rate),4)) 'netvalue', ";
+                    Strsql = " Select 1 as SortOrder,'Equity' as type, td_stlmnt as stlmnt,td_scripcd scripcd ,rtrim(ss_Name)+' ('+td_scripcd+')' scripname, ";
+                    Strsql = Strsql + " sum(td_bqty) 'Buy',sum(round(convert(money,td_bqty * td_rate),4)) 'BuyAmount', sum(td_sqty) 'Sell', ";
+                    Strsql = Strsql + " sum(round(convert(money,td_sqty * td_rate),4)) 'Sellamount', sum(td_bqty - td_sqty) 'Net', ";
+                    Strsql = Strsql + " sum(round(convert(money,(td_sqty - td_bqty)*td_rate),4)) 'NetAmount', ";
                     Strsql = Strsql + " cast(convert(money,case when sum(td_bqty - td_sqty)=0 then 0 else sum((td_bqty-td_sqty)*td_rate)/sum(td_bqty-td_sqty) ";
-                    Strsql = Strsql + " end) as decimal(15,2)) 'average', ";
-                    Strsql = Strsql + " cast(sum(td_brokerage*(td_bqty+td_sqty)) as decimal(15,4)) td_Brokerage, ";
-                    Strsql = Strsql + " td_stlmnt+td_dt+td_scripcd 'td_Lookup' ";
+                    Strsql = Strsql + " end) as decimal(15,2)) 'AvgRate', ";
+                    Strsql = Strsql + " cast(sum(td_brokerage*(td_bqty+td_sqty)) as decimal(15,4)) Brokerage,td_orderid orderid,td_tradeid tradeid,td_time trdtime,";
+                    Strsql = Strsql + " case when sum(td_bqty) > 0 Then round(sum(td_bqty * td_rate)/sum(td_bqty),4) else 0 end BuyRate,";
+                    Strsql = Strsql + " case when sum(td_sqty) > 0 Then round(sum(td_sqty * td_rate)/sum(td_sqty),4) else 0 end SellRate";
                     Strsql = Strsql + " from Trx with (nolock), securities with (nolock), Settlements with (nolock) ";
-                    Strsql = Strsql + " where td_clientcd= '" + td_clientcd + "' and td_stlmnt = se_stlmnt and td_scripcd = ss_cd and td_dt='" + StrDate + "' ";
-                    if (StrScripCode.Trim() != "")
-                    { Strsql += " and td_scripcd = '" + StrScripCode.Trim() + "'"; }
-                    if (Strbsflag.Trim() != "")
-                    { Strsql += " and td_bsflag = '" + Strbsflag.Trim() + "'"; }
-                    Strsql = Strsql + " group by td_stlmnt,td_scripcd,ss_Name ,td_dt";
-                }
-                else
-                {
-                    Strsql = "Select 1 as td_order,'Equity' as td_type, td_stlmnt,td_scripcd,rtrim(td_scripnm)+' ('+td_scripcd+')' td_scripnm,";
-                    Strsql = Strsql + " sum(td_bqty) 'bqty',sum(round(convert(money,td_bqty * td_rate),4)) 'bvalue', sum(td_sqty) 'sqty', ";
-                    Strsql = Strsql + " sum(round(convert(money,td_sqty * td_rate),4)) 'svalue', sum(td_bqty - td_sqty) 'netqty', ";
-                    Strsql = Strsql + " sum(round(convert(money,(td_sqty - td_bqty)*td_rate),4)) 'netvalue',  ";
-                    Strsql = Strsql + " cast(convert(money,case when sum(td_bqty - td_sqty)=0 then 0 else ";
-                    Strsql = Strsql + " sum((td_bqty-td_sqty)*td_rate)/sum(td_bqty-td_sqty)  end) as decimal(15,2)) 'average', ";
-                    Strsql = Strsql + " cast(sum(td_brokerage*(td_bqty+td_sqty)) as decimal(15,4)) td_Brokerage,  td_stlmnt+td_dt+td_scripcd 'td_Lookup' ";
-                    Strsql = Strsql + " from Trx with(" + StrTRXIndex + "nolock) , Settlements with (nolock)  where td_clientcd= '" + td_clientcd + "'  ";
-                    Strsql = Strsql + " and td_stlmnt = se_stlmnt  and td_dt='" + StrDate + "' and td_stlmnt+td_dt+td_scripcd='" + StrLookup + "' ";
-                    if (Strbsflag.Trim() != "")
-                    { Strsql += " and td_bsflag = '" + Strbsflag.Trim() + "'"; }
-                    Strsql = Strsql + "  group by td_stlmnt,td_scripcd,td_scripnm ,td_dt ";
+                    Strsql = Strsql + " where td_clientcd= '" + userId + "' and td_stlmnt = se_stlmnt and td_scripcd = ss_cd ";
+                    if (exch != "" && exch != null) { Strsql = Strsql + " and left(td_stlmnt,1) = '" + exch + "'"; }
+                    Strsql = Strsql + " and td_dt between '" + fromdate + "' and '" + todate + "'";
+                    if (scripcode != "" && scripcode != null) { Strsql += " and td_scripcd = '" + scripcode.Trim() + "'";}
+                    Strsql = Strsql + " group by td_stlmnt,td_scripcd,ss_Name ,td_dt,td_tradeid,td_time";
                 }
             }
-            else if (StrOrder == "2")
+            else if (seg == "F" || seg == "K")
             {
-                Strsql = "select case right(sm_prodtype,1) when 'F' then 2 else 3 end, 'Equity '+  case right(sm_prodtype,1) ";
-                Strsql = Strsql + " when 'F' then 'Future' else 'Option' end td_type, 'Exp: '+ convert(char(10),convert(datetime,sm_expirydt),105) as td_stlmnt, case right(sm_prodtype,1) ";
-                Strsql = Strsql + " when 'F' then '' else ltrim(convert(char(8),sm_strikeprice))+sm_callput end ,rtrim(sm_symbol)+case right(sm_prodtype,1)  when 'F' then ''  else ' ('+ltrim(convert(char(8),sm_strikeprice))+sm_callput+')' end as td_Scripnm ,sum(td_bqty) 'bqty',  ";
-                Strsql = Strsql + " sum(round(convert(money,td_bqty * td_rate),4)) 'bvalue', sum(td_sqty) 'sqty',";
-                Strsql = Strsql + " sum(round(convert(money,td_sqty * td_rate),4)) 'svalue', sum(td_bqty - td_sqty) 'netqty',   sum(round(convert(money,(td_sqty - td_bqty)*td_rate),4)) 'netvalue', ";
-                Strsql = Strsql + " cast(convert(money,case when sum(td_bqty - td_sqty)=0 then 0 else  sum((td_bqty-td_sqty)*td_rate)/sum(td_bqty-td_sqty) end) as decimal(15,2)) 'average' , ";
-                Strsql = Strsql + " cast(sum(td_brokerage*(td_bqty*td_sqty)) as decimal(15,4)) td_brokerage,  'N'+td_dt+sm_expirydt+right(sm_prodtype,1)+ sm_symbol+'/'+convert(char(9),sm_strikeprice)+sm_callput ";
-
-                if (_configuration["IsTradeWeb"] == "O")
-                { Strsql = Strsql + " from trades with (nolock) , series_master with (nolock) "; }
-                else
-                { Strsql = Strsql + " from  trades with(" + StrTradesIndex + "nolock), series_master with (nolock) "; }
-
-                Strsql = Strsql + " where td_clientcd='" + td_clientcd + "' and  td_exchange+td_segment+td_dt+sm_expirydt+right(sm_prodtype,1)+ sm_symbol+'/'+convert(char(9),sm_strikeprice)+sm_callput='" + StrLookup + "' and td_seriesid=sm_seriesid and td_trxFlag = 'N' and td_dt='" + StrDate + "'";
-                Strsql = Strsql + " group by sm_prodtype,sm_symbol,sm_desc, sm_expirydt, sm_strikeprice, sm_callput,td_dt ";
-                Strsql = Strsql + " Union All ";
-
-                Strsql = Strsql + " select case ex_eaflag when 'E' then 4 else 5 end ,case ex_eaflag when 'E' then 'Exercise' else 'Assignment'  end Td_Type, 'Exp: ' +convert(char(10), ";
-                Strsql = Strsql + " convert(datetime,sm_expirydt),105), ltrim( convert(char(8),sm_strikeprice))+sm_callput,   rtrim(sm_symbol)+' ('+ ltrim( convert(char(8),sm_strikeprice))+sm_callput+')', sum(ex_aqty) Bqty, ";
-                Strsql = Strsql + " sum(ex_aqty*ex_diffrate) BAmt, sum(ex_eqty) Sqty, sum(ex_eqty*ex_diffrate) SAmt, sum(ex_aqty-ex_eqty) NQty,   sum((ex_aqty-ex_eqty)*ex_diffrate) NAmt, ";
-                Strsql = Strsql + " cast(convert(money,case when sum(ex_aqty-ex_eqty)=0 then 0  else sum((ex_aqty-ex_eqty)*ex_diffrate)/sum(ex_aqty-ex_eqty) end) as decimal(15,2)) 'average', ";
-                Strsql = Strsql + " cast(sum(ex_brokerage*(ex_eqty+ex_aqty)) as decimal(15,4)) td_Brokerage, ex_exchange+ex_Segment+ex_dt+sm_expirydt+ right(sm_prodtype,1)+sm_symbol ";
-                Strsql = Strsql + " from exercise with (nolock), series_master with (nolock) where ex_clientcd='" + td_clientcd + "' and  ";
-                Strsql = Strsql + " ex_exchange=sm_exchange and ex_Segment=sm_Segment and ex_seriesid=sm_seriesid and  ex_exchange+ex_Segment+ex_dt+sm_expirydt+ right(sm_prodtype,1)+sm_symbol='" + StrLookup + "' and ex_dt='" + StrDate + "' group by ex_eaflag, sm_symbol,sm_desc, ";
-                Strsql = Strsql + " sm_expirydt, sm_strikeprice, sm_callput,ex_exchange,ex_Segment,ex_dt,sm_prodtype  ";
-            }
-
-            else if (StrOrder == "3")
-            {
-                Strsql = " select case right(sm_prodtype,1) when 'F' then 6 else 7 end,  case right(sm_prodtype,1) when 'F' then 'CurrentFuture' else 'CurrentOption' end td_type,";
-                Strsql = Strsql + " 'Exp: ' +convert(char(10),convert(datetime,sm_expirydt),105) as td_stlmnt,  case right(sm_prodtype,1) when 'F' then '' else convert(char(8),sm_strikeprice)+sm_callput end,sm_symbol,  ";
-                Strsql = Strsql + " sum(td_bqty) , sum(round(convert(money,td_bqty * td_rate*sm_multiplier),4)) , sum(td_sqty) ,  sum(round(convert(money,td_sqty * td_rate*sm_multiplier),4)) , sum(td_bqty - td_sqty) , ";
-                Strsql = Strsql + " sum(round(convert(money,(td_sqty - td_bqty)*td_rate*sm_multiplier),2)) ,   cast(convert(money,case when sum(td_bqty - td_sqty)=0 then 0  ";
-                Strsql = Strsql + " else sum((td_sqty - td_bqty)*td_rate*sm_multiplier)/sum(td_bqty-td_sqty) end) as decimal(15,4)) ,  cast(sum(td_brokerage*(td_bqty+td_sqty)) as decimal(15,4)) td_brokerage, ";
-                Strsql = Strsql + " (td_exchange+td_Segment+td_dt+sm_expirydt+right(sm_prodtype,1)+sm_symbol+'/'+convert(char(9),sm_strikeprice)+sm_callput)  as td_lookup ";
-                if (_configuration["IsTradeWeb"] == "O")
-                { Strsql = Strsql + " from trades with (nolock), series_master with (nolock)"; }
-                else
-                { Strsql = Strsql + " from trades with(" + StrTradesIndex + "nolock), series_master with (nolock) "; }
-
-                Strsql = Strsql + " where td_clientcd='" + td_clientcd + "' and td_dt='" + StrDate + "' and td_exchange+td_Segment+td_dt+sm_expirydt+right(sm_prodtype,1)+sm_symbol+'/'+convert(char(9),sm_strikeprice)+sm_callput='" + StrLookup + "' and td_seriesid=sm_seriesid ";
-                Strsql = Strsql + " and td_exchange<>'N' group by sm_prodtype,sm_symbol,sm_desc, sm_expirydt, sm_callput,  sm_strikeprice, td_exchange, td_Segment,td_dt   ";
-
-            }
-            else if (StrOrder == "4")
-            {
-                Strsql = " select 8, 'Commodity Futures' as  td_type, 'Exp: ' +convert(char(10),convert(datetime,sm_expirydt),105) as td_stlmnt,'', ";
-                Strsql = Strsql + " sm_symbol as td_Scripnm,sum(td_bqty) AS bqty ,sum(round(convert(money,td_bqty * td_rate),4)) as bvalue , sum(td_sqty) as sqty , ";
-                Strsql = Strsql + " sum(round(convert(money,td_sqty * td_rate),4)) AS svalue , sum(td_bqty - td_sqty) as netqty ,  ";
-                Strsql = Strsql + " sum(round(convert(money,(td_sqty - td_bqty)*td_rate),4)) as netvalue ,   cast(convert(money,case when sum(td_bqty - td_sqty)=0 then 0  ";
-                Strsql = Strsql + " else sum((td_sqty - td_bqty)*td_rate)/sum(td_bqty-td_sqty) end) as decimal(15,2)) as average,  cast(sum(td_brokerage*(td_bqty+td_sqty)*sm_multiplier) as decimal(15,4)) td_brokerage, ";
-                Strsql = Strsql + " (td_exchange+td_dt+sm_expirydt+right(sm_prodtype,1)+sm_symbol) as td_lookup ";
-
-                if (_configuration["IsTradeWeb"] == "O")
+                if (type == 0 || type == 1)
                 {
+                    if (Strsql.Length > 0 ) { Strsql = Strsql + " union all "; }
+                    Strsql += "select case right(sm_prodtype,1) when 'F' then 2 else 3 end SortOrder, case td_Segment When 'F' Then 'Equity ' else 'Currency ' end + case right(sm_prodtype,1) ";
+                    Strsql = Strsql + " when 'F' then 'Future' else 'Option' end type, 'Exp: '+ convert(char(10),convert(datetime,sm_expirydt),105) as stlmnt, case right(sm_prodtype,1) ";
+                    Strsql = Strsql + " when 'F' then '' else ltrim(convert(char(8),sm_strikeprice))+sm_callput end scripcode,rtrim(sm_symbol)+case right(sm_prodtype,1)  when 'F' then ''  else ' ('+ltrim(convert(char(8),sm_strikeprice))+sm_callput+')' end as scripname,sum(td_bqty) 'buy',  ";
+                    Strsql = Strsql + " sum(round(convert(money,td_bqty * td_rate * sm_multiplier ),4)) 'BuyAmount', sum(td_sqty) 'Sell',";
+                    Strsql = Strsql + " sum(round(convert(money,td_sqty * td_rate * sm_multiplier ),4)) 'SellAmount', sum(td_bqty - td_sqty) 'Net',   sum(round(convert(money,(td_sqty - td_bqty)*td_rate*sm_multiplier),4)) 'NetAmount', ";
+                    Strsql = Strsql + " cast(convert(money,case when sum(td_bqty - td_sqty)=0 then 0 else  sum((td_bqty-td_sqty)*td_rate)/sum(td_bqty-td_sqty) end) as decimal(15,2)) 'AvgRate' , ";
+                    Strsql = Strsql + " cast(sum(td_brokerage*(td_bqty*td_sqty)) as decimal(15,4)) Brokerage,td_orderid orderid,td_tradeid tradeid,td_time trdtime,";
+                    Strsql = Strsql + " case when sum(td_bqty) > 0 Then round(sum(td_bqty * td_rate)/sum(td_bqty),4) else 0 end BuyRate,";
+                    Strsql = Strsql + " case when sum(td_sqty) > 0 Then round(sum(td_sqty * td_rate)/sum(td_sqty),4) else 0 end SellRate";
+                    Strsql = Strsql + " from trades with (nolock) , series_master with (nolock) ";
+                    Strsql = Strsql + " where td_clientcd='" + userId + "' and td_segment = '" + seg + "'";
+                    if (exch != "" && exch != null ) {Strsql = Strsql + " and  td_exchange='" + exch + "'";}                        
+                    Strsql = Strsql + " and td_seriesid=sm_seriesid and td_trxFlag = 'N' ";
+                    Strsql = Strsql + " and td_dt between '" + fromdate + "' and '" + todate + "'";
+                    if (scripcode != "" && scripcode != null) { Strsql = Strsql + "and td_seriesid = " + scripcode + ""; }
+                    Strsql = Strsql + " group by td_Segment,sm_prodtype,sm_symbol,sm_desc, sm_expirydt, sm_strikeprice, sm_callput,td_dt,td_orderid,td_tradeid,td_time";
+                }
+                if (type == 0 || type == 2)
+                {
+                    if (Strsql.Length > 0) { Strsql = Strsql + " union all "; }
+                    Strsql += " select case ex_eaflag when 'E' then 4 else 5 end SortOrder ,case ex_Segment When 'F' Then 'Equity ' else 'Currency ' end +  case ex_eaflag when 'E' then 'Exercise' else 'Assignment'  end type, 'Exp: ' +convert(char(10), ";
+                    Strsql = Strsql + " convert(datetime,sm_expirydt),105) stlmnt, ltrim( convert(char(8),sm_strikeprice))+sm_callput scripcode,   rtrim(sm_symbol)+' ('+ ltrim( convert(char(8),sm_strikeprice))+sm_callput+')' scripname, sum(ex_aqty) Buy, ";
+                    Strsql = Strsql + " sum(ex_aqty*ex_diffrate) BuyAmount , sum(ex_eqty) Sell, sum(ex_eqty*ex_diffrate) SellAmount, sum(ex_aqty-ex_eqty) Net,   sum((ex_aqty-ex_eqty)*ex_diffrate) NetAmount, ";
+                    Strsql = Strsql + " cast(convert(money,case when sum(ex_aqty-ex_eqty)=0 then 0  else sum((ex_aqty-ex_eqty)*ex_diffrate)/sum(ex_aqty-ex_eqty) end) as decimal(15,2)) 'AvgRate', ";
+                    Strsql = Strsql + " cast(sum(ex_brokerage*(ex_eqty+ex_aqty)) as decimal(15,4)) Brokerage,";
+                    Strsql = Strsql + " 0 orderid, 0 tradeid,'' trdtime,";
+                    Strsql = Strsql + " case when sum(ex_aqty) > 0 Then round(sum(ex_aqty*ex_diffrate)/sum(ex_aqty),4) else 0 end BuyRate,";
+                    Strsql = Strsql + " case when sum(ex_eqty) > 0 Then round(sum(ex_eqty*ex_diffrate)/sum(ex_eqty),4) else 0 end SellRate";
+                    Strsql = Strsql + " from exercise with (nolock), series_master with (nolock) where ex_clientcd='" + userId + "' and  ";
+                    Strsql = Strsql + " ex_exchange=sm_exchange and ex_Segment=sm_Segment and ex_seriesid=sm_seriesid ";
+                    if (exch != "" && exch != null)  { Strsql = Strsql + " and ex_exchange='" + exch + "'";}
+                    Strsql = Strsql + " and ex_Segment = '" + seg + "' and ex_dt='" + fromdate + "'";
+                    if (scripcode != "" && scripcode != null) Strsql = Strsql + " and ex_seriesid = " + scripcode ;
+                    Strsql = Strsql + " group by ex_Segment,ex_eaflag, sm_symbol,sm_desc, sm_expirydt, sm_strikeprice, sm_callput,ex_exchange,ex_Segment,ex_dt,sm_prodtype";
+                }
+            }
+            else if (seg == "X")
+            {
+                if (type == 0 || type == 1)
+                {
+                    if (Strsql.Length > 0) { Strsql = Strsql + " union all "; }
+                    Strsql += "select case right(sm_prodtype,1) when 'F' then 2 else 3 end SortOrder, 'Commodity '+  case right(sm_prodtype,1) ";
+                    Strsql = Strsql + " when 'F' then 'Future' else 'Option' end type, 'Exp: '+ convert(char(10),convert(datetime,sm_expirydt),105) as stlmnt, case right(sm_prodtype,1) ";
+                    Strsql = Strsql + " when 'F' then '' else ltrim(convert(char(8),sm_strikeprice))+sm_callput end scripcode,rtrim(sm_symbol)+case right(sm_prodtype,1)  when 'F' then ''  else ' ('+ltrim(convert(char(8),sm_strikeprice))+sm_callput+')' end as scripname,sum(td_bqty) 'buy',  ";
+                    Strsql = Strsql + " sum(round(convert(money,td_bqty * td_rate * sm_multiplier ),4)) 'BuyAmount', sum(td_sqty) 'Sell',";
+                    Strsql = Strsql + " sum(round(convert(money,td_sqty * td_rate * sm_multiplier ),4)) 'SellAmount', sum(td_bqty - td_sqty) 'Net',   sum(round(convert(money,(td_sqty - td_bqty)*td_rate* sm_multiplier ),4)) 'NetAmount', ";
+                    Strsql = Strsql + " cast(convert(money,case when sum(td_bqty - td_sqty)=0 then 0 else  sum((td_bqty-td_sqty)*td_rate)/sum(td_bqty-td_sqty) end) as decimal(15,2)) 'AvgRate' , ";
+                    Strsql = Strsql + " cast(sum(td_brokerage*(td_bqty*td_sqty)) as decimal(15,4)) Brokerage,td_orderid orderid,td_tradeid tradeid,td_time trdtime,";
+                    Strsql = Strsql + " case when sum(td_bqty) > 0 Then round(sum(td_bqty * td_rate)/sum(td_bqty),4) else 0 end BuyRate,";
+                    Strsql = Strsql + " case when sum(td_sqty) > 0 Then round(sum(td_sqty * td_rate)/sum(td_sqty),4) else 0 end SellRate";
                     if (objUtility.GetWebParameter("Commex") != null && objUtility.GetWebParameter("Commex") != string.Empty)
                     {
-
                         string StrCommexConn = "";
                         StrCommexConn = objUtility.GetCommexConnection();
                         Strsql = Strsql + " from " + StrCommexConn + ".Trades," + StrCommexConn + ".Series_master";
                     }
+                    Strsql = Strsql + " where td_clientcd='" + userId + "'  ";
+                    if (exch != "" && exch != null) { Strsql = Strsql + " and  td_exchange='" + exch + "'"; }
+                    Strsql = Strsql + " and td_seriesid=sm_seriesid and td_trxFlag = 'N' ";
+                    Strsql = Strsql + " and td_dt between '" + fromdate + "' and '" + todate + "'";
+                    if (scripcode != "" && scripcode != null) { Strsql = Strsql + " and td_seriesid = " + scripcode + ""; }
+                    Strsql = Strsql + " group by sm_prodtype,sm_symbol,sm_desc, sm_expirydt, sm_strikeprice, sm_callput,td_dt,td_orderid,td_tradeid,td_time";
                 }
-                else
-                {
-                    Strsql = Strsql + " from Ctrades with (nolock),Cseries_master with (nolock)";
-                }
-                Strsql = Strsql + " where td_clientcd='" + td_clientcd + "'  ";
-                Strsql = Strsql + " and td_seriesid=sm_seriesid and td_dt ='" + StrDate + "' and  td_exchange+td_dt+sm_expirydt+right(sm_prodtype,1)+sm_symbol='" + StrLookup + "' group by sm_prodtype,sm_symbol,sm_desc, ";
-                Strsql = Strsql + "  sm_expirydt, td_exchange,td_dt ";
             }
 
             return Strsql;
         }
-
-        // get dropdown menu confirmation details data
-        public string GetQueryConfirmationDetails(string td_clientcd, string StrOrder, string StrLoopUp)
-        {
-            string Strsql = "";
-            string StrTradesIndex = "";
-            if (Convert.ToInt16(objUtility.fnFireQueryTradeWeb("sysobjects a, sysindexes b", "COUNT(0)", "a.id = b.id and a.name = 'trades' and b.name", "idx_trades_clientcd", true)) == 1)
-            { StrTradesIndex = "index(idx_trades_clientcd),"; }
-
-            string StrTRXIndex = "";
-            if (Convert.ToInt16(objUtility.fnFireQueryTradeWeb("sysobjects a, sysindexes b", "COUNT(0)", "a.id = b.id and a.name = 'Trx' and b.name", "idx_Trx_Clientcd", true)) == 1)
-            { StrTRXIndex = "index(idx_trx_clientcd),"; }
-
-            if (StrOrder == "1")
-            {
-                Strsql = " select td_orderid,  td_tradeid,td_time, cast(convert(money,td_marketrate) as decimal(15,4)) td_marketrate, (td_bqty-td_sqty) td_qty, cast(td_brokerage as decimal(15,4)) td_brokerage, convert(decimal(15,4),td_rate) td_rate, convert(decimal(15,4),td_brokerage*(td_bqty+td_sqty)) td_TtlBrok, convert(decimal (15,4),td_rate*(td_bqty-td_sqty)) NetValue";
-                Strsql = Strsql + " from trx with (" + StrTRXIndex + "nolock) where td_clientcd='" + td_clientcd + "' and td_stlmnt+td_dt+td_scripcd='" + StrLoopUp + "'";
-            }
-
-            if (StrOrder == "2" || StrOrder == "3" || StrOrder == "6" || StrOrder == "7")
-            {
-                Strsql = Strsql + " select td_orderid,  td_tradeid,td_time, cast(convert(money,td_marketrate) as decimal(15,4)) td_marketrate, (td_bqty-td_sqty) td_qty, cast(td_brokerage as decimal(15,4)) td_brokerage, td_rate, cast((td_brokerage*(td_bqty+td_sqty))as decimal(15,4)) td_TtlBrok, td_rate*(td_bqty-td_sqty) NetValue";
-                Strsql = Strsql + " from trades with (" + StrTradesIndex + "nolock), series_master with (nolock) where sm_seriesid=td_seriesid and sm_exchange=td_exchange and sm_Segment=td_segment and ";
-                Strsql = Strsql + " td_clientcd='" + td_clientcd + "' and td_exchange+td_Segment+td_dt+sm_expirydt+right(sm_prodtype,1)+sm_symbol+'/'+convert(char(9),sm_strikeprice)+sm_callput='" + StrLoopUp + "'";
-            }
-
-            if (StrOrder == "4" || StrOrder == "5")
-            {
-                Strsql = Strsql + " select convert(money,ex_mainbrdiffrate) ex_mainbrdiffrate, (ex_aqty-ex_eqty) td_qty, ex_brokerage, ex_diffrate, cast((ex_brokerage*(ex_eqty+ex_aqty))as decimal(15,4)) td_TtlBrok, ex_diffrate*(ex_aqty-ex_eqty) NetValue";
-                Strsql = Strsql + " from exercise with (nolock), series_master with (nolock) where sm_seriesid=ex_seriesid and sm_exchange=ex_exchange and sm_Segment=ex_Segment and";
-                Strsql = Strsql + " ex_clientcd='" + td_clientcd + "' and ex_dt='20100624' and sm_symbol='NTPC' and sm_expirydt='20100729' and sm_strikeprice=200.00 and sm_callput='C'";
-            }
-            if (StrOrder == "8")
-            {
-                Strsql = Strsql + " select td_orderid,  td_tradeid,td_time, convert(money,td_marketrate) td_marketrate, (td_bqty-td_sqty) td_qty, td_brokerage, td_rate,cast((td_brokerage*(td_bqty+td_sqty))as decimal(15,2)) td_TtlBrok, td_rate*(td_bqty-td_sqty) NetValue";
-
-                if (_configuration["IsTradeWeb"] == "O")
-                {
-                    string StrComTradesIndex = string.Empty;
-
-                    string StrCommexConn = "";
-                    StrCommexConn = objUtility.GetCommexConnection();
-
-
-                    if (Convert.ToInt16(objUtility.fnFireQueryTradeWeb(StrCommexConn + ".sysobjects a, " + StrCommexConn + ".sysindexes b", "COUNT(0)", "a.id = b.id and a.name = 'trades' and b.name", "idx_trades_clientcd", true)) == 1)
-                    { StrComTradesIndex = "index(idx_trades_clientcd),"; }
-
-                    Strsql = Strsql + " from " + StrCommexConn + ".Trades with(" + StrComTradesIndex + "nolock)," + StrCommexConn + ".series_master with (nolock) ";
-                    Strsql = Strsql + " where sm_seriesid=td_seriesid and sm_exchange=td_exchange and";
-                }
-                else
-                {
-
-                    string StrCTradesIndex = "";
-                    if (Convert.ToInt16(objUtility.fnFireQueryTradeWeb("sysobjects a, sysindexes b", "COUNT(0)", "a.id = b.id and a.name = 'Ctrades' and b.name", "idx_Ctrades_clientcd", true)) == 1)
-                    { StrCTradesIndex = "index(idx_Ctrades_clientcd),"; }
-
-                    Strsql = Strsql + " from ctrades with (" + StrCTradesIndex + "nolock),cseries_master with (nolock) where sm_seriesid=td_seriesid and sm_exchange=td_exchange and";
-                }
-
-                Strsql = Strsql + " td_clientcd='" + td_clientcd + "' and td_exchange+td_dt+sm_expirydt+right(sm_prodtype,1)+sm_symbol='" + StrLoopUp + "' ";
-            }
-            return Strsql;
-        }
+        
         #endregion
         #endregion
 
         #region Login method
 
-        public string Method_Login_Password_GenerateOTP(string userId, string mode)
+        public string Login_Password_GenerateOTP_SMS_Email(string userId, string mode)
         {
             List<OtpUserIdSession> sessionOtp = new List<OtpUserIdSession>();
             string Strsql = "";
             Boolean blnMobile = false;
             Boolean blnEmail = false;
             mode = mode.ToUpper();
-            if (mode == "ALL")
+            if (mode == "BOTH")
             {
                 blnMobile = true;
                 blnEmail = true;
@@ -4775,6 +4107,8 @@ namespace TradeWeb.API.Repository
                 blnMobile = false;
                 blnEmail = true;
             }
+            else
+                return "Invalid Mode Value";
 
             DataSet ds = new DataSet();
             ds = objUtility.OpenDataSet("select cm_cd, cm_mobile, cm_email from client_master where cm_cd='" + userId + "';");
@@ -4799,38 +4133,17 @@ namespace TradeWeb.API.Repository
 
             string strSotp = new String(stringChars1);
             string strMsgTxt = string.Empty;
-            if (Convert.ToInt16(objUtility.fnFireQueryTradeWeb("Sysparameter", "count(0)", "sp_parmcd", "SMSCLMMO", true)) > 0)
+            if (Convert.ToInt16(objUtility.fnFireQueryTradeWeb("Sysparameter", "count(0)", "sp_parmcd", "SMSCLPW", true)) > 0)
             {
-                strMsgTxt = objUtility.fnFireQueryTradeWeb("sysparameter", "SP_SYSVALUE", "sp_parmcd", "SMSCLMMO", true);
+                strMsgTxt = objUtility.fnFireQueryTradeWeb("sysparameter", "SP_SYSVALUE", "sp_parmcd", "SMSCLPW", true);
             }
             else
             {
-                strMsgTxt = "Your OTP to initiate Mobile/Email/Gross Income change request for <Client> is <OTP>";
+                strMsgTxt = "Your OTP to change password request for <Client> is <OTP>";
             }
             //strMsgTxt = "Your OTP to initiate change request for <Client> is <OTP>";
             strMsgTxt = strMsgTxt.Replace("<Client>", userId.ToUpper());
             strMsgTxt = strMsgTxt.Replace("<OTP>", strSotp);
-
-            if (strMsgTxt.ToUpper().Contains("<EMAIL ID/MOBILE NUMBER/INCOME>") == true)
-            {
-                string strTag = "";
-                List<string> lstTag = new List<string> { };
-                if (mode == "EMAIL")
-                {
-                    lstTag.Add("Email ID");
-                }
-                if (mode == "MOBILE")
-                {
-                    lstTag.Add("Mobile number");
-                }
-                if (mode == "ALL")
-                {
-                    lstTag.Add("Mobile number");
-                    lstTag.Add("Email ID");
-                }
-                strTag = String.Join("/", lstTag.ToArray());
-                strMsgTxt = strMsgTxt.Replace("<Email ID/Mobile number/Income>", strTag);
-            }
 
             strMsgTxt = strMsgTxt.Replace("<&>", "<~>");
             strMsgTxt = strMsgTxt.Replace("&", "");
@@ -5145,10 +4458,10 @@ namespace TradeWeb.API.Repository
                 strMessage = "OTP sent to " + (mode == "EMAIL" ? "Email" : "new Email");
             }
 
-            return strMessage + " OTP - " + strSotp;
+            return strSotp;
         }
 
-        public Boolean Method_Login_Password_Update(string userId, string OTP, string oldPassword, string newPassword)
+        public Boolean Login_Password_Update_execute(string userId, string OTP, string oldPassword, string newPassword)
         {
             try
             {
@@ -5183,11 +4496,6 @@ namespace TradeWeb.API.Repository
                             Strsql = " update Client_master set cm_pwd='" + newPassword + "' where cm_cd='" + userId + "'";
                             objUtility.ExecuteSQL(Strsql);
 
-                            if (_configuration["IsTradeWeb"] != "O") //not live
-                            {
-                                Strsql = "Update LoginDetails set lg_lastLoginDt='" + strLastLoginDt + "',lg_RsetPwd='Y',lg_ChangePwd='Y',lg_LastRSetDt='" + DateTime.Now.ToString("yyyyMMdd").Trim() + "' where lg_cmcd='" + userId + "' and lg_companycode=''";
-                                objUtility.ExecuteSQL(Strsql);
-                            }
                             return true;
                         }
 
@@ -5213,11 +4521,6 @@ namespace TradeWeb.API.Repository
                             Strsql = Strsql + " and cm_pwd='" + oldPassword + "'";
                             objUtility.ExecuteSQL(Strsql);
 
-                            if (_configuration["IsTradeWeb"] != "O") //not live
-                            {
-                                Strsql = "Update LoginDetails set lg_lastLoginDt='" + strLastLoginDt + "',lg_RsetPwd='Y',lg_ChangePwd='Y',lg_LastRSetDt='" + DateTime.Now.ToString("yyyyMMdd").Trim() + "' where lg_cmcd='" + userId + "' and lg_companycode=''";
-                                objUtility.ExecuteSQL(Strsql);
-                            }
                             return true;
                         }
                         else
@@ -5239,7 +4542,7 @@ namespace TradeWeb.API.Repository
         #endregion
 
         #region Reset Password method
-        public string ResetPassword(string userId)
+        public string Login_GetPassword_Execute(string userId)
         {
             string Strsql = "";
             string[] strSMSParamVal = new string[5];
@@ -7750,33 +7053,8 @@ namespace TradeWeb.API.Repository
                 {
                     if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
                     {
-
-
-
                         var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
                         return json;
-                    }
-                }
-                return new List<string>();
-            }
-            catch (Exception ex)
-            {
-                throw ex;
-            }
-        }
-
-        // get digital document main data
-        public dynamic GetDigitalDocumentDownload(string userId, string cmbProductValue, string cmbDocumentTypeValue, string cmbExchangeValue, string fromDate)
-        {
-            try
-            {
-                var ds = GetQueryDigitalDocumentDownload(userId, cmbProductValue, cmbDocumentTypeValue, cmbExchangeValue, fromDate);
-                if (ds != null)
-                {
-                    if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
-                    {
-                        var response = DownloadDocument(ds.Tables[0].Rows[0]["doctype"].ToString().Trim(), fromDate, ds.Tables[0].Rows[0]["dd_srno"].ToString().Trim());
-                        return response;
                     }
                 }
                 return new List<string>();
@@ -7902,134 +7180,6 @@ namespace TradeWeb.API.Repository
                 ObjAdpater.Dispose();
             }
             return ObjDataSet1;
-        }
-
-        public DataSet GetQueryDigitalDocumentDownload(string userId, string cmbProductValue, string cmbDocumentTypeValue, string cmbExchangeValue, string fromDate)
-        {
-            Boolean IsCommexES = false;
-            string strsql = "";
-            if (cmbProductValue == "X")
-            {
-                if (_configuration["CommexES"] != null && _configuration["CommexES"] != string.Empty)
-                {
-                    IsCommexES = true;
-                    strsql = "select 'Commex' doctype,'DownLoad'as download,dd_srno,do_desc,ltrim(rtrim(convert(char,convert(datetime,dd_dt),103))) as dd_dt,dd_stlmnt,dd_contractno,'' DT ";
-                    char[] ArrSeparators = new char[1];
-                    ArrSeparators[0] = '/';
-                    string[] ArrCommex = _configuration["CommexES"].Split(ArrSeparators);
-                    strsql = strsql + " from   " + ArrCommex[0].Trim() + "." + ArrCommex[1].Trim() + "." + ArrCommex[2].Trim() + ".digital_details,";
-                    strsql = strsql + ArrCommex[0].Trim() + "." + ArrCommex[1].Trim() + "." + ArrCommex[2].Trim() + ".DocumentType_master";
-                    strsql = strsql + " where dd_clientcd = '" + userId + "'";
-                    if (cmbDocumentTypeValue == "Combine Contract" || cmbDocumentTypeValue == "Periodic Settlement")
-                    {
-                        strsql = strsql + " and dd_dt between '" + fromDate + "' and '" + fromDate + "'"; ;
-                    }
-                    else
-                    {
-                        strsql = strsql + " and dd_dt='" + fromDate + "'";
-                    }
-                    strsql = strsql + "and dd_filetype = do_cd ";
-                    strsql = strsql + " and dd_filetype='" + getdoc(cmbDocumentTypeValue, cmbExchangeValue) + "' ";
-                    strsql = strsql + " order by dd_dt desc ";
-                }
-            }
-            else
-            {
-                strsql = "select 'Tplus' doctype,'Download'as download,dd_srno,do_desc,ltrim(rtrim(convert(char,convert(datetime,dd_dt),103))) as dd_dt,dd_stlmnt,dd_contractno,'" + fromDate + "' DT ";
-                strsql = strsql + "from digital_details ,DocumentType_master ";
-                strsql = strsql + "where dd_clientcd = '" + userId + "'";
-                if (cmbDocumentTypeValue == "Combine Contract" || cmbDocumentTypeValue == "Periodic Settlement" || cmbDocumentTypeValue == "Combine Margin Statement")
-                {
-                    strsql = strsql + " and dd_dt between '" + fromDate + "' and '" + fromDate + "'"; ;
-                }
-                else
-                {
-                    strsql = strsql + " and dd_dt='" + fromDate + "'";
-                }
-                strsql = strsql + " and dd_filetype = do_cd ";
-                strsql = strsql + " and dd_filetype='" + getdoc(cmbDocumentTypeValue, cmbExchangeValue) + "' ";
-                strsql = strsql + " order by dd_dt desc ";
-            }
-
-            DataSet ObjDataSet1 = new DataSet();
-            if (strsql != null && strsql != "")
-            {
-                SqlConnection ObjConnection = new SqlConnection(objUtility.EsignConnectionString(IsCommexES, fromDate));
-                if (ObjConnection.State == ConnectionState.Closed)
-                { ObjConnection.Open(); }
-
-                SqlDataAdapter ObjAdpater = new SqlDataAdapter();
-                SqlCommand sqlCommand = new SqlCommand(strsql, ObjConnection);
-                ObjAdpater.SelectCommand = sqlCommand;
-                ObjAdpater.Fill(ObjDataSet1);
-                ObjAdpater.Dispose();
-            }
-
-            return ObjDataSet1;
-
-            //if (ObjDataSet1?.Tables?.Count > 0 && ObjDataSet1?.Tables[0]?.Rows?.Count > 0)
-            //{
-            //    var json = JsonConvert.SerializeObject(ObjDataSet1.Tables[0], Formatting.Indented);
-            //    return json;
-            //}
-        }
-
-        public DigitalDocumentModel DownloadDocument(string docType, string date, string srNo)
-        {
-            Boolean IsCommex = false;
-            strsql = "select dd_filename from ";
-            if (docType == "Tplus")
-            {
-                strsql += " digital_details ";
-            }
-            else if (docType == "Commex")
-            {
-                IsCommex = true;
-                char[] ArrSeparators = new char[1];
-                ArrSeparators[0] = '/';
-                string[] ArrCommex = _configuration["CommexES"].Split(ArrSeparators);
-                strsql = strsql + ArrCommex[0].Trim() + "." + ArrCommex[1].Trim() + "." + ArrCommex[2].Trim() + ".digital_details";
-            }
-            strsql += " where dd_srno = '" + srNo + "'";
-            DataSet DataSet = new DataSet();
-            SqlConnection ObjConnection = new SqlConnection(objUtility.EsignConnectionString(IsCommex, date.Trim()));
-            SqlCommand cmd1 = new SqlCommand(strsql, ObjConnection);
-            SqlDataAdapter adp = new SqlDataAdapter();
-            adp.SelectCommand = cmd1;
-            adp.Fill(DataSet);
-            if (DataSet.Tables[0].Rows.Count > 0)
-            {
-                strsql = "select dd_document from ";
-                if (docType == "Tplus")
-                {
-                    strsql += " digital_details ";
-                }
-                else if (docType == "Commex")
-                {
-                    char[] ArrSeparators = new char[1];
-                    ArrSeparators[0] = '/';
-                    string[] ArrCommex = _configuration["CommexES"].Split(ArrSeparators);
-                    strsql = strsql + ArrCommex[0].Trim() + "." + ArrCommex[1].Trim() + "." + ArrCommex[2].Trim() + ".digital_details";
-                }
-                strsql += " where dd_srno = '" + srNo + "'";
-                if (ObjConnection.State == ConnectionState.Closed)
-                {
-                    ObjConnection.Open();
-                }
-                SqlCommand cmd = new SqlCommand(strsql, ObjConnection);
-
-                SqlDataReader ObjReader = cmd.ExecuteReader(CommandBehavior.CloseConnection);
-                if (ObjReader.HasRows == true)
-                {
-                    ObjReader.Read();
-                    var bytes = (byte[])ObjReader["dd_document"];
-                    var result = Convert.ToBase64String(bytes, 0, bytes.Length);
-     
-                    return new DigitalDocumentModel{ FileName = DataSet.Tables[0].Rows[0]["dd_filename"].ToString().Trim(), FileData = result };
-                }
-                ObjReader.Close();
-            }
-            return null;
         }
 
         // Add new item comodity in dropdown product list

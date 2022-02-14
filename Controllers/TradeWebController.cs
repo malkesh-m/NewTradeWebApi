@@ -70,7 +70,7 @@ namespace TradeWeb.API.Controllers
                 try
                 {
                     var result = _tradeWebRepository.Login_validate_USER(userId);
-                    if (result != "failed")
+                    if (result != null)
                     {
                         return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = result });
                     }
@@ -366,7 +366,7 @@ namespace TradeWeb.API.Controllers
         /// <returns></returns>
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpGet("OutStandingPosition_Detail", Name = "OutStandingPosition_Detail")]
-        public IActionResult OutStandingPosition_Detail(string seriesId, string CESCd, string AsOnDt)
+        public IActionResult OutStandingPosition_Detail(string AsOnDt, string CESCd, string seriesId)
         {
             if (ModelState.IsValid)
             {
@@ -455,8 +455,8 @@ namespace TradeWeb.API.Controllers
         }
 
         [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("Holding_Demat_Current", Name = "Holding_Demat_Current")]
-        public IActionResult Holding_Demat_Current()
+        [HttpGet("Holding_MyDematAct_List", Name = "Holding_MyDematAct_List")]
+        public IActionResult Holding_MyDematAct_List()
         {
             if (ModelState.IsValid)
             {
@@ -465,7 +465,7 @@ namespace TradeWeb.API.Controllers
                     var tokenS = GetToken();
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.Holding_Demat_Current(userId);
+                    var getData = _tradeWebRepository.Holding_MyDematAct_List(userId);
                     if (getData != null)
                     {
                         return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
@@ -483,16 +483,73 @@ namespace TradeWeb.API.Controllers
             return BadRequest();
         }
 
-        // Get data for bind dropdownlist combo as on
         [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("GetDropDownComboAsOnData", Name = "GetDropDownComboAsOnData")]
-        public IActionResult GetDropDownComboAsOnData(string table)
+        [HttpGet("Holding_MyDematAct_Current", Name = "Holding_MyDematAct_Current")]
+        public IActionResult Holding_MyDematAct_Current(string dematActNo)
         {
             if (ModelState.IsValid)
             {
                 try
                 {
-                    var getData = _tradeWebRepository.GetDropDownComboAsOnDataHandler(table);
+                    var tokenS = GetToken();
+                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
+
+                    var getData = _tradeWebRepository.Holding_MyDemat_Current(userId, dematActNo,"Holding");
+                    if (getData != null)
+                    {
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                    }
+                    else
+                    {
+                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
+
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpGet("Holding_MyDematAct_Ason", Name = "Holding_MyDematAct_Ason")]
+        public IActionResult Holding_MyDematAct_Ason(string dematActNo,string AsOnDt)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var tokenS = GetToken();
+                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
+
+                    var getData = _tradeWebRepository.Holding_MyDemat_Current(userId, dematActNo, "Holding_" + AsOnDt);
+                    if (getData != null)
+                    {
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                    }
+                    else
+                    {
+                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
+        // Get data for bind dropdownlist combo as on
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpGet("Holding_MyDematAct_HoldingDates", Name = "Holding_MyDematAct_HoldingDates")]
+        public IActionResult Holding_MyDematAct_HoldingDates()
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var getData = _tradeWebRepository.Holding_MyDematAct_HoldingDates_Execute();
                     if (getData != null)
                     {
                         return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
@@ -543,16 +600,42 @@ namespace TradeWeb.API.Controllers
 
         #region Bill Api
 
-        // get settelment type for dropdown settlement
         [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("GetSettlementData", Name = "GetSettlementData")]
-        public IActionResult GetSettlementData([FromQuery] string exchange, string status)
+        [HttpGet("Bills_exchSeg", Name = "Bills_exchSeg")]
+        public IActionResult Bills_exchSeg()
         {
             if (ModelState.IsValid)
             {
                 try
                 {
-                    var getData = _tradeWebRepository.GetSettelmentType(exchange, status);
+                    var getData = _tradeWebRepository.Bills_exchSeg();
+                    if (getData != null)
+                    {
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                    }
+                    else
+                    {
+                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
+
+        // get settelment type for dropdown settlement
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpGet("Bills_cash_settTypes_list", Name = "Bills_cash_settTypes_list")]
+        public IActionResult Bills_cash_settTypes_list([FromQuery] string exch)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var getData = _tradeWebRepository.Bills_cash_settTypes_list(exch);
                     if (getData != null)
                     {
                         return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
@@ -594,19 +677,18 @@ namespace TradeWeb.API.Controllers
         }
 
         // get bill main data
-        //[Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("GetBillMainData", Name = "GetBillMainData")]
-        public IActionResult GetBillMainData([FromQuery] string client, string exchangeType, string settelmentType, string fromDate)
+
+        [HttpGet("Bills_cash_stlmnt", Name = "Bills_cash_stlmnt")]
+        public IActionResult Bills_cash_stlmnt([FromQuery] string stlmnt)
         {
             if (ModelState.IsValid)
             {
                 try
                 {
                     var tokenS = GetToken();
-                    var companyCode = tokenS.Claims.First(claim => claim.Type == "companyCode").Value;
-                    var clientId = tokenS.Claims.First(claim => claim.Type == "username").Value;
-
-                    var getData = _tradeWebRepository.GetBillMainData(clientId, client, exchangeType, settelmentType, fromDate, companyCode);
+                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
+                    string dt = objUtility.fnFireQuery("settlements", "se_stdt", "se_stlmnt", stlmnt, true);
+                    var getData = _tradeWebRepository.Bill_data(userId,stlmnt.Substring(0, 1) + 'C', stlmnt.Substring(1, 1), dt);
                     if (getData != null)
                     {
                         return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
@@ -624,74 +706,100 @@ namespace TradeWeb.API.Controllers
             return BadRequest();
         }
 
+        //[Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpGet("Bills_cash_settType", Name = "Bills_cash_settType")]
+        public IActionResult Bills_cash_settType([FromQuery] string exch_settType, string dt)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var tokenS = GetToken();
+                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
+
+                    var getData = _tradeWebRepository.Bill_data(userId, exch_settType .Substring(0,1)+ 'C', exch_settType.Substring(1,1), dt);
+                    if (getData != null)
+                    {
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                    }
+                    else
+                    {
+                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
+
+        // get bill main data
+        //[Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpGet("Bills_FO", Name = "Bills_FO")]
+        public IActionResult Bills_FO([FromQuery] string exch, string seg, string dt)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var tokenS = GetToken();
+                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
+
+                    var getData = _tradeWebRepository.Bill_data(userId, exch + seg, "", dt);
+                    if (getData != null)
+                    {
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                    }
+                    else
+                    {
+                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
+
+        [HttpGet("Bills_Commodity", Name = "Bills_Commodity")]
+        public IActionResult Bills_Commodity([FromQuery] string exch, string dt)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var tokenS = GetToken();
+                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
+
+                    var getData = _tradeWebRepository.Bill_data(userId, exch + "X", "", dt);
+                    if (getData != null)
+                    {
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                    }
+                    else
+                    {
+                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
 
         #endregion
 
         #region Confirmation Api
-        // get dropdown menu cumulative details data
-        [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("GetCumulativeDetails", Name = "GetCumulativeDetails")]
-        public IActionResult GetCumulativeDetails([FromQuery] string order, string scripCode, string bsflag, string date, string lookup)
-        {
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    var tokenS = GetToken();
-                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
-
-                    var getData = _tradeWebRepository.GetCumulativeDetailsHandler(userId, order, scripCode, bsflag, date, lookup);
-                    if (getData != null)
-                    {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
-                    }
-                    else
-                    {
-                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
-                    }
-                }
-                catch (Exception ex)
-                {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
-                }
-            }
-            return BadRequest();
-        }
-
-        // get dropdown menu confirmation details data
-        [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("GetConfirmationDetails", Name = "GetConfirmationDetails")]
-        public IActionResult GetConfirmationDetails([FromQuery] string Order, string loopUp)
-        {
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    var tokenS = GetToken();
-                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
-
-                    var getData = _tradeWebRepository.GetConfirmationDetailsHandler(userId, Order, loopUp);
-                    if (getData != null)
-                    {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
-                    }
-                    else
-                    {
-                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
-                    }
-                }
-                catch (Exception ex)
-                {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
-                }
-            }
-            return BadRequest();
-        }
-
         // get confirmation main data
         [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("GetConfirmationData", Name = "GetConfirmationData")]
-        public IActionResult GetConfirmationData([FromQuery] int lstConfirmationSelectIndex, string date)
+        [HttpGet("Confirmation", Name = "Confirmation")]
+        public IActionResult Confirmation([FromQuery] int type, string dt)
         {
             if (ModelState.IsValid)
             {
@@ -700,7 +808,7 @@ namespace TradeWeb.API.Controllers
                     var tokenS = GetToken();
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.GetConfirmationMainDataHandler(userId, lstConfirmationSelectIndex, date);
+                    var getData = _tradeWebRepository.Confirmation(userId, type, dt);
                     if (getData != null)
                     {
                         return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
@@ -717,9 +825,38 @@ namespace TradeWeb.API.Controllers
             }
             return BadRequest();
         }
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpGet("Transaction_Detail", Name = "Transaction_Detail")]
+        public IActionResult Transaction_Detail([FromQuery] string exch, string seg, int type, string fromdate, string todate, string scripcode)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var tokenS = GetToken();
+                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
+
+                    var getData = _tradeWebRepository.Transaction_Detail(userId, exch, seg, type, fromdate, todate, scripcode);
+                    if (getData != null)
+                    {
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                    }
+                    else
+                    {
+                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
+
         #endregion
 
-       
+
         #region Agreement
         // TODO : Get Family Page_Load Data
         [Authorize(AuthenticationSchemes = "Bearer")]
@@ -845,10 +982,7 @@ namespace TradeWeb.API.Controllers
                             //Response.ContentType = "application/download";
                             //Response.BinaryWrite((byte[])ObjReader["dd_document"]);
                             //Response.End();
-                            var bytes = (byte[])ObjReader["dd_document"];
-                            var result = Convert.ToBase64String(bytes, 0, bytes.Length);
-                            //return File((byte[])ObjReader["dd_document"], "application/pdf", DataSet.Tables[0].Rows[0]["dd_filename"].ToString().Trim());
-                            return Ok(new downloadResponse {  status = true, message = "Success", statusCode = (int)HttpStatusCode.OK,  fileName = DataSet.Tables[0].Rows[0]["dd_filename"].ToString().Trim(), fileData = result });
+                            return File((byte[])ObjReader["dd_document"], "application/pdf", DataSet.Tables[0].Rows[0]["dd_filename"].ToString().Trim());
                         }
                         ObjReader.Close();
                     }
@@ -923,39 +1057,6 @@ namespace TradeWeb.API.Controllers
             }
             return BadRequest();
         }
-
-
-        // get dropdown Exchange list
-        [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("GetDigitalDocumentDownload", Name = "GetDigitalDocumentDownload")]
-        public IActionResult GetDigitalDocumentDownload([FromQuery] string productType, string documentType, string exchangeType, string fromDate)
-        {
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    var tokenS = GetToken();
-                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
-
-                    var getData = _tradeWebRepository.GetDigitalDocumentDownload(userId, productType, documentType, exchangeType, fromDate);
-                    if (getData != null)
-                    {
-                        return Ok(new downloadResponse { status = true, message = "success", statusCode = (int)HttpStatusCode.OK , fileName = getData.FileName,  fileData = getData.FileData });
-                    }
-                    else
-                    {
-                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
-                    }
-                }
-                catch (Exception ex)
-                {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
-                }
-            }
-            return BadRequest();
-        }
-
-
 
 
         #endregion
