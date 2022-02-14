@@ -25,7 +25,6 @@ namespace TradeWeb.API.Controllers
             _tradeWebRepository = tradeWebRepository;
         }
 
-
         #region Holding Api
 
         [Authorize(AuthenticationSchemes = "Bearer")]
@@ -172,6 +171,7 @@ namespace TradeWeb.API.Controllers
             }
             return BadRequest();
         }
+
         // Get data for bind dropdownlist combo as on
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpGet("Holding_MyDematAct_HoldingDates", Name = "Holding_MyDematAct_HoldingDates")]

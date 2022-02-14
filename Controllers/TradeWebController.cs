@@ -57,6 +57,34 @@ namespace TradeWeb.API.Controllers
 
         #region Login
 
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpPost("Home_UserProfile", Name = "Home_UserProfile")]
+        public IActionResult Home_UserProfile()
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var tokenS = GetToken();
+                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
+                    var getData = _tradeWebRepository.GetUserDetais(userId);
+                    if (getData != null)
+                    {
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                    }
+                    else
+                    {
+                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
+
         /// <summary>
         /// Login validate USER
         /// </summary>
@@ -185,20 +213,21 @@ namespace TradeWeb.API.Controllers
             }
             return BadRequest();
         }
+
         #endregion
 
+        #region Ledger Api
 
         [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpPost("Home_UserProfile", Name = "Home_UserProfile")]
-        public IActionResult Home_UserProfile()
+        [HttpGet("Ledger_Year", Name = "Ledger_Year")]
+        public IActionResult Ledger_Year()
         {
             if (ModelState.IsValid)
             {
                 try
                 {
-                    var tokenS = GetToken();
-                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
-                    var getData = _tradeWebRepository.GetUserDetais(userId);
+
+                    var getData = _tradeWebRepository.Ledger_Year();
                     if (getData != null)
                     {
                         return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
@@ -216,8 +245,6 @@ namespace TradeWeb.API.Controllers
             return BadRequest();
         }
 
-
-        #region Ledger Api
 
         /// <summary>
         /// 
@@ -291,33 +318,7 @@ namespace TradeWeb.API.Controllers
             return BadRequest();
         }
 
-        [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("Ledger_Year", Name = "Ledger_Year")]
-        public IActionResult Ledger_Year()
-        {
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    
-                    var getData = _tradeWebRepository.Ledger_Year();
-                    if (getData != null)
-                    {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
-                    }
-                    else
-                    {
-                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
-                    }
-                }
-                catch (Exception ex)
-                {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
-                }
-            }
-            return BadRequest();
-        }
-
+        
 
         #endregion
 
@@ -394,8 +395,6 @@ namespace TradeWeb.API.Controllers
         #endregion
 
         
-
-
         //[Authorize(AuthenticationSchemes = "Bearer")]
         //[HttpGet("GetINVPLTradeListingDelete", Name = "GetINVPLTradeListingDelete")]
         //public IActionResult GetINVPLTradeListingDelete(string srNo)

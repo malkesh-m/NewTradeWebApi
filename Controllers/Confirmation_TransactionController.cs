@@ -27,6 +27,7 @@ namespace TradeWeb.API.Controllers
 
 
         #region Confirmation Api
+        
         // get confirmation main data
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpGet("Confirmation", Name = "Confirmation")]
@@ -56,6 +57,7 @@ namespace TradeWeb.API.Controllers
             }
             return BadRequest();
         }
+        
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpGet("Transaction_Detail", Name = "Transaction_Detail")]
         public IActionResult Transaction_Detail([FromQuery] string exch, string seg, int type, string fromdate, string todate, string scripcode)
@@ -84,6 +86,8 @@ namespace TradeWeb.API.Controllers
             }
             return BadRequest();
         }
+
+        #endregion
 
         #region Transaction Api
         /// <summary>
@@ -204,6 +208,5 @@ namespace TradeWeb.API.Controllers
             return token;
         }
 
-        #endregion
     }
 }
