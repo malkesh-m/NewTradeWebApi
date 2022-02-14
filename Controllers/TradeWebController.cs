@@ -360,13 +360,12 @@ namespace TradeWeb.API.Controllers
         /// <summary>
         /// OutStanding details data
         /// </summary>
-        /// <param name="seriesId"></param>
         /// <param name="CESCd"></param>
-        /// <param name="AsOnDt"></param>
+        /// <param name="seriesId"></param>
         /// <returns></returns>
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpGet("OutStandingPosition_Detail", Name = "OutStandingPosition_Detail")]
-        public IActionResult OutStandingPosition_Detail(string AsOnDt, string CESCd, string seriesId)
+        public IActionResult OutStandingPosition_Detail(string CESCd, string seriesId)
         {
             if (ModelState.IsValid)
             {
@@ -375,7 +374,7 @@ namespace TradeWeb.API.Controllers
                     var tokenS = GetToken();
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.OutStandingPosition_Detail(userId, seriesId, CESCd, AsOnDt);
+                    var getData = _tradeWebRepository.OutStandingPosition_Detail(userId, seriesId, CESCd);
                     if (getData != null)
                     {
                         return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });

@@ -1,6 +1,5 @@
 ﻿using INVPLService;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -50,7 +49,7 @@ namespace TradeWeb.API.Repository
 
         public dynamic OutStandingPosition(string userId, string AsOnDt);
 
-        public dynamic OutStandingPosition_Detail(string userId, string seriesid, string CESCd, string AsOnDt);
+        public dynamic OutStandingPosition_Detail(string userId, string seriesid, string CESCd);
 
         public dynamic ProfitLoss_Cash_Summary(string userId, string fromDate, string toDate);
 
@@ -140,6 +139,15 @@ namespace TradeWeb.API.Repository
         public dynamic GetDigitalDocumentData(string userId, string cmbProductValue, string cmbDocumentTypeValue, string cmbExchangeValue, string fromDate, string toDate);
 
         public dynamic AddDdlProductListItem();
+
+        public dynamic Family_List(string userId);
+
+        public dynamic Family_Add(string userId, string password, string UCC_Code);
+
+        public dynamic Family_Remove(string UCC_Code);
+
+        public dynamic Family_Balance(List<string> UCC_Codes);
+
     }
 
     public class TradeWebRepository : ITradeWebRepository
@@ -1753,7 +1761,7 @@ namespace TradeWeb.API.Repository
         }
 
         //For getting Outstanding details data
-        public dynamic OutStandingPosition_Detail(string userId, string seriesid, string CESCd, string AsOnDt)
+        public dynamic OutStandingPosition_Detail(string userId, string seriesid, string CESCd)
         {
             try
             {
@@ -2355,7 +2363,7 @@ namespace TradeWeb.API.Repository
         }
 
 
-        public dynamic Holding_MyDemat_Current(string userid,string dematActNo,string strtable)
+        public dynamic Holding_MyDemat_Current(string userid, string dematActNo, string strtable)
         {
             string strsql = string.Empty;
 
@@ -3356,7 +3364,7 @@ namespace TradeWeb.API.Repository
         }
 
         // get bill main data
-        public dynamic Bill_data(string userId,string exchSeg,string settType,string dt)
+        public dynamic Bill_data(string userId, string exchSeg, string settType, string dt)
         {
             try
             {
@@ -3378,7 +3386,7 @@ namespace TradeWeb.API.Repository
         }
 
         #region Bill usefull methods
-        public DataSet Bill_Process(string userId,string exchSeg, string stlmntType, string dt)
+        public DataSet Bill_Process(string userId, string exchSeg, string stlmntType, string dt)
         {
             Boolean blnInterOP = new Boolean();
             List<string> arrexchange = new List<string>();
@@ -3389,7 +3397,7 @@ namespace TradeWeb.API.Repository
             if (exchSeg.Substring(1, 1) == "C")
             {
                 string StrStlmntWhere = string.Empty;
-                string Stlmnt = objUtility.fnFireQuery("settlements", "se_stlmnt", "se_stdt = '" + dt + "' and se_exchange+se_type", exchSeg.Substring(0, 1)+ stlmntType, true);
+                string Stlmnt = objUtility.fnFireQuery("settlements", "se_stlmnt", "se_stdt = '" + dt + "' and se_exchange+se_type", exchSeg.Substring(0, 1) + stlmntType, true);
 
                 string StrMsg;
                 StrMsg = objUtility.fnCheckInterOperability(dt, "C");
@@ -3688,7 +3696,7 @@ namespace TradeWeb.API.Repository
 
 
                 string StrMsg;
-                StrMsg = objUtility.fnCheckInterOperability(dt, exchSeg.Substring(1,1));
+                StrMsg = objUtility.fnCheckInterOperability(dt, exchSeg.Substring(1, 1));
 
                 if (StrMsg.ToUpper().Trim() == "TRUE")
                 {
@@ -3965,7 +3973,7 @@ namespace TradeWeb.API.Repository
                 Strsql = Strsql + " and td_clientcd='" + userId + "'  and  ";
                 Strsql = Strsql + " td_dt ='" + dt + "' and td_trxflag='N' ";
 
-                Strsql = "select * from (" + Strsql  + ") a order by SorORder,type,stlmnt,scripname ";
+                Strsql = "select * from (" + Strsql + ") a order by SorORder,type,stlmnt,scripname ";
 
                 ObjDataSet = objUtility.OpenDataSet(Strsql);
             }
@@ -4003,7 +4011,7 @@ namespace TradeWeb.API.Repository
                     Strsql = Strsql + " where td_clientcd= '" + userId + "' and td_stlmnt = se_stlmnt and td_scripcd = ss_cd ";
                     if (exch != "" && exch != null) { Strsql = Strsql + " and left(td_stlmnt,1) = '" + exch + "'"; }
                     Strsql = Strsql + " and td_dt between '" + fromdate + "' and '" + todate + "'";
-                    if (scripcode != "" && scripcode != null) { Strsql += " and td_scripcd = '" + scripcode.Trim() + "'";}
+                    if (scripcode != "" && scripcode != null) { Strsql += " and td_scripcd = '" + scripcode.Trim() + "'"; }
                     Strsql = Strsql + " group by td_stlmnt,td_scripcd,ss_Name ,td_dt,td_tradeid,td_time";
                 }
             }
@@ -4011,7 +4019,7 @@ namespace TradeWeb.API.Repository
             {
                 if (type == 0 || type == 1)
                 {
-                    if (Strsql.Length > 0 ) { Strsql = Strsql + " union all "; }
+                    if (Strsql.Length > 0) { Strsql = Strsql + " union all "; }
                     Strsql += "select case right(sm_prodtype,1) when 'F' then 2 else 3 end SortOrder, case td_Segment When 'F' Then 'Equity ' else 'Currency ' end + case right(sm_prodtype,1) ";
                     Strsql = Strsql + " when 'F' then 'Future' else 'Option' end type, 'Exp: '+ convert(char(10),convert(datetime,sm_expirydt),105) as stlmnt, case right(sm_prodtype,1) ";
                     Strsql = Strsql + " when 'F' then '' else ltrim(convert(char(8),sm_strikeprice))+sm_callput end scripcode,rtrim(sm_symbol)+case right(sm_prodtype,1)  when 'F' then ''  else ' ('+ltrim(convert(char(8),sm_strikeprice))+sm_callput+')' end as scripname,sum(td_bqty) 'buy',  ";
@@ -4023,7 +4031,7 @@ namespace TradeWeb.API.Repository
                     Strsql = Strsql + " case when sum(td_sqty) > 0 Then round(sum(td_sqty * td_rate)/sum(td_sqty),4) else 0 end SellRate";
                     Strsql = Strsql + " from trades with (nolock) , series_master with (nolock) ";
                     Strsql = Strsql + " where td_clientcd='" + userId + "' and td_segment = '" + seg + "'";
-                    if (exch != "" && exch != null ) {Strsql = Strsql + " and  td_exchange='" + exch + "'";}                        
+                    if (exch != "" && exch != null) { Strsql = Strsql + " and  td_exchange='" + exch + "'"; }
                     Strsql = Strsql + " and td_seriesid=sm_seriesid and td_trxFlag = 'N' ";
                     Strsql = Strsql + " and td_dt between '" + fromdate + "' and '" + todate + "'";
                     if (scripcode != "" && scripcode != null) { Strsql = Strsql + "and td_seriesid = " + scripcode + ""; }
@@ -4042,9 +4050,9 @@ namespace TradeWeb.API.Repository
                     Strsql = Strsql + " case when sum(ex_eqty) > 0 Then round(sum(ex_eqty*ex_diffrate)/sum(ex_eqty),4) else 0 end SellRate";
                     Strsql = Strsql + " from exercise with (nolock), series_master with (nolock) where ex_clientcd='" + userId + "' and  ";
                     Strsql = Strsql + " ex_exchange=sm_exchange and ex_Segment=sm_Segment and ex_seriesid=sm_seriesid ";
-                    if (exch != "" && exch != null)  { Strsql = Strsql + " and ex_exchange='" + exch + "'";}
+                    if (exch != "" && exch != null) { Strsql = Strsql + " and ex_exchange='" + exch + "'"; }
                     Strsql = Strsql + " and ex_Segment = '" + seg + "' and ex_dt='" + fromdate + "'";
-                    if (scripcode != "" && scripcode != null) Strsql = Strsql + " and ex_seriesid = " + scripcode ;
+                    if (scripcode != "" && scripcode != null) Strsql = Strsql + " and ex_seriesid = " + scripcode;
                     Strsql = Strsql + " group by ex_Segment,ex_eaflag, sm_symbol,sm_desc, sm_expirydt, sm_strikeprice, sm_callput,ex_exchange,ex_Segment,ex_dt,sm_prodtype";
                 }
             }
@@ -4079,7 +4087,7 @@ namespace TradeWeb.API.Repository
 
             return Strsql;
         }
-        
+
         #endregion
         #endregion
 
@@ -7897,6 +7905,249 @@ namespace TradeWeb.API.Repository
         #endregion
         #endregion
 
+
+
         #endregion
+
+        #region new family handler
+
+        //For getting Outstanding details data
+        public dynamic Family_List(string userId)
+        {
+            try
+            {
+                string strSql = "select upper(case when CF_CD=CF_FamilyCd then 'MAIN' else '' end) MainCd,upper(cf_cd) cf_cd ,cm_name";
+                strSql += " from Client_Family,Client_master where cm_cd=CF_CD and CF_FamilyCd='" + userId + "'  order by MainCd desc ";
+
+                var ds = CommonRepository.FillDataset(strSql);
+                if (ds != null)
+                {
+                    if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                    {
+                        var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
+                        return json;
+                    }
+                }
+                return new List<string>();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        public dynamic Family_Add(string userId, string password, string UCC_Code)
+        {
+            string strHostAdd = Dns.GetHostName();
+
+            string apiRes = objUtility.fnFireQueryTradeWeb("Client_Family", "count(*)", "Cf_cd", UCC_Code, true);
+
+            if (Conversion.Val(apiRes) > 0)
+            {
+                return "( " + UCC_Code.Trim() + " ) Already Assign To Family";
+            }
+
+            if (objUtility.GetWebParameter("PANASPASSWORD") == "Y")
+                strsql = " select cm_pwd,cm_Panno from Client_master with (nolock) where cm_cd='" + UCC_Code.Trim() + "'";
+            else
+                strsql = " select cm_pwd,'' cm_Panno from Client_master with (nolock) where cm_cd='" + UCC_Code.Trim() + "'";
+
+            DataSet ObjPwd = objUtility.OpenDataSet(strsql);//apiObj.CommonOpenDataSet(strsql);
+
+            if (ObjPwd.Tables[0].Rows.Count > 0)
+            {
+                if (ObjPwd.Tables[0].Rows[0]["cm_pwd"].ToString().Trim() != password.Trim())
+                {
+                    if (ObjPwd.Tables[0].Rows[0]["cm_Panno"].ToString().Trim() == "")
+                    {
+                        return "'Invalid Password!'";
+                    }
+                    if (ObjPwd.Tables[0].Rows[0]["cm_Panno"].ToString().Trim() != password.Trim())
+                    {
+                        return "'Invalid Password!'";
+                    }
+                }
+            }
+
+            string apiRes1 = objUtility.fnFireQueryTradeWeb("Client_Family", "count(*)", "Cf_cd", userId, true);
+
+            if (Conversion.Val(apiRes1) == 0)
+            {
+                strsql = "insert into Client_Family values ('" + userId + "','" + userId + "',convert(char(8),getdate(),112),convert(char(8),getdate(),108),'" + strHostAdd + "')";
+                objUtility.ExecuteSQL(strsql);
+            }
+            DataSet dsStatus = objUtility.OpenDataSet("select cf_familyCd from Client_Family where cf_cd='" + userId + "'");
+
+            string StrClientCd = userId;
+            if (UCC_Code.ToUpper().Trim() != StrClientCd.ToUpper().Trim())
+            {
+                strsql = "insert into Client_Family values ('" + UCC_Code.Trim() + "','" + dsStatus.Tables[0].Rows[0]["cf_familyCd"].ToString() + "',convert(char(8),getdate(),112),convert(char(8),getdate(),108),'" + strHostAdd + "')";
+                objUtility.ExecuteSQL(strsql);
+            }
+            return "Success";
+        }
+
+        public dynamic Family_Remove(string UCC_Code)
+        {
+            try
+            {
+                var result = FamilyRemoveQuery(UCC_Code);
+                return JsonConvert.SerializeObject(result); ;
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        public dynamic Family_Balance(List<string> UCC_Codes)
+        {
+            try
+            {
+                var ds = FamilyBalanceQuery(UCC_Codes);
+                if (ds != null)
+                {
+                    if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                    {
+                        var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
+                        return json;
+                    }
+                }
+                return new List<string>();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        #region family query
+        public string FamilyRemoveQuery(string UCC_Code)
+        {
+            if (Convert.ToInt16(objUtility.fnFireQueryTradeWeb("Client_Family", "COUNT(0)", " CF_CD=CF_FamilyCd and CF_CD ", UCC_Code, true)) == 1)
+                strsql = "delete from Client_Family where CF_FamilyCd ='" + UCC_Code + "' ";
+            else
+                strsql = "delete from Client_Family where CF_CD ='" + UCC_Code + "' ";
+
+            objUtility.ExecuteSQL(strsql);
+            return "Success";
+        }
+
+        public DataSet FamilyBalanceQuery(List<string> UCC_Codes)
+        {
+            string SelectedCLCode = "";
+
+
+
+            int CurrentYear = DateTime.Now.Year;
+            if (DateTime.Today.Month < 3)
+            {
+                CurrentYear = CurrentYear - 1;
+            }
+            string Fromdt = objUtility.dtos(new DateTime(CurrentYear, 4, 1).ToString());
+            string Todt = objUtility.dtos(new DateTime(CurrentYear + 1, 3, 31).ToString());
+            string StrDataFields = "";
+            string StrHeaderTitles = "";
+            string StrSubTotalsFor = "";
+            string StrTextAlign = "";
+            string StrTextLength = "";
+            string Strcolhide = "";
+            string StrCDC = "";
+            string StrAccC = "";
+            string StrCDM = "";
+            string StrAccM = "";
+            string StrCDL = "";
+            string StrAccL = "";
+            char[] ArrSeparters = new char[1];
+            ArrSeparters[0] = '/';
+            string[] StrClCd;
+            StrClCd = Convert.ToString(SelectedCLCode).Split(ArrSeparters);
+            int i = 0;
+            for (i = 0; i < StrClCd.Length - 1; i++)
+            {
+                string StrName = Strings.Left(StrClCd[i].Trim().Split('~')[1].Trim(), 15);
+
+                StrAccC += " cast(sum(Case When ld_clientcd = '" + StrClCd[i].Trim().Split('~')[0].Trim() + "' then ld_amount else 0 end) as decimal(15,2)) as  '" + StrClCd[i].Trim().Split('~')[0].Trim() + "_" + StrName.Trim() + "',";
+                StrCDC += "'" + StrClCd[i].Trim().Split('~')[0].Trim() + "',";
+                StrAccL += " cast(sum(Case When ld_clientcd = '" + StrClCd[i].Trim().Split('~')[0].Trim() + objUtility.GetSysParmSt("MTFP_SUFFIX", "") + "' then ld_amount else 0 end) as decimal(15,2)) as  '" + StrClCd[i].Trim().Split('~')[0].Trim() + "_" + StrName.Trim() + "',";
+                StrCDL += "'" + StrClCd[i].Trim().Split('~')[0].Trim() + objUtility.GetSysParmSt("MTFP_SUFFIX", "") + "',";
+
+                string StrMrg = objUtility.fnFireQueryTradeWeb("client_master", "distinct cm_brkggroup", "cm_cd", StrClCd[i].Trim().Split('~')[0].Trim(), true).Trim();
+                StrAccM += (StrMrg.Trim() == "" ? "0" : "cast(sum(Case When ld_clientcd = '" + StrMrg.Trim() + "' then ld_amount else 0 end) as decimal(15,2))") + " as  '" + StrClCd[i].Trim().Split('~')[0].Trim() + "_" + StrName.Trim() + "',";
+                StrCDM += "'" + StrMrg.Trim() + "',";
+                StrDataFields += StrClCd[i].Trim().Split('~')[0].Trim() + "_" + StrName.Trim() + ",";
+                StrHeaderTitles += StrClCd[i].Trim().Split('~')[0].Trim() + "_" + StrName.Trim() + ",";
+                StrSubTotalsFor += StrClCd[i].Trim().Split('~')[0].Trim() + "_" + StrName.Trim() + ",";
+                StrTextAlign += "R,";
+                StrTextLength += "15,";
+                Strcolhide += i + 1 + ",";
+            }
+            Strcolhide += i + 1;
+            StrCDC = Strings.Left(StrCDC, StrCDC.Length - 1);
+            StrCDL = Strings.Left(StrCDL, StrCDL.Length - 1);
+            StrCDM = Strings.Left(StrCDM, StrCDM.Length - 1);
+            
+
+            strsql = "select 'C' as account, ";
+            strsql += "case substring(ld_dpid,2,1)   when 'B' then 'BSE-' when 'N' then 'NSE-' when 'M' then 'MCX-' when 'F' then 'NCDEX-' else '' end +  ";
+            strsql += " case substring(ld_dpid,3,1)   when 'C' then 'CASH'  when 'F' then 'DERIVATIVE'  when 'K' then 'FX' when 'M' then 'MF' when 'X' then 'COMM' else '' end  as heading,";
+            strsql += StrAccC;
+            strsql += " cast(sum(ld_amount) as decimal(15,2)) as  'Total' ";
+            strsql += " from Ledger ";
+            strsql += " Where ld_clientcd in (" + StrCDC + " )";
+            strsql += " Group By ld_dpid";
+
+            strsql += " Union all select 'M' as account, ";
+            strsql += " case substring(ld_dpid,2,1)   when 'B' then 'BSE-' when 'N' then 'NSE-' when 'M' then 'MCX-' when 'F' then 'NCDEX-' else '' end + ";
+            strsql += " case substring(ld_dpid,3,1)   when 'C' then 'CASH'  when 'F' then 'DERIVATIVE'  when 'K' then 'FX'  when 'X' then 'COMM' else '' end + '(M)',";
+            strsql += StrAccM;
+            strsql += " cast(sum(ld_amount) as decimal(15,2)) as  'Total' ";
+            strsql += " from Ledger ";
+            strsql += " Where ld_clientcd in (" + StrCDM + " )";
+            strsql += " Group By ld_dpid ";
+
+            //MTF ledger
+            if (Convert.ToInt32(objUtility.fnFireQueryTradeWeb("sysobjects", "count(*)", "name", "MrgTdgFin_TRX", true)) > 0)
+            {
+                strsql += " union all select 'L' as account, case substring(ld_dpid,2,1)   when 'B' then 'BSE-' when 'N' then 'NSE-' when 'M' then 'MCX-' else '' end + 'MTF' ,";
+                strsql += StrAccL;
+                strsql += " cast(sum(ld_amount) as decimal(15,2)) as  'Total' ";
+                strsql += " from ledger with (nolock),MrgTdgFin_Clients ";
+                strsql += " where ld_clientcd in (" + StrCDL + " ) and ld_dt <= '20210331' ";
+                strsql += "  and ld_clientcd =  Rtrim(MTFC_CMCD) + '" + objUtility.GetSysParmSt("MTFP_SUFFIX", "") + "' group by ld_dpid";
+            }
+
+            // NBFC
+            if (Convert.ToInt32(objUtility.fnFireQueryTradeWeb("sysobjects", "count(*)", "name", "nbfc_clients", true)) > 0)
+            {
+                strsql += " union all ";
+                strsql += "select 'N' as account, 'NBFC',";
+                strsql += StrAccC;
+                strsql += " cast(sum(ld_amount) as decimal(15,2)) as  'Total' ";
+                strsql += " from NBFC_Ledger with (nolock) where ld_clientcd in (" + StrCDC + " ) and ld_dt <= '" + Todt + "' group by ld_dpid ";
+            }
+            if (_configuration["Commex"] != null && _configuration["Commex"] != string.Empty)
+            {
+                string StrCommexConn = "";
+                StrCommexConn = objUtility.GetCommexConnection();
+                strsql += " union all select 'CM' as account, ";
+                strsql += " case substring(ld_dpid,2,1) when 'M' then 'MCX-COMM' when 'N' then 'NCDEX-COMM' when 'S' then 'NSEL-COMM' when 'D' then 'NSX-COMM' end as heading ,";
+                strsql += StrAccC;
+                strsql += " cast(sum(ld_amount) as decimal(15,2)) as  'Total' ";
+                strsql += " from   " + StrCommexConn + ".ledger";
+                strsql += " where ld_clientcd in (" + StrCDC + " ) and ld_dt <= '" + Todt + "' ";
+                strsql += " group by ld_dpid ";
+
+                strsql += " order by account";
+            }
+            DataSet ObjDataSet = new DataSet();
+            ObjDataSet = objUtility.OpenDataSet(strsql);
+            return ObjDataSet;
+        }
+        #endregion
+
+        #endregion
+
+
     }
 }
