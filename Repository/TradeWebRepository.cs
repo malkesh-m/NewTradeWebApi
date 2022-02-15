@@ -14,6 +14,7 @@ using System.Net;
 using System.Net.Mail;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Web.Helpers;
 using TradeWeb.API.Data;
 using TradeWeb.API.Models;
 using static INVPLService.NVPLSoapClient;
@@ -77,6 +78,7 @@ namespace TradeWeb.API.Repository
 
 
         public dynamic Confirmation(string userId, int type, string dt);
+
         public dynamic Transaction_Detail(string userId, string exch, string seg, int type, string fromdate, string todate, string scripcode);
 
 
@@ -8007,11 +8009,7 @@ namespace TradeWeb.API.Repository
                 var ds = FamilyBalanceQuery(UCC_Codes);
                 if (ds != null)
                 {
-                    if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
-                    {
-                        var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
-                        return json;
-                    }
+                    return ds;
                 }
                 return new List<string>();
             }
@@ -8033,11 +8031,19 @@ namespace TradeWeb.API.Repository
             return "Success";
         }
 
-        public DataSet FamilyBalanceQuery(List<string> UCC_Codes)
+        public List<FamilyBalanceResponse> FamilyBalanceQuery(List<string> UCC_Codes)
         {
             string SelectedCLCode = "";
+            string uccName = "";
+            foreach (var uccCode in UCC_Codes)
+            {
+                uccName = objUtility.fnFireQueryTradeWeb("client_master", "cm_name", "cm_cd", uccCode, true);
 
-
+                if (!String.IsNullOrEmpty(uccName))
+                {
+                    SelectedCLCode = SelectedCLCode + uccCode.Trim().ToUpper() + "~" + uccName.Trim() + "/";
+                }
+            }
 
             int CurrentYear = DateTime.Now.Year;
             if (DateTime.Today.Month < 3)
@@ -8086,7 +8092,7 @@ namespace TradeWeb.API.Repository
             StrCDC = Strings.Left(StrCDC, StrCDC.Length - 1);
             StrCDL = Strings.Left(StrCDL, StrCDL.Length - 1);
             StrCDM = Strings.Left(StrCDM, StrCDM.Length - 1);
-            
+
 
             strsql = "select 'C' as account, ";
             strsql += "case substring(ld_dpid,2,1)   when 'B' then 'BSE-' when 'N' then 'NSE-' when 'M' then 'MCX-' when 'F' then 'NCDEX-' else '' end +  ";
@@ -8142,7 +8148,75 @@ namespace TradeWeb.API.Repository
             }
             DataSet ObjDataSet = new DataSet();
             ObjDataSet = objUtility.OpenDataSet(strsql);
-            return ObjDataSet;
+
+            List<FamilyBalanceResponse> familyBalanceResponses = new List<FamilyBalanceResponse>();
+
+            ArrSeparters[0] = '_';
+            string[] code;
+
+            foreach (DataColumn column in ObjDataSet.Tables[0].Columns)
+            {
+
+                if (column.ColumnName != "account" && column.ColumnName != "heading" && column.ColumnName != "Total")
+                {
+                    FamilyBalanceResponse familyBalance = new FamilyBalanceResponse();
+                    familyBalance.Name = column.ColumnName;
+                    code = column.ColumnName.Split(ArrSeparters);
+                    familyBalance.Code = code[0];
+                    familyBalance.ExchSegBalances = new List<ExchSegBalance>();
+                    for (i = 0; i < ObjDataSet.Tables[0].Rows.Count; i++)
+                    {
+                        if (familyBalance.ExchSegBalances != null)
+                        {
+
+                            //var abc = dr.ItemArray[].ToString();
+                            familyBalance.ExchSegBalances.Add(new ExchSegBalance
+                            {
+
+                                ExchSeg = ObjDataSet.Tables[0].Rows[i]["heading"].ToString(),
+                                Balance = ObjDataSet.Tables[0].Rows[i][column.ColumnName].ToString(),
+                            });
+                        }
+                        else
+                        {
+                            familyBalance.ExchSegBalances.Add(new ExchSegBalance
+                            {
+                                ExchSeg = ObjDataSet.Tables[0].Rows[i]["heading"].ToString(),
+                                Balance = ObjDataSet.Tables[0].Rows[i][column.ColumnName].ToString(),
+                            });
+                        }
+                    }
+                    //foreach (DataRow dr in ObjDataSet.Tables[0].Rows)
+                    //{
+                    //    if (familyBalance.ExchSegBalances != null)
+                    //    {
+
+                    //        //var abc = dr.ItemArray[].ToString();
+                    //        familyBalance.ExchSegBalances.Add(new ExchSegBalance
+                    //        {
+
+                    //            ExchSeg = dr.Table.Rows[0]["heading"].ToString(),
+                    //            Balance = dr.Table.Rows[0][column.ColumnName].ToString(),
+                    //        });
+                    //    }
+                    //    else
+                    //    {
+                    //        familyBalance.ExchSegBalances.Add(new ExchSegBalance
+                    //        {
+                    //            ExchSeg = dr.Table.Rows[0]["heading"].ToString(),
+                    //            Balance = dr.Table.Rows[0][column.ColumnName].ToString(),
+                    //        });
+                    //    }
+
+
+                    //}
+                    familyBalanceResponses.Add(familyBalance);
+                }
+            }
+
+            return familyBalanceResponses;
+
+
         }
         #endregion
 

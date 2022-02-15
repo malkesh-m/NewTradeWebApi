@@ -428,7 +428,6 @@ namespace TradeWeb.API.Controllers
             var handler = new JwtSecurityTokenHandler();
             string authHeader = Request.Headers["Authorization"];
             authHeader = authHeader.Replace("Bearer ", "");
-            //var jsonToken = handler.ReadToken(authHeader);
             var token = handler.ReadToken(authHeader) as JwtSecurityToken;
             return token;
         }
