@@ -42,7 +42,7 @@ namespace TradeWeb.API.Repository
         public dynamic Transaction_Accounts(string userId, string type, string fromDate, string toDate);
 
         public dynamic Transaction_AGTS(string userId, string seg, string fromDate, string toDate);
-        public dynamic Ledger_Summary(string userId, string type, string fromdate, string toDate);
+        public DataTable Ledger_Summary(string userId, string type, string fromdate, string toDate);
 
         public dynamic Ledger_Year();
 
@@ -1389,7 +1389,118 @@ namespace TradeWeb.API.Repository
         #endregion
 
         #region Ledger handler methods
-        public dynamic Ledger_Summary(string userId, string type, string fromdate, string toDate)
+        public DataTable Ledger_Summary(string userId, string type, string fromdate, string toDate)
+        {
+
+            if (String.IsNullOrEmpty(type))
+                type = "";
+
+            if (String.IsNullOrEmpty(fromdate))
+                fromdate = "";
+
+            if (String.IsNullOrEmpty(toDate))
+                toDate = "";
+
+            string strsql = "";
+            if (type == "" || type.ToUpper() == "1")
+            {
+                strsql = strsql + "select 'Trading' as [Type],ld_clientcd as [ClientCode], sum(case sign(datediff(d,'" + fromdate + "',ld_dt)) when -1 then ld_amount else 0 end) OpeningBalance,sum(case sign(datediff(d,'" + fromdate + "',ld_dt)) when -1 then 0 else case ld_debitflag when 'D' then ld_amount else 0 end end) Debit, sum(case sign(datediff(d,'" + fromdate + "',ld_dt)) when -1 then 0 else case ld_debitflag     when 'D' then 0 else ld_amount end end) Credit, sum(ld_amount) Balance ,";
+                strsql = strsql + " Rtrim(CES_Exchange) + '-' + CES_Segment [ExchSeg], ";
+                strsql = strsql + " LD_DPID as CESCD";
+                strsql = strsql + " from ledger with (nolock) , Companyexchangesegments where LD_DPID = CES_Cd and ld_clientcd='" + userId + "' and ld_dt <= '" + toDate + "' group by ld_dpid , ld_clientcd,CES_Exchange,CES_Segment";
+                strsql = strsql + " union all ";
+                strsql = strsql + " select 'Trading-Margin' as [Type],ld_clientcd as [ClientCode], sum(case sign(datediff(d,'" + fromdate + "',ld_dt)) when -1 then ld_amount else 0 end) OpeningBalance,sum(case sign(datediff(d,'" + fromdate + "',ld_dt)) when -1 then 0 else case ld_debitflag  ";
+                strsql = strsql + " when 'D' then ld_amount else 0 end end) Debit, sum(case sign(datediff(d,'" + fromdate + "',ld_dt)) when -1 then 0 else case ld_debitflag when 'D' then 0 else ld_amount end end) Credit, sum(ld_amount) Balance, ";
+                strsql = strsql + " Rtrim(CES_Exchange) + '-' + CES_Segment [ExchSeg], ";
+                strsql = strsql + " LD_DPID as CompanyCode";
+                strsql = strsql + " from ledger , Companyexchangesegments where LD_DPID = CES_Cd and ld_clientcd=(select distinct cm_brkggroup from client_master with (nolock) where cm_cd='" + userId + "') ";
+                strsql = strsql + " and ld_dt <= '" + toDate + "' group by ld_dpid , ld_clientcd,CES_Exchange,CES_Segment ";
+            }
+
+            if (type == "" || type.ToUpper() == "3")
+            {
+                if (Convert.ToInt32(objUtility.fnFireQueryTradeWeb("sysobjects", "count(*)", "name", "MrgTdgFin_TRX", true)) > 0)
+                {
+                    if (strsql.Length > 0)
+                    {
+                        strsql = strsql + " union all ";
+                    }
+                    strsql = strsql + "select 'MTF' as [Type],ld_clientcd [ClientCode], sum(case sign(datediff(d,'" + fromdate + "',ld_dt)) when -1 then ld_amount else 0 end) OpeningBalance,sum(case sign(datediff(d,'" + fromdate + "',ld_dt)) when -1 then 0 else case ld_debitflag when 'D' then ld_amount else 0 end end) Debit, sum(case sign(datediff(d,'" + fromdate + "',ld_dt)) when -1 then 0 else case ld_debitflag     when 'D' then 0 else ld_amount end end) Credit, sum(ld_amount) Balance ,";
+                    strsql = strsql + " Rtrim(CES_Exchange) + '- MTF' [ExchSeg] , ";
+                    strsql = strsql + " LD_DPID as CESCD";
+                    strsql = strsql + " from ledger with (nolock),MrgTdgFin_Clients with (nolock) , Companyexchangesegments where LD_DPID = CES_Cd and ld_clientcd='" + userId + objUtility.GetSysParmSt("MTFP_SUFFIX", "") + "' and ld_dt <= '" + toDate + "'";
+                    strsql = strsql + " and ld_clientcd =  Rtrim(MTFC_CMCD) + '" + objUtility.GetSysParmSt("MTFP_SUFFIX", "") + "' ";
+                    strsql = strsql + " group by ld_dpid , ld_clientcd , CES_Exchange ";
+                }
+
+            }
+            //MTF ledger
+
+            // NBFC
+            if (type == "" || type.ToUpper() == "4")
+            {
+                if (Convert.ToInt32(objUtility.fnFireQueryTradeWeb("sysobjects", "count(*)", "name", "nbfc_clients", true)) > 0)
+                {
+                    if (strsql.Length > 0)
+                    {
+                        strsql = strsql + " union all ";
+                    }
+                    strsql += "select 'NBFC' as [Type],ld_clientcd [ClientCode], sum(case sign(datediff(d,'" + fromdate + "',ld_dt)) when -1 then ld_amount else 0 end) OpeningBalance,sum(case sign(datediff(d,'" + fromdate + "',ld_dt)) when -1 then 0 else case ld_debitflag when 'D' then ld_amount else 0 end end) Debit, sum(case sign(datediff(d,'" + fromdate + "',ld_dt)) when -1 then 0 else case ld_debitflag     when 'D' then 0 else ld_amount end end) Credit, sum(ld_amount) Balance ,";
+                    strsql += " 'NBFC' [ExchSeg],";
+                    strsql += " 'NBFC' as CESCD";
+                    strsql = strsql + " from NBFC_Ledger with (nolock) where ld_clientcd='" + userId + "' and ld_dt <= '" + toDate + "' group by ld_dpid , ld_clientcd";
+
+                }
+            }
+            if (type == "" || type.ToUpper() == "2")
+            {
+                if (_configuration["Commex"] != null && _configuration["Commex"] != string.Empty)
+                {
+
+                    string StrCommexConn = objUtility.GetCommexConnectionNew(_configuration["Commex"]);
+
+                    if (strsql.Length > 0)
+                    {
+                        strsql = strsql + " union all ";
+                    }
+                    strsql = strsql + " select 'Commodity' as [Type],ld_clientcd [ClientCode], sum(case sign(datediff(d,'" + fromdate + "',ld_dt)) when -1 then ld_amount else 0 end) OpeningBalance,sum(case sign(datediff(d,'" + fromdate + "',ld_dt)) when -1 then 0 else case ld_debitflag when 'D' then ld_amount else 0 end end) Debit, sum(case sign(datediff(d,'" + fromdate + "',ld_dt)) when -1 then 0 else case ld_debitflag when 'D' then 0 else ld_amount end end) Credit, sum(ld_amount) Balance, ";
+                    strsql = strsql + " Rtrim(CES_Exchange) + '-Comm' [ExchSeg] , ";
+                    strsql = strsql + " Left(ld_DPID,2)+'X' as CESCD";
+                    strsql = strsql + " from " + StrCommexConn + ".ledger," + StrCommexConn + ".Companyexchangesegments";
+                    strsql = strsql + " where LD_DPID = CES_Cd and ld_clientcd='" + userId + "' and ld_dt <= '" + toDate + "' ";
+                    strsql = strsql + " group by ld_dpid , ld_clientcd , CES_Exchange ";
+
+                    strsql = strsql + " union all ";
+                    strsql = strsql + " select 'Commodity-Margin' as [Type],ld_clientcd [ClientCode], sum(case sign(datediff(d,'" + fromdate + "',ld_dt)) when -1 then ld_amount else 0 end) OpeningBalance,sum(case sign(datediff(d,'" + fromdate + "',ld_dt)) when -1 then 0 else case ld_debitflag when 'D' then ld_amount else 0 end end) Debit, sum(case sign(datediff(d,'" + fromdate + "',ld_dt)) when -1 then 0 else case ld_debitflag when 'D' then 0 else ld_amount end end) Credit, sum(ld_amount) Balance, ";
+                    strsql = strsql + " Rtrim(CES_Exchange) + '-Comm' [ExchSeg],";
+                    strsql = strsql + " Left(ld_DPID,2)+'X' as CESCD";
+                    strsql = strsql + " from   " + StrCommexConn + ".ledger," + StrCommexConn + ".Companyexchangesegments";
+                    strsql = strsql + " where LD_DPID = CES_Cd and ld_clientcd=(select distinct cm_brkggroup from " + StrCommexConn + ".client_master where cm_cd='" + userId + "') and ld_dt <= '" + toDate + "' ";
+                    strsql = strsql + " group by ld_dpid , ld_clientcd , CES_Exchange ";
+                }
+            }
+            strsql = "select * from ( " + strsql;
+            strsql = strsql + " ) a ";
+            strsql = strsql + " order by [Type],ClientCode,CESCD ";
+
+            try
+            {
+                var ds = objUtility.OpenDataSet(strsql);
+                if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                {
+                    var data = ds.Tables[0];
+                    return data;
+                    //return JsonConvert.SerializeObject(data, Formatting.None);
+                }
+                return new DataTable(); // List<string>();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        /*public dynamic Ledger_Summary(string userId, string type, string fromdate, string toDate)
         {
 
             if (String.IsNullOrEmpty(type))
@@ -1497,7 +1608,7 @@ namespace TradeWeb.API.Repository
             {
                 throw ex;
             }
-        }
+        }*/
 
         public dynamic Ledger_Detail(string userId, LedgerDetailsModel model, string fromDate, string toDate)
         {

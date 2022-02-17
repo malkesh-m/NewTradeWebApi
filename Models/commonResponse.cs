@@ -12,7 +12,7 @@ namespace TradeWeb.API.Entity
         public int status_code { get; set; }
         public string message { get; set; }
         public string error_message { get; set; }
-        public dynamic data { get; set; }
+        public Object data { get; set; }
     }
 
     public class tokenResponse : commonResponse
