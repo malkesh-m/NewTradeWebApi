@@ -157,6 +157,8 @@ namespace TradeWeb.API.Repository
         public dynamic Family_Position(List<string> UCC_Codes);
 
         public dynamic Family_Transaction(FamilyTransactionModel model);
+
+        public dynamic Family_Transaction_Details(string client, string type, string fromDate, string toDate);
     }
 
     public class TradeWebRepository : ITradeWebRepository
@@ -8217,6 +8219,26 @@ namespace TradeWeb.API.Repository
             }
         }
 
+        public dynamic Family_Transaction_Details(string client, string type, string fromDate, string toDate)
+        {
+            try
+            {
+                var ds = FamilyTransactionDetailQuery(client, type, fromDate, toDate);
+                if (ds != null)
+                {
+                    if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                    {
+                        return JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
+                    }
+                }
+                return new List<string>();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
         #region family query
 
         public string FamilyRemoveQuery(string UCC_Code)
@@ -8586,6 +8608,31 @@ namespace TradeWeb.API.Repository
                 DataSet ObjDataSet = objUtility.OpenDataSet(strsql);
                 return ObjDataSet;
             }
+        }
+
+        public DataSet FamilyTransactionDetailQuery(string Client, string Type, string FromDate, string ToDate)
+        {
+            if (Type.Trim() == "R" || Type.Trim() == "P")
+            {
+                strsql = " select 'DP Transaction' Td_Type,ld_documentno , ltrim(rtrim(convert(char,convert(datetime,ld_dt),103))) Date , ld_Particular , ld_Chequeno,";
+                strsql += "convert(decimal(15,2),case ld_documenttype When 'R' Then (-1) else 1 end*ld_amount)  Amount from ledger with (nolock)";
+                strsql += "where ld_documenttype = '" + Type.Trim() + "'";
+                strsql += "and ld_clientcd='" + Client.Trim() + "' and ld_dt between '" + FromDate + "' and '" + ToDate + "'";
+                strsql += "order by ld_dt desc ";
+            }
+            else
+            {
+                strsql = "select 'DP Transaction' Td_Type,ld_documentno , ltrim(rtrim(convert(char,convert(datetime,ld_dt),103))) Date , ";
+                strsql = strsql + " ld_Particular  , case ld_debitflag when 'D' then convert(decimal(15,2),ld_amount) else 0 end  Debit,";
+                strsql = strsql + " case ld_debitflag when 'D' then 0 else convert(decimal(15,2),-ld_amount) end  Credit";
+                strsql = strsql + " from ledger with (nolock) where ld_documenttype= 'J'";
+                strsql = strsql + " and ld_clientcd='" + Client.Trim() + "'";
+                strsql = strsql + " and ld_dt between '" + FromDate + "' and '" + ToDate + "'";
+                strsql = strsql + " order by ld_dt desc";
+            }
+            DataSet ObjDataSet = new DataSet();
+            ObjDataSet = objUtility.OpenDataSet(strsql);
+            return ObjDataSet;
         }
         #endregion
 

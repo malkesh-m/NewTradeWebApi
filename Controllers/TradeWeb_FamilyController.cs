@@ -385,6 +385,32 @@ namespace TradeWeb.API.Controllers
             return BadRequest();
         }
 
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpPost("Family_Transaction_Details", Name = "Family_Transaction_Details")]
+        public IActionResult Family_Transaction_Details(string client, string type, string fromDate, string toDate)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var getData = _tradeWebRepository.Family_Transaction_Details(client, type, fromDate, toDate);
+                    if (getData != null)
+                    {
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                    }
+                    else
+                    {
+                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
+
 
         #endregion
 
