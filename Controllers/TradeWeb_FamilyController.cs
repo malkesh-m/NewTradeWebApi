@@ -8,6 +8,7 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using TradeWeb.API.Entity;
+using TradeWeb.API.Models;
 using TradeWeb.API.Repository;
 
 namespace TradeWeb.API.Controllers
@@ -356,6 +357,33 @@ namespace TradeWeb.API.Controllers
             return BadRequest();
         }
 
+
+        // TODO : Get Family List
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpPost("Family_Transaction", Name = "Family_Transaction")]
+        public IActionResult Family_Transaction(FamilyTransactionModel model)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var getData = _tradeWebRepository.Family_Transaction(model);
+                    if (getData != null)
+                    {
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                    }
+                    else
+                    {
+                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
 
 
         #endregion

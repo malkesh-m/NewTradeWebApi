@@ -155,6 +155,8 @@ namespace TradeWeb.API.Repository
         public dynamic Family_Holding(List<string> UCC_Codes);
 
         public dynamic Family_Position(List<string> UCC_Codes);
+
+        public dynamic Family_Transaction(FamilyTransactionModel model);
     }
 
     public class TradeWebRepository : ITradeWebRepository
@@ -8125,7 +8127,7 @@ namespace TradeWeb.API.Repository
                 var ds = FamilyBalanceQuery(UCC_Codes);
                 if (ds != null)
                 {
-                    return ds;
+                        return ds;
                 }
                 return new List<string>();
             }
@@ -8142,7 +8144,10 @@ namespace TradeWeb.API.Repository
                 var ds = FamilyRetainedStokeQuery(UCC_Codes);
                 if (ds != null)
                 {
-                    return JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
+                    if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                    {
+                        return JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
+                    }
                 }
                 return new List<string>();
             }
@@ -8159,7 +8164,10 @@ namespace TradeWeb.API.Repository
                 var ds = FamilyHoldingQuery(UCC_Codes);
                 if (ds != null)
                 {
-                    return JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
+                    if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                    {
+                        return JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
+                    }
                 }
                 return new List<string>();
             }
@@ -8176,7 +8184,30 @@ namespace TradeWeb.API.Repository
                 var ds = FamilyPositionQuery(UCC_Codes);
                 if (ds != null)
                 {
-                    return JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
+                    if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                    {
+                        return JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
+                    }
+                }
+                return new List<string>();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        public dynamic Family_Transaction(FamilyTransactionModel model)
+        {
+            try
+            {
+                var ds = FamilyTransactionQuery(model);
+                if (ds != null)
+                {
+                    if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                    {
+                        return JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
+                    }
                 }
                 return new List<string>();
             }
