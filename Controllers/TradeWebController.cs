@@ -266,9 +266,10 @@ namespace TradeWeb.API.Controllers
                     var userId = token.Claims.First(claim => claim.Type == "username").Value;
 
                     var dataList = _tradeWebRepository.Ledger_Summary(userId, type, fromDate, toDate);
+                    var strDataList = Newtonsoft.Json.JsonConvert.SerializeObject(dataList).Replace(@"\",String.Empty);
                     if (dataList != null)
                     {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = dataList });
+                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = strDataList });
                     }
                     return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.NotFound, data = null });
                 }
