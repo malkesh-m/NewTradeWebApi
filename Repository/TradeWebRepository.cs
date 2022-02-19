@@ -159,6 +159,8 @@ namespace TradeWeb.API.Repository
         public dynamic Family_Transaction(FamilyTransactionModel model);
 
         public dynamic Family_Transaction_Details(string client, string type, string fromDate, string toDate);
+
+        public dynamic Family_RetainedStokeJson(List<string> UCC_Codes);
     }
 
     public class TradeWebRepository : ITradeWebRepository
@@ -8129,7 +8131,7 @@ namespace TradeWeb.API.Repository
                 var ds = FamilyBalanceQuery(UCC_Codes);
                 if (ds != null)
                 {
-                        return ds;
+                    return ds;
                 }
                 return new List<string>();
             }
@@ -8239,6 +8241,22 @@ namespace TradeWeb.API.Repository
             }
         }
 
+        public dynamic Family_RetainedStokeJson(List<string> UCC_Codes)
+        {
+            try
+            {
+                var result = FamilyRetainedStokeJson(UCC_Codes);
+                if (result != null)
+                {
+                    return result;
+                }
+                return new List<string>();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
         #region family query
 
         public string FamilyRemoveQuery(string UCC_Code)
@@ -8913,6 +8931,167 @@ namespace TradeWeb.API.Repository
             DataSet ObjDataSet = new DataSet();
             ObjDataSet = objUtility.OpenDataSet(strsql);
             return ObjDataSet;
+        }
+
+        public List<FamilyRetainedStokeResponse> FamilyRetainedStokeJson(List<string> UCC_Codes)
+        {
+            string SelectedCLCode = "";
+            string uccName = "";
+            foreach (var uccCode in UCC_Codes)
+            {
+                uccName = objUtility.fnFireQueryTradeWeb("client_master", "cm_name", "cm_cd", uccCode, true);
+
+                if (!String.IsNullOrEmpty(uccName))
+                {
+                    SelectedCLCode = SelectedCLCode + uccCode.Trim().ToUpper() + "~" + uccName.Trim() + "/";
+                }
+            }
+
+            string Strsql = string.Empty;
+            DataSet ObjDataSet = new DataSet();
+
+            string strdate = DateTime.Today.Date.ToString("yyyyMMdd");
+            int i = 0;
+            string strstat = string.Empty;
+            Strsql = "select st_sysvalue from stationary where st_parmcd='DMTCOLLATDP' and st_exchange = 'B' ";
+            ObjDataSet = objUtility.OpenDataSet(Strsql);
+            if (ObjDataSet.Tables[0].Rows.Count != 0)
+                strstat = ObjDataSet.Tables[0].Rows[0][0].ToString().Trim();
+            char[] ArrSeprator = new char[1];
+            ArrSeprator[0] = ',';
+            string[] arrstat = strstat.Split(ArrSeprator);
+            string strcollat = "( ";
+            for (i = 0; i <= arrstat.Length - 1; i++)
+            {
+                strcollat = strcollat + "'" + arrstat[i] + "',";
+            }
+            strcollat = strcollat + ")";
+            strcollat = strcollat.Replace(",)", ")");
+
+            string StrSelect = "";
+            string StrCDC = "";
+            char[] ArrSeparters = new char[1];
+            ArrSeparters[0] = '/';
+            string[] StrClCd;
+            string StrDataFields = "";
+            string StrSubTotalFields = "";
+            string StrHeaderTitles = "";
+            string StrTextAlign = "";
+            string StrTextLength = "";
+
+            StrClCd = Convert.ToString(SelectedCLCode).Split(ArrSeparters);
+
+            for (i = 0; i < StrClCd.Length - 1; i++)
+            {
+                StrSelect += " cast(sum(Case When dm_clientcd = '" + StrClCd[i].Trim().Split('~')[0].Trim() + "' then qty else 0 end) as decimal(15,0)) as  '" + StrClCd[i].Trim().Split('~')[0].Trim() + "_Qty',cast(sum(Case When dm_clientcd = '" + StrClCd[i].Trim().Split('~')[0].Trim() + "' then (ss_bserate*qty) else 0 end) as decimal(15,2)) as  '" + StrClCd[i].Trim().Split('~')[0].Trim() + "_Valuation',";
+                StrCDC += "'" + StrClCd[i].Trim().Split('~')[0].Trim() + "',";
+                StrDataFields += StrClCd[i].Trim().Split('~')[0].Trim() + "_Qty," + StrClCd[i].Trim().Split('~')[0].Trim() + "_Valuation,";
+                StrSubTotalFields += StrClCd[i].Trim().Split('~')[0].Trim() + "_Valuation,";
+                StrHeaderTitles += "Qty,Valuation,";
+                StrTextAlign += "R,R,";
+                StrTextLength += "15,15,";
+            }
+
+            StrCDC = Strings.Left(StrCDC, StrCDC.Length - 1);
+            SqlConnection con;
+            using (var db = new DataContext())
+            {
+                con = new SqlConnection((db.Database.GetDbConnection()).ConnectionString);
+                con.Open();
+                objUtility.GetHairCut(con);
+                strsql = "select dm_isin,ss_name,bh_type, " + StrSelect;
+                strsql += " cast(sum(qty)  as decimal(15,0)) as  'TotalQty', ";
+                strsql += " cast(sum((ss_bserate*qty)) as decimal(15,2)) as  'TotalVal' ";
+                strsql += " from ( ";
+                strsql += objUtility.GetSqlTradeHolding(con.ConnectionString, StrCDC, strdate, strcollat, con);
+                strsql += " ) a group by dm_isin,ss_name,bh_type having abs(sum(qty)) > 0 ";
+
+                ObjDataSet = new DataSet();
+                ObjDataSet = objUtility.OpenDataSetTmp(strsql, con);
+            }
+
+            List<FamilyRetainedStokeResponse> familyRetainedStokeResponses = new List<FamilyRetainedStokeResponse>();
+            StokeDetails stokeDetails;
+            FamilyRetainedStokeResponse familyRetainedStoke;
+            ArrSeparters[0] = '_';
+            string[] code;
+
+            for (int k = 3; k < ObjDataSet.Tables[0].Columns.Count; k += 2)
+            {
+                familyRetainedStoke = new FamilyRetainedStokeResponse();
+                familyRetainedStoke.StokeDetails = new List<StokeDetails>();
+                var uccCode = ObjDataSet.Tables[0].Columns[k].ColumnName.Split(ArrSeparters)[0].Trim();
+                uccName = objUtility.fnFireQueryTradeWeb("client_master", "cm_name", "cm_cd", uccCode, true);
+                if (!string.IsNullOrEmpty(uccName))
+                {
+                    familyRetainedStoke.Code = uccCode;
+                    familyRetainedStoke.Name = uccName;
+                }
+                else
+                {
+                    familyRetainedStoke.Code = "Total";
+                    familyRetainedStoke.Name = "Total";
+                }
+
+                for (i = 0; i < ObjDataSet.Tables[0].Rows.Count; i++)
+                {
+                    stokeDetails = new StokeDetails();
+                    stokeDetails.ISIN = ObjDataSet.Tables[0].Rows[i]["dm_isin"].ToString();
+                    stokeDetails.ss_Name = ObjDataSet.Tables[0].Rows[i]["ss_name"].ToString();
+                    stokeDetails.Quantity = ObjDataSet.Tables[0].Rows[i][k].ToString();
+                    stokeDetails.Valuation = ObjDataSet.Tables[0].Rows[i][k + 1].ToString();
+                    familyRetainedStoke.StokeDetails.Add(stokeDetails);
+                }
+
+                familyRetainedStokeResponses.Add(familyRetainedStoke);
+            }
+
+            return familyRetainedStokeResponses;
+
+
+            #region old code
+            //List<FamilyRetainedStokeResponse> familyRetainedStokeModels = new List<FamilyRetainedStokeResponse>();
+
+            //ArrSeparters[0] = '_';
+            //string[] code;
+
+            //foreach (DataColumn column in ObjDataSet.Tables[0].Columns)
+            //{
+
+            //    if (column.ColumnName != "dm_isin" && column.ColumnName != "ss_name" && column.ColumnName != "Total")
+            //    {
+            //        FamilyRetainedStokeResponse familyRetained = new FamilyRetainedStokeResponse();
+            //        familyRetained.Name = column.ColumnName;
+            //        code = column.ColumnName.Split(ArrSeparters);
+            //        familyRetained.Code = code[0];
+            //        familyRetained.StokeDetails = new List<StokeDetails>();
+            //        for (i = 0; i < ObjDataSet.Tables[0].Rows.Count; i++)
+            //        {
+            //            if (familyRetained.StokeDetails != null)
+            //            {
+
+            //                //var abc = dr.ItemArray[].ToString();
+            //                familyRetained.StokeDetails.Add(new StokeDetails
+            //                {
+
+            //                    ExchSeg = ObjDataSet.Tables[0].Rows[i]["heading"].ToString(),
+            //                    Balance = ObjDataSet.Tables[0].Rows[i][column.ColumnName].ToString(),
+            //                });
+            //            }
+            //            else
+            //            {
+            //                familyRetained.StokeDetails.Add(new StokeDetails
+            //                {
+            //                    ExchSeg = ObjDataSet.Tables[0].Rows[i]["heading"].ToString(),
+            //                    Balance = ObjDataSet.Tables[0].Rows[i][column.ColumnName].ToString(),
+            //                });
+            //            }
+            //        }
+
+            //        familyRetainedStokeModels.Add(familyRetained);
+            //    }
+            //}
+            #endregion
         }
 
         #endregion
