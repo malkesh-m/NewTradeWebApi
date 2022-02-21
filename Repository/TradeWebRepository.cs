@@ -161,6 +161,8 @@ namespace TradeWeb.API.Repository
         public dynamic Family_Transaction_Details(string client, string type, string fromDate, string toDate);
 
         public dynamic Family_RetainedStokeJson(List<string> UCC_Codes);
+
+        public dynamic Family_HoldingJson(List<string> UCC_Codes);
     }
 
     public class TradeWebRepository : ITradeWebRepository
@@ -8257,6 +8259,24 @@ namespace TradeWeb.API.Repository
                 throw ex;
             }
         }
+
+        public dynamic Family_HoldingJson(List<string> UCC_Codes)
+        {
+            try
+            {
+                var result = FamilyHoldingJson(UCC_Codes);
+                if (result != null)
+                {
+                    return result;
+                }
+                return new List<string>();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
         #region family query
 
         public string FamilyRemoveQuery(string UCC_Code)
@@ -9025,7 +9045,7 @@ namespace TradeWeb.API.Repository
                 if (!string.IsNullOrEmpty(uccName))
                 {
                     familyRetainedStoke.Code = uccCode;
-                    familyRetainedStoke.Name = uccName;
+                    familyRetainedStoke.Name = uccCode + "_" + uccName;
                 }
                 else
                 {
@@ -9048,50 +9068,110 @@ namespace TradeWeb.API.Repository
 
             return familyRetainedStokeResponses;
 
+        }
 
-            #region old code
-            //List<FamilyRetainedStokeResponse> familyRetainedStokeModels = new List<FamilyRetainedStokeResponse>();
+        public List<FamilyHoldingResponse> FamilyHoldingJson(List<string> UCC_Codes)
+        {
+            string SelectedCLCode = "";
+            string uccName = "";
+            foreach (var uccCode in UCC_Codes)
+            {
+                uccName = objUtility.fnFireQueryTradeWeb("client_master", "cm_name", "cm_cd", uccCode, true);
 
-            //ArrSeparters[0] = '_';
-            //string[] code;
+                if (!String.IsNullOrEmpty(uccName))
+                {
+                    SelectedCLCode = SelectedCLCode + uccCode.Trim().ToUpper() + "~" + uccName.Trim() + "/";
+                }
+            }
 
-            //foreach (DataColumn column in ObjDataSet.Tables[0].Columns)
-            //{
+            string StrSelect = "";
+            string StrCDC = "";
+            char[] ArrSeparters = new char[1];
+            ArrSeparters[0] = '/';
+            string[] StrClCd;
+            string StrDataFields = "";
+            string StrSubTotalFields = "";
+            string StrHeaderTitles = "";
+            string StrTextAlign = "";
+            string StrTextLength = "";
+            StrClCd = Convert.ToString(SelectedCLCode).Split(ArrSeparters);
+            int i = 0;
+            for (i = 0; i < StrClCd.Length - 1; i++)
+            {
+                StrSelect += " cast(sum(Case When CM.cm_blsavingcd = '" + StrClCd[i].Trim().Split('~')[0].Trim() + "' then a.hld_ac_pos else 0 end) as decimal(15,0)) as  '" + StrClCd[i].Trim().Split('~')[0].Trim() + "_Qty',cast(sum(Case When CM.cm_blsavingcd = '" + StrClCd[i].Trim().Split('~')[0].Trim() + "' then (a.hld_ac_pos * sc_Rate) else 0 end) as decimal(15,2)) as  '" + StrClCd[i].Trim().Split('~')[0].Trim() + "_Valuation',";
+                StrCDC += "'" + StrClCd[i].Trim().Split('~')[0].Trim() + "',";
+                StrDataFields += StrClCd[i].Trim().Split('~')[0].Trim() + "_Qty," + StrClCd[i].Trim().Split('~')[0].Trim() + "_Valuation,";
+                StrSubTotalFields += StrClCd[i].Trim().Split('~')[0].Trim() + "_Valuation,";
+                StrHeaderTitles += "Qty,Valuation,";
+                StrTextAlign += "R,R,";
+                StrTextLength += "15,15,";
+            }
+            StrCDC = Strings.Left(StrCDC, StrCDC.Length - 1);
 
-            //    if (column.ColumnName != "dm_isin" && column.ColumnName != "ss_name" && column.ColumnName != "Total")
-            //    {
-            //        FamilyRetainedStokeResponse familyRetained = new FamilyRetainedStokeResponse();
-            //        familyRetained.Name = column.ColumnName;
-            //        code = column.ColumnName.Split(ArrSeparters);
-            //        familyRetained.Code = code[0];
-            //        familyRetained.StokeDetails = new List<StokeDetails>();
-            //        for (i = 0; i < ObjDataSet.Tables[0].Rows.Count; i++)
-            //        {
-            //            if (familyRetained.StokeDetails != null)
-            //            {
+            if (_configuration["IsTradeWeb"] == "O")
+            {//-----------------------------------------------------------Live----------------------------------------------------------------------------------------
+                char[] ArrSeparators = new char[1];
+                ArrSeparators[0] = '/';
+                if (_configuration["Cross"] != "") // strBoid  LEft 2 <>IN
+                {
+                    string[] ArrCross = _configuration["Cross"].Split(ArrSeparators);
+                    strsql = "select a.hld_isin_code,b.sc_isinname,bt_description as BType, " + StrSelect + " cast(sum(a.hld_ac_pos) as decimal(15,0)) as  'TotalQty', cast(sum(a.hld_ac_pos * sc_Rate) as decimal(15,2)) as  'TotalVal' ";
+                    strsql += " from " + ArrCross[0].Trim() + "." + ArrCross[1].Trim() + "." + ArrCross[2].Trim() + ".Holding a,";
+                    strsql += ArrCross[0].Trim() + "." + ArrCross[1].Trim() + "." + ArrCross[2].Trim() + ".Security b ," + ArrCross[0].Trim() + "." + ArrCross[1].Trim() + "." + ArrCross[2].Trim() + ".client_master CM, ";
+                    strsql += ArrCross[0].Trim() + "." + ArrCross[1].Trim() + "." + ArrCross[2].Trim() + ".Beneficiary_type d where a.hld_isin_code = b.sc_isincode ";
+                    strsql += " and d.bt_code = a.hld_ac_type and CM.cm_cd = a.hld_ac_code and CM.cm_blsavingcd in (" + StrCDC + ") group by a.hld_isin_code,b.sc_isinname,bt_description ";
+                }
+                else if (_configuration["Estro"] != "")
+                {
+                    string[] ArrEstro = _configuration["Estro"].Split(ArrSeparators);
+                    strsql = "select a.hld_isin_code,b.sc_company_name,bt_description as BType, " + StrSelect + " cast(sum(a.hld_ac_pos) as decimal(15,0)) as  'TotalQty', cast(sum(a.hld_ac_pos * sc_Rate) as decimal(15,2)) as  'TotalVal' ";
+                    strsql += " from " + ArrEstro[0].Trim() + "." + ArrEstro[1].Trim() + "." + ArrEstro[2].Trim() + ".Holding a,";
+                    strsql += ArrEstro[0].Trim() + "." + ArrEstro[1].Trim() + "." + ArrEstro[2].Trim() + ".Security b ,";
+                    strsql += ArrEstro[0].Trim() + "." + ArrEstro[1].Trim() + "." + ArrEstro[2].Trim() + ".Beneficiary_type d, ";
+                    strsql += ArrEstro[0].Trim() + "." + ArrEstro[1].Trim() + "." + ArrEstro[2].Trim() + ".sysParameter, " + ArrEstro[0].Trim() + "." + ArrEstro[1].Trim() + "." + ArrEstro[2].Trim() + ".client_master CM  ";
+                    strsql += " where a.hld_isin_code = b.sc_isincode and sp_parmcd = 'DPID' and CM.cm_blsavingcd in (" + StrCDC + ") ";
+                    strsql += " and d.bt_code = a.hld_ac_type and CM.cm_cd = a.hld_ac_code group by a.hld_isin_code,b.sc_company_name,bt_description ";
+                }
+            }
+            DataSet ObjDataSet = new DataSet();
+            ObjDataSet = objUtility.OpenDataSet(strsql);
 
-            //                //var abc = dr.ItemArray[].ToString();
-            //                familyRetained.StokeDetails.Add(new StokeDetails
-            //                {
+            List<FamilyHoldingResponse> familyHoldingResponses = new List<FamilyHoldingResponse>();
+            HoldingDetails holdingDetails;
+            FamilyHoldingResponse familyHolding;
+            ArrSeparters[0] = '_';
 
-            //                    ExchSeg = ObjDataSet.Tables[0].Rows[i]["heading"].ToString(),
-            //                    Balance = ObjDataSet.Tables[0].Rows[i][column.ColumnName].ToString(),
-            //                });
-            //            }
-            //            else
-            //            {
-            //                familyRetained.StokeDetails.Add(new StokeDetails
-            //                {
-            //                    ExchSeg = ObjDataSet.Tables[0].Rows[i]["heading"].ToString(),
-            //                    Balance = ObjDataSet.Tables[0].Rows[i][column.ColumnName].ToString(),
-            //                });
-            //            }
-            //        }
+            for (int k = 3; k < ObjDataSet.Tables[0].Columns.Count; k += 2)
+            {
+                familyHolding = new FamilyHoldingResponse();
+                familyHolding.HoldingDetails = new List<HoldingDetails>();
+                var uccCode = ObjDataSet.Tables[0].Columns[k].ColumnName.Split(ArrSeparters)[0].Trim();
+                uccName = objUtility.fnFireQueryTradeWeb("client_master", "cm_name", "cm_cd", uccCode, true);
+                if (!string.IsNullOrEmpty(uccName))
+                {
+                    familyHolding.Code = uccCode;
+                    familyHolding.Name = uccCode + "_" + uccName;
+                }
+                else
+                {
+                    familyHolding.Code = "Total";
+                    familyHolding.Name = "Total";
+                }
 
-            //        familyRetainedStokeModels.Add(familyRetained);
-            //    }
-            //}
-            #endregion
+                for (i = 0; i < ObjDataSet.Tables[0].Rows.Count; i++)
+                {
+                    holdingDetails = new HoldingDetails();
+                    holdingDetails.ISIN = ObjDataSet.Tables[0].Rows[i]["hld_isin_code"].ToString();
+                    holdingDetails.ss_Name = ObjDataSet.Tables[0].Rows[i]["sc_isinname"].ToString();
+                    holdingDetails.Quantity = ObjDataSet.Tables[0].Rows[i][k].ToString();
+                    holdingDetails.Valuation = ObjDataSet.Tables[0].Rows[i][k + 1].ToString();
+                    familyHolding.HoldingDetails.Add(holdingDetails);
+                }
+
+                familyHoldingResponses.Add(familyHolding);
+            }
+
+            return familyHoldingResponses;
         }
 
         #endregion
