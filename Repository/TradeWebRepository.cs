@@ -163,6 +163,8 @@ namespace TradeWeb.API.Repository
         public dynamic Family_RetainedStokeJson(List<string> UCC_Codes);
 
         public dynamic Family_HoldingJson(List<string> UCC_Codes);
+
+        public dynamic Family_TransactionJson(FamilyTransactionModel model);
     }
 
     public class TradeWebRepository : ITradeWebRepository
@@ -8277,6 +8279,23 @@ namespace TradeWeb.API.Repository
             }
         }
 
+        public dynamic Family_TransactionJson(FamilyTransactionModel model)
+        {
+            try
+            {
+                var result = FamilyTransactionJson(model);
+                if (result != null)
+                {
+                    return result;
+                }
+                return new List<string>();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
         #region family query
 
         public string FamilyRemoveQuery(string UCC_Code)
@@ -9044,20 +9063,20 @@ namespace TradeWeb.API.Repository
                 uccName = objUtility.fnFireQueryTradeWeb("client_master", "cm_name", "cm_cd", uccCode, true);
                 if (!string.IsNullOrEmpty(uccName))
                 {
-                    familyRetainedStoke.Code = uccCode;
-                    familyRetainedStoke.Name = uccCode + "_" + uccName;
+                    familyRetainedStoke.FamilyCode = uccCode;
+                    familyRetainedStoke.FamilyName = uccCode + "_" + uccName;
                 }
                 else
                 {
-                    familyRetainedStoke.Code = "Total";
-                    familyRetainedStoke.Name = "Total";
+                    familyRetainedStoke.FamilyCode = "Total";
+                    familyRetainedStoke.FamilyName = "Total";
                 }
 
                 for (i = 0; i < ObjDataSet.Tables[0].Rows.Count; i++)
                 {
                     stokeDetails = new StokeDetails();
                     stokeDetails.ISIN = ObjDataSet.Tables[0].Rows[i]["dm_isin"].ToString();
-                    stokeDetails.ss_Name = ObjDataSet.Tables[0].Rows[i]["ss_name"].ToString();
+                    stokeDetails.ISINName = ObjDataSet.Tables[0].Rows[i]["ss_name"].ToString();
                     stokeDetails.Quantity = ObjDataSet.Tables[0].Rows[i][k].ToString();
                     stokeDetails.Valuation = ObjDataSet.Tables[0].Rows[i][k + 1].ToString();
                     familyRetainedStoke.StokeDetails.Add(stokeDetails);
@@ -9149,20 +9168,20 @@ namespace TradeWeb.API.Repository
                 uccName = objUtility.fnFireQueryTradeWeb("client_master", "cm_name", "cm_cd", uccCode, true);
                 if (!string.IsNullOrEmpty(uccName))
                 {
-                    familyHolding.Code = uccCode;
-                    familyHolding.Name = uccCode + "_" + uccName;
+                    familyHolding.FamilyCode = uccCode;
+                    familyHolding.FamilyName = uccCode + "_" + uccName;
                 }
                 else
                 {
-                    familyHolding.Code = "Total";
-                    familyHolding.Name = "Total";
+                    familyHolding.FamilyCode = "Total";
+                    familyHolding.FamilyName = "Total";
                 }
 
                 for (i = 0; i < ObjDataSet.Tables[0].Rows.Count; i++)
                 {
                     holdingDetails = new HoldingDetails();
                     holdingDetails.ISIN = ObjDataSet.Tables[0].Rows[i]["hld_isin_code"].ToString();
-                    holdingDetails.ss_Name = ObjDataSet.Tables[0].Rows[i]["sc_isinname"].ToString();
+                    holdingDetails.ISINName = ObjDataSet.Tables[0].Rows[i]["sc_isinname"].ToString();
                     holdingDetails.Quantity = ObjDataSet.Tables[0].Rows[i][k].ToString();
                     holdingDetails.Valuation = ObjDataSet.Tables[0].Rows[i][k + 1].ToString();
                     familyHolding.HoldingDetails.Add(holdingDetails);
@@ -9174,6 +9193,104 @@ namespace TradeWeb.API.Repository
             return familyHoldingResponses;
         }
 
+        public dynamic FamilyTransactionJson(FamilyTransactionModel model)
+        {
+            char[] ArrSeparters = new char[1];
+            string SelectedCLCode = "";
+            string uccName = "";
+            foreach (var uccCode in model.UCC_Codes)
+            {
+                uccName = objUtility.fnFireQueryTradeWeb("client_master", "cm_name", "cm_cd", uccCode, true);
+
+                if (!String.IsNullOrEmpty(uccName))
+                {
+                    SelectedCLCode = SelectedCLCode + uccCode.Trim().ToUpper() + "~" + uccName.Trim() + "/";
+                }
+            }
+
+            if (model.SelectedValue == "Trades")
+            {
+                var ObjDataSet = ShowFamilyTransaction(SelectedCLCode, model.FromDate, model.ToDate);
+
+                List<TransactionTradeResponse> familyTransactionResponses = new List<TransactionTradeResponse>();
+                TransactionTradeDetails transactionDetails;
+                TransactionTradeResponse transactionTrade;
+                ArrSeparters[0] = '_';
+                int i;
+
+                for (int k = 3; k < ObjDataSet.Tables[0].Columns.Count; k += 2)
+                {
+                    transactionTrade = new TransactionTradeResponse();
+                    transactionTrade.TransactionTradeDetails = new List<TransactionTradeDetails>();
+                    var uccCode = ObjDataSet.Tables[0].Columns[k].ColumnName.Split(ArrSeparters)[0].Trim();
+                    uccName = objUtility.fnFireQueryTradeWeb("client_master", "cm_name", "cm_cd", uccCode, true);
+                    if (!string.IsNullOrEmpty(uccName))
+                    {
+                        transactionTrade.FamilyCode = uccCode;
+                        transactionTrade.FamilyName = uccCode + "_" + uccName;
+                    }
+                    else
+                    {
+                        transactionTrade.FamilyCode = "Total";
+                        transactionTrade.FamilyName = "Total";
+                    }
+
+                    for (i = 0; i < ObjDataSet.Tables[0].Rows.Count; i++)
+                    {
+                        transactionDetails = new TransactionTradeDetails();
+                        transactionDetails.Scrip = ObjDataSet.Tables[0].Rows[i]["td_scripnm"].ToString();
+                        transactionDetails.Name = ObjDataSet.Tables[0].Rows[i]["snm"].ToString();
+                        transactionDetails.Quantity = ObjDataSet.Tables[0].Rows[i][k].ToString();
+                        transactionDetails.Rate = ObjDataSet.Tables[0].Rows[i][k + 1].ToString();
+                        transactionTrade.TransactionTradeDetails.Add(transactionDetails);
+                    }
+
+                    familyTransactionResponses.Add(transactionTrade);
+                }
+
+                return familyTransactionResponses;
+            }
+
+            if (model.SelectedValue == "Journals" || model.SelectedValue == "Receipts/Payments")
+            {
+                var ObjDataSet = ShowFamilyTrxReceipts(SelectedCLCode, model.SelectedValue, model.FromDate, model.ToDate);
+                
+                if (model.SelectedValue == "Receipts/Payments")
+                {
+                    List<TransactionRecieptResponse> transactionReciepts = new List<TransactionRecieptResponse>();
+
+                    for (int i = 0; i < ObjDataSet.Tables[0].Rows.Count; i++)
+                    {
+                        transactionReciepts.Add(new TransactionRecieptResponse
+                        {
+                            FamilyCode = ObjDataSet.Tables[0].Rows[i]["ld_clientcd"].ToString(),
+                            FamilyName = ObjDataSet.Tables[0].Rows[i]["cm_name"].ToString(),
+                            Receipt = ObjDataSet.Tables[0].Rows[i]["RAmt"].ToString(),
+                            Payment = ObjDataSet.Tables[0].Rows[i]["PAmt"].ToString(),
+                        });
+                    }
+                    return transactionReciepts;
+                }
+                else
+                {
+                    List<TransactionJournalResponse> transactionJournal = new List<TransactionJournalResponse>();
+
+                    for (int i = 0; i < ObjDataSet.Tables[0].Rows.Count; i++)
+                    {
+                        transactionJournal.Add(new TransactionJournalResponse
+                        {
+                            FamilyCode = ObjDataSet.Tables[0].Rows[i]["ld_clientcd"].ToString(),
+                            FamilyName = ObjDataSet.Tables[0].Rows[i]["cm_name"].ToString(),
+                            Debit = ObjDataSet.Tables[0].Rows[i]["Dr"].ToString(),
+                            Credit = ObjDataSet.Tables[0].Rows[i]["Cr"].ToString(),
+                        });
+                    }
+                    return transactionJournal;
+                }
+            }
+
+            return null;
+        }
         #endregion
 
         #endregion

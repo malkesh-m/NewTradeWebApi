@@ -7,15 +7,15 @@ namespace TradeWeb.API.Models
 {
     public class FamilyHoldingResponse
     {
-        public string Code { get; set; }
-        public string Name { get; set; }
+        public string FamilyCode { get; set; }
+        public string FamilyName { get; set; }
         public List<HoldingDetails> HoldingDetails { get; set; }
     }
 
     public class HoldingDetails
     {
         public string ISIN { get; set; }
-        public string ss_Name { get; set; }
+        public string ISINName { get; set; }
         public string Quantity { get; set; }
         public string Valuation { get; set; }
     }
