@@ -474,8 +474,8 @@ namespace TradeWeb.API.Controllers
         }
 
         [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpPost("Family_TransactionDetailsJson", Name = "Family_TransactionDetailsJson")]
-        public IActionResult Family_TransactionDetailsJson(string Client, string Type, string FromDate, string ToDate)
+        [HttpPost("Family_Transaction_DetailsJson", Name = "Family_Transaction_DetailsJson")]
+        public IActionResult Family_Transaction_DetailsJson(string Client, string Type, string FromDate, string ToDate)
         {
             if (ModelState.IsValid)
             {
