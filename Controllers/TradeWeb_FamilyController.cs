@@ -473,6 +473,32 @@ namespace TradeWeb.API.Controllers
             return BadRequest();
         }
 
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpPost("Family_TransactionDetailsJson", Name = "Family_TransactionDetailsJson")]
+        public IActionResult Family_TransactionDetailsJson(string Client, string Type, string FromDate, string ToDate)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var getData = _tradeWebRepository.Family_TransactionDetailJson(Client, Type, FromDate, ToDate);
+                    if (getData != null)
+                    {
+                        return Ok(getData);
+                    }
+                    else
+                    {
+                        return NotFound("records not found");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(ex.Message.ToString());
+                }
+            }
+            return BadRequest();
+        }
+
         #endregion
 
         private JwtSecurityToken GetToken()

@@ -165,6 +165,8 @@ namespace TradeWeb.API.Repository
         public dynamic Family_HoldingJson(List<string> UCC_Codes);
 
         public dynamic Family_TransactionJson(FamilyTransactionModel model);
+
+        public dynamic Family_TransactionDetailJson(string Client, string Type, string FromDate, string ToDate);
     }
 
     public class TradeWebRepository : ITradeWebRepository
@@ -8033,8 +8035,6 @@ namespace TradeWeb.API.Repository
         #endregion
         #endregion
 
-
-
         #endregion
 
         #region new family handler
@@ -8284,6 +8284,23 @@ namespace TradeWeb.API.Repository
             try
             {
                 var result = FamilyTransactionJson(model);
+                if (result != null)
+                {
+                    return result;
+                }
+                return new List<string>();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        public dynamic Family_TransactionDetailJson(string Client, string Type, string FromDate, string ToDate)
+        {
+            try
+            {
+                var result = FamilyTransactionDetailJson(Client, Type, FromDate, ToDate);
                 if (result != null)
                 {
                     return result;
