@@ -36,4 +36,21 @@ namespace TradeWeb.API.Models
         public string Credit { get; set; }
     }
 
+    public class TransactionDetailJournalResponse
+    {
+        public string RefNo { get; set; }
+        public string Date { get; set; }
+        public string Particulars { get; set; }
+        public string Debit { get; set; }
+        public string Credit { get; set; }
+    }
+
+    public class TransactionDetailReceiptResponse
+    {
+        public string RefNo { get; set; }
+        public string Date { get; set; }
+        public string Particulars { get; set; }
+        public string Instrument { get; set; }
+        public string Amount { get; set; }
+    }
 }

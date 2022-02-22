@@ -9291,6 +9291,61 @@ namespace TradeWeb.API.Repository
 
             return null;
         }
+
+        public dynamic FamilyTransactionDetailJson(string Client, string Type, string FromDate, string ToDate)
+        {
+            DataSet ObjDataSet = new DataSet();
+            if (Type.Trim() == "R" || Type.Trim() == "P")
+            {
+                strsql = " select 'DP Transaction' Td_Type,ld_documentno , ltrim(rtrim(convert(char,convert(datetime,ld_dt),103))) Date , ld_Particular , ld_Chequeno,";
+                strsql += "convert(decimal(15,2),case ld_documenttype When 'R' Then (-1) else 1 end*ld_amount)  Amount from ledger with (nolock)";
+                strsql += "where ld_documenttype = '" + Type.Trim() + "'";
+                strsql += "and ld_clientcd='" + Client.Trim() + "' and ld_dt between '" + FromDate + "' and '" + ToDate + "'";
+                strsql += "order by ld_dt desc ";
+                ObjDataSet = objUtility.OpenDataSet(strsql);
+
+                List<TransactionDetailReceiptResponse> transactionReceipt = new List<TransactionDetailReceiptResponse>();
+
+                for (int i = 0; i < ObjDataSet.Tables[0].Rows.Count; i++)
+                {
+                    transactionReceipt.Add(new TransactionDetailReceiptResponse
+                    {
+                        RefNo = ObjDataSet.Tables[0].Rows[i]["ld_documentno"].ToString(),
+                        Date = ObjDataSet.Tables[0].Rows[i]["Date"].ToString(),
+                        Particulars = ObjDataSet.Tables[0].Rows[i]["ld_Particular"].ToString(),
+                        Instrument = ObjDataSet.Tables[0].Rows[i]["ld_Chequeno"].ToString(),
+                        Amount = ObjDataSet.Tables[0].Rows[i]["Amount"].ToString(),
+                    });
+                }
+                return transactionReceipt;
+            }
+            else
+            {
+                strsql = "select 'DP Transaction' Td_Type,ld_documentno , ltrim(rtrim(convert(char,convert(datetime,ld_dt),103))) Date , ";
+                strsql = strsql + " ld_Particular  , case ld_debitflag when 'D' then convert(decimal(15,2),ld_amount) else 0 end  Debit,";
+                strsql = strsql + " case ld_debitflag when 'D' then 0 else convert(decimal(15,2),-ld_amount) end  Credit";
+                strsql = strsql + " from ledger with (nolock) where ld_documenttype= 'J'";
+                strsql = strsql + " and ld_clientcd='" + Client.Trim() + "'";
+                strsql = strsql + " and ld_dt between '" + FromDate + "' and '" + ToDate + "'";
+                strsql = strsql + " order by ld_dt desc";
+                ObjDataSet = objUtility.OpenDataSet(strsql);
+
+                List<TransactionDetailJournalResponse> transactionJournals = new List<TransactionDetailJournalResponse>();
+
+                for (int i = 0; i < ObjDataSet.Tables[0].Rows.Count; i++)
+                {
+                    transactionJournals.Add(new TransactionDetailJournalResponse
+                    {
+                        RefNo = ObjDataSet.Tables[0].Rows[i]["ld_documentno"].ToString(),
+                        Date = ObjDataSet.Tables[0].Rows[i]["Date"].ToString(),
+                        Particulars = ObjDataSet.Tables[0].Rows[i]["ld_Particular"].ToString(),
+                        Debit = ObjDataSet.Tables[0].Rows[i]["Debit"].ToString(),
+                        Credit = ObjDataSet.Tables[0].Rows[i]["Credit"].ToString(),
+                    });
+                }
+                return transactionJournals;
+            }
+        }
         #endregion
 
         #endregion
