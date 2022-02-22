@@ -40,16 +40,16 @@ namespace TradeWeb.API.Controllers
                     var getData = _tradeWebRepository.GetTradesData(userId, fromDate, toDate, selectedIndex);
                     if (getData != null)
                     {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                        return Ok(getData);
                     }
                     else
                     {
-                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                        return NotFound("records not found");
                     }
                 }
                 catch (Exception ex)
                 {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                    return BadRequest(ex.Message.ToString());
                 }
             }
             return BadRequest();
@@ -71,16 +71,16 @@ namespace TradeWeb.API.Controllers
                     var getData = _tradeWebRepository.GetTempRMSSummaryData(userId, compCode);
                     if (getData != null)
                     {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                        return Ok(getData);
                     }
                     else
                     {
-                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                        return NotFound("records not found");
                     }
                 }
                 catch (Exception ex)
                 {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                    return BadRequest(ex.Message.ToString());
                 }
             }
             return BadRequest();
@@ -103,16 +103,16 @@ namespace TradeWeb.API.Controllers
                     var getData = _tradeWebRepository.GetStatusFundData(userId, compCode);
                     if (getData != null)
                     {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                        return Ok(getData);
                     }
                     else
                     {
-                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                        return NotFound("records not found");
                     }
                 }
                 catch (Exception ex)
                 {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                    return BadRequest(ex.Message.ToString());
                 }
             }
             return BadRequest();
@@ -135,16 +135,16 @@ namespace TradeWeb.API.Controllers
                     var getData = _tradeWebRepository.GetStatusCollateralData(userId, compCode);
                     if (getData != null)
                     {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                        return Ok(getData);
                     }
                     else
                     {
-                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                        return NotFound("records not found");
                     }
                 }
                 catch (Exception ex)
                 {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                    return BadRequest(ex.Message.ToString());
                 }
             }
             return BadRequest();
@@ -162,9 +162,9 @@ namespace TradeWeb.API.Controllers
                     var dataList = _tradeWebRepository.GetprSecurityListRptHandler(blnBSE, blnNSE);
                     if (dataList != null)
                     {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = dataList });
+                        return Ok(dataList);
                     }
-                    return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.NotFound, data = null });
+                    return NotFound("records not found");
                 }
                 catch (Exception ex)
                 {
@@ -190,16 +190,16 @@ namespace TradeWeb.API.Controllers
                     var getData = _tradeWebRepository.GetShortFallMainGridData(userId, days);
                     if (getData != null)
                     {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                        return Ok(getData);
                     }
                     else
                     {
-                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                        return NotFound("records not found");
                     }
                 }
                 catch (Exception ex)
                 {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                    return BadRequest(ex.Message.ToString());
                 }
             }
             return BadRequest();

@@ -33,7 +33,6 @@ namespace TradeWeb.API.Controllers
         {
             if (ModelState.IsValid)
             {
-                #region
                 try
                 {
                     var tokenS = GetToken();
@@ -42,18 +41,17 @@ namespace TradeWeb.API.Controllers
                     var getData = _tradeWebRepository.Get_Page_Load_Data(userId);
                     if (getData != null)
                     {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                        return Ok(getData);
                     }
                     else
                     {
-                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                        return NotFound("records not found");
                     }
                 }
                 catch (Exception ex)
                 {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                    return BadRequest(ex.Message.ToString());
                 }
-                #endregion
             }
             return BadRequest();
         }
@@ -70,16 +68,16 @@ namespace TradeWeb.API.Controllers
                     var getData = _tradeWebRepository.Get_Buttons_Data(clickValue, selectedCLCode);
                     if (getData != null)
                     {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                        return Ok(getData);
                     }
                     else
                     {
-                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                        return NotFound("records not found");
                     }
                 }
                 catch (Exception ex)
                 {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                    return BadRequest(ex.Message.ToString());
                 }
             }
             return BadRequest();
@@ -92,24 +90,22 @@ namespace TradeWeb.API.Controllers
         {
             if (ModelState.IsValid)
             {
-                #region
                 try
                 {
                     var getData = _tradeWebRepository.Get_Transaction_Btn_Data(clickValue, selectedCLCode, lstShowTransaction, fromDate, toDate);
                     if (getData != null)
                     {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                        return Ok(getData);
                     }
                     else
                     {
-                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                        return NotFound("records not found");
                     }
                 }
                 catch (Exception ex)
                 {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                    return BadRequest(ex.Message.ToString());
                 }
-                #endregion
             }
             return BadRequest();
         }
@@ -121,24 +117,22 @@ namespace TradeWeb.API.Controllers
         {
             if (ModelState.IsValid)
             {
-                #region
                 try
                 {
                     var getData = _tradeWebRepository.Get_Transaction_Btn_RPJ_Detailed_Data(client, commandArgumentType, fromDate, toDate);
                     if (getData != null)
                     {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                        return Ok(getData);
                     }
                     else
                     {
-                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                        return NotFound("records not found");
                     }
                 }
                 catch (Exception ex)
                 {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                    return BadRequest(ex.Message.ToString());
                 }
-                #endregion
             }
             return BadRequest();
         }
@@ -154,7 +148,6 @@ namespace TradeWeb.API.Controllers
         {
             if (ModelState.IsValid)
             {
-                #region
                 try
                 {
                     var tokenS = GetToken();
@@ -163,18 +156,17 @@ namespace TradeWeb.API.Controllers
                     var getData = _tradeWebRepository.Family_List(userId);
                     if (getData != null)
                     {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                        return Ok(getData);
                     }
                     else
                     {
-                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                        return NotFound("records not found");
                     }
                 }
                 catch (Exception ex)
                 {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                    return BadRequest(ex.Message.ToString());
                 }
-                #endregion
             }
             return BadRequest();
         }
@@ -186,7 +178,6 @@ namespace TradeWeb.API.Controllers
         {
             if (ModelState.IsValid)
             {
-                #region
                 try
                 {
                     var tokenS = GetToken();
@@ -195,18 +186,17 @@ namespace TradeWeb.API.Controllers
                     var getData = _tradeWebRepository.Family_Add(userId, password, UCC_Code);
                     if (getData != null)
                     {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                        return Ok(getData);
                     }
                     else
                     {
-                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                        return NotFound("records not found");
                     }
                 }
                 catch (Exception ex)
                 {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                    return BadRequest(ex.Message.ToString());
                 }
-                #endregion
             }
             return BadRequest();
         }
@@ -218,7 +208,6 @@ namespace TradeWeb.API.Controllers
         {
             if (ModelState.IsValid)
             {
-                #region
                 try
                 {
                     var tokenS = GetToken();
@@ -227,18 +216,17 @@ namespace TradeWeb.API.Controllers
                     var getData = _tradeWebRepository.Family_Remove(UCC_Code);
                     if (getData != null)
                     {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                        return Ok(getData);
                     }
                     else
                     {
-                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                        return NotFound("records not found");
                     }
                 }
                 catch (Exception ex)
                 {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                    return BadRequest(ex.Message.ToString());
                 }
-                #endregion
             }
             return BadRequest();
         }
@@ -252,20 +240,19 @@ namespace TradeWeb.API.Controllers
             {
                 try
                 {
-                    
                     var getData = _tradeWebRepository.Family_Balance(UCC_Codes);
                     if (getData != null)
                     {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                        return Ok(getData);
                     }
                     else
                     {
-                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                        return NotFound("records not found");
                     }
                 }
                 catch (Exception ex)
                 {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                    return BadRequest(ex.Message.ToString());
                 }
             }
             return BadRequest();
@@ -286,16 +273,16 @@ namespace TradeWeb.API.Controllers
                     var getData = _tradeWebRepository.Family_RetainedStoke(UCC_Codes);
                     if (getData != null)
                     {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                        return Ok(getData);
                     }
                     else
                     {
-                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                        return NotFound("records not found");
                     }
                 }
                 catch (Exception ex)
                 {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                    return BadRequest(ex.Message.ToString());
                 }
             }
             return BadRequest();
@@ -313,16 +300,16 @@ namespace TradeWeb.API.Controllers
                     var getData = _tradeWebRepository.Family_Holding(UCC_Codes);
                     if (getData != null)
                     {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                        return Ok(getData);
                     }
                     else
                     {
-                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                        return NotFound("records not found");
                     }
                 }
                 catch (Exception ex)
                 {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                    return BadRequest(ex.Message.ToString());
                 }
             }
             return BadRequest();
@@ -340,16 +327,16 @@ namespace TradeWeb.API.Controllers
                     var getData = _tradeWebRepository.Family_Position(UCC_Codes);
                     if (getData != null)
                     {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                        return Ok(getData);
                     }
                     else
                     {
-                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                        return NotFound("records not found");
                     }
                 }
                 catch (Exception ex)
                 {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                    return BadRequest(ex.Message.ToString());
                 }
             }
             return BadRequest();
@@ -367,16 +354,16 @@ namespace TradeWeb.API.Controllers
                     var getData = _tradeWebRepository.Family_Transaction(model);
                     if (getData != null)
                     {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                        return Ok(getData);
                     }
                     else
                     {
-                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                        return NotFound("records not found");
                     }
                 }
                 catch (Exception ex)
                 {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                    return BadRequest(ex.Message.ToString());
                 }
             }
             return BadRequest();
@@ -393,16 +380,16 @@ namespace TradeWeb.API.Controllers
                     var getData = _tradeWebRepository.Family_Transaction_Details(client, type, fromDate, toDate);
                     if (getData != null)
                     {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                        return Ok(getData);
                     }
                     else
                     {
-                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                        return NotFound("records not found");
                     }
                 }
                 catch (Exception ex)
                 {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                    return BadRequest(ex.Message.ToString());
                 }
             }
             return BadRequest();
@@ -419,16 +406,16 @@ namespace TradeWeb.API.Controllers
                     var getData = _tradeWebRepository.Family_RetainedStokeJson(UCC_Codes);
                     if (getData != null)
                     {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                        return Ok(getData);
                     }
                     else
                     {
-                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                        return NotFound("records not found");
                     }
                 }
                 catch (Exception ex)
                 {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                    return BadRequest(ex.Message.ToString());
                 }
             }
             return BadRequest();
@@ -445,16 +432,16 @@ namespace TradeWeb.API.Controllers
                     var getData = _tradeWebRepository.Family_HoldingJson(UCC_Codes);
                     if (getData != null)
                     {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                        return Ok(getData);
                     }
                     else
                     {
-                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                        return NotFound("records not found");
                     }
                 }
                 catch (Exception ex)
                 {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                    return BadRequest(ex.Message.ToString());
                 }
             }
             return BadRequest();
@@ -471,16 +458,16 @@ namespace TradeWeb.API.Controllers
                     var getData = _tradeWebRepository.Family_TransactionJson(model);
                     if (getData != null)
                     {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                        return Ok(getData);
                     }
                     else
                     {
-                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                        return NotFound("records not found");
                     }
                 }
                 catch (Exception ex)
                 {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                    return BadRequest(ex.Message.ToString());
                 }
             }
             return BadRequest();
@@ -493,7 +480,6 @@ namespace TradeWeb.API.Controllers
             var handler = new JwtSecurityTokenHandler();
             string authHeader = Request.Headers["Authorization"];
             authHeader = authHeader.Replace("Bearer ", "");
-            //var jsonToken = handler.ReadToken(authHeader);
             var token = handler.ReadToken(authHeader) as JwtSecurityToken;
             return token;
         }

@@ -40,16 +40,16 @@ namespace TradeWeb.API.Controllers
                     var getData = _tradeWebRepository.GetMarginMainData(userId, compCode);
                     if (getData != null)
                     {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                        return Ok(getData);
                     }
                     else
                     {
-                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                        return NotFound("records not found");
                     }
                 }
                 catch (Exception ex)
                 {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                    return BadRequest(ex.Message.ToString());
                 }
             }
             return BadRequest();
@@ -71,16 +71,16 @@ namespace TradeWeb.API.Controllers
                     var getData = _tradeWebRepository.GetDropdownListData(userId, compCode);
                     if (getData != null)
                     {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                        return Ok(getData);
                     }
                     else
                     {
-                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                        return NotFound("records not found");
                     }
                 }
                 catch (Exception ex)
                 {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                    return BadRequest(ex.Message.ToString());
                 }
             }
             return BadRequest();
@@ -102,16 +102,16 @@ namespace TradeWeb.API.Controllers
                     var getData = _tradeWebRepository.GetMarginPledgeData(userId, userId.ToUpper(), compCode, DPIDValue);
                     if (getData != null)
                     {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                        return Ok(getData);
                     }
                     else
                     {
-                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                        return NotFound("records not found");
                     }
                 }
                 catch (Exception ex)
                 {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                    return BadRequest(ex.Message.ToString());
                 }
             }
             return BadRequest();
@@ -132,16 +132,16 @@ namespace TradeWeb.API.Controllers
                     var getData = _tradeWebRepository.GetCurrentPledgeRequest(userId.ToUpper());
                     if (getData != null)
                     {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                        return Ok(getData);
                     }
                     else
                     {
-                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                        return NotFound("records not found");
                     }
                 }
                 catch (Exception ex)
                 {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                    return BadRequest(ex.Message.ToString());
                 }
             }
             return BadRequest();
@@ -162,16 +162,16 @@ namespace TradeWeb.API.Controllers
                     var getData = _tradeWebRepository.AddPledgeRequest(userId.ToUpper(), DPIDValue, isIdentityOn, intcnt, scripcd, quantity);
                     if (getData != null)
                     {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                        return Ok(getData);
                     }
                     else
                     {
-                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                        return NotFound("records not found");
                     }
                 }
                 catch (Exception ex)
                 {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                    return BadRequest(ex.Message.ToString());
                 }
             }
             return BadRequest();

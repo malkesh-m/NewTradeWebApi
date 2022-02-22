@@ -266,12 +266,12 @@ namespace TradeWeb.API.Controllers
                     var userId = token.Claims.First(claim => claim.Type == "username").Value;
 
                     var dataList = _tradeWebRepository.Ledger_Summary(userId, type, fromDate, toDate);
-                    var strDataList = Newtonsoft.Json.JsonConvert.SerializeObject(dataList).Replace(@"\",String.Empty);
+                    var strDataList = Newtonsoft.Json.JsonConvert.SerializeObject(dataList).Replace(@"\", String.Empty);
                     if (dataList != null)
                     {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = strDataList });
+                        return Ok(strDataList);
                     }
-                    return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.NotFound, data = null });
+                    return NotFound("records not found");
                 }
                 catch (Exception ex)
                 {
@@ -284,13 +284,10 @@ namespace TradeWeb.API.Controllers
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="fromDate"></param>
-        /// <param name="toDate"></param>
-        /// <param name="type_cesCd"></param>
         /// <returns></returns>
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpPost("Ledger_Detail", Name = "Ledger_Detail")]
-        public IActionResult Ledger_Detail( LedgerDetailsModel model /*string fromDate, string toDate, string type_cesCd*/)
+        public IActionResult Ledger_Detail(LedgerDetailsModel model /*string fromDate, string toDate, string type_cesCd*/)
         {
             if (ModelState.IsValid)
             {
@@ -304,22 +301,22 @@ namespace TradeWeb.API.Controllers
                     var getData = _tradeWebRepository.Ledger_Detail(userName, model, model.fromDate, model.toDate);
                     if (getData != null)
                     {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                        return Ok(getData);
                     }
                     else
                     {
-                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                        return NotFound("records not found");
                     }
                 }
                 catch (Exception ex)
                 {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                    return BadRequest(ex.Message.ToString());
                 }
             }
             return BadRequest();
         }
 
-        
+
 
         #endregion
 
@@ -343,16 +340,16 @@ namespace TradeWeb.API.Controllers
                     var getData = _tradeWebRepository.OutStandingPosition(userId, AsOnDt);
                     if (getData != null)
                     {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                        return Ok(getData);
                     }
                     else
                     {
-                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                        return NotFound("records not found");
                     }
                 }
                 catch (Exception ex)
                 {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                    return BadRequest(ex.Message.ToString());
                 }
             }
             return BadRequest();
@@ -378,23 +375,23 @@ namespace TradeWeb.API.Controllers
                     var getData = _tradeWebRepository.OutStandingPosition_Detail(userId, seriesId, CESCd);
                     if (getData != null)
                     {
-                        return Ok(new commonResponse { status = true, message = "success", status_code = (int)HttpStatusCode.OK, data = getData });
+                        return Ok(getData);
                     }
                     else
                     {
-                        return NotFound(new commonResponse { status = false, message = "blank", status_code = (int)HttpStatusCode.NotFound, error_message = "records not found" });
+                        return NotFound("records not found");
                     }
                 }
                 catch (Exception ex)
                 {
-                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                    return BadRequest(ex.Message.ToString());
                 }
             }
             return BadRequest();
         }
         #endregion
 
-        
+
         //[Authorize(AuthenticationSchemes = "Bearer")]
         //[HttpGet("GetINVPLTradeListingDelete", Name = "GetINVPLTradeListingDelete")]
         //public IActionResult GetINVPLTradeListingDelete(string srNo)
