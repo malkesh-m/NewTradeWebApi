@@ -84,6 +84,8 @@ namespace TradeWeb.API.Repository
 
         public dynamic GetMarginMainData(string cm_cd, string strCompanyCode);
 
+        public dynamic MarginMainData(string cm_cd, string strCompanyCode, string date);
+
         public dynamic GetDropdownListData(string cm_cd, string strCompanyCode);
 
         public dynamic GetMarginPledgeData(string cm_cd, string UserId, string strCompanyCode, string CmbDPID_Value);
@@ -139,6 +141,8 @@ namespace TradeWeb.API.Repository
         public dynamic GetDdlExchangeList(string cmbProductValue, string cmbDocumentTypeValue);
 
         public dynamic GetDigitalDocumentData(string userId, string cmbProductValue, string cmbDocumentTypeValue, string cmbExchangeValue, string fromDate, string toDate);
+
+        public dynamic GetDigitalDocumentDownload(string userId, string cmbProductValue, string cmbDocumentTypeValue, string cmbExchangeValue, string fromDate);
 
         public dynamic AddDdlProductListItem();
 
@@ -7222,7 +7226,27 @@ namespace TradeWeb.API.Repository
             }
         }
 
-
+        // get digital document main data
+        public dynamic GetDigitalDocumentDownload(string userId, string cmbProductValue, string cmbDocumentTypeValue, string cmbExchangeValue, string fromDate)
+        {
+            try
+            {
+                var ds = GetQueryDigitalDocumentDownload(userId, cmbProductValue, cmbDocumentTypeValue, cmbExchangeValue, fromDate);
+                if (ds != null)
+                {
+                    if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                    {
+                        var response = DownloadDocument(ds.Tables[0].Rows[0]["doctype"].ToString().Trim(), fromDate, ds.Tables[0].Rows[0]["dd_srno"].ToString().Trim());
+                        return response;
+                    }
+                }
+                return new List<string>();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
 
         #region DigitalDocument usefull method
 
@@ -7318,6 +7342,134 @@ namespace TradeWeb.API.Repository
                 ObjAdpater.Dispose();
             }
             return ObjDataSet1;
+        }
+
+        public DataSet GetQueryDigitalDocumentDownload(string userId, string cmbProductValue, string cmbDocumentTypeValue, string cmbExchangeValue, string fromDate)
+        {
+            Boolean IsCommexES = false;
+            string strsql = "";
+            if (cmbProductValue == "X")
+            {
+                if (_configuration["CommexES"] != null && _configuration["CommexES"] != string.Empty)
+                {
+                    IsCommexES = true;
+                    strsql = "select 'Commex' doctype,'DownLoad'as download,dd_srno,do_desc,ltrim(rtrim(convert(char,convert(datetime,dd_dt),103))) as dd_dt,dd_stlmnt,dd_contractno,'' DT ";
+                    char[] ArrSeparators = new char[1];
+                    ArrSeparators[0] = '/';
+                    string[] ArrCommex = _configuration["CommexES"].Split(ArrSeparators);
+                    strsql = strsql + " from   " + ArrCommex[0].Trim() + "." + ArrCommex[1].Trim() + "." + ArrCommex[2].Trim() + ".digital_details,";
+                    strsql = strsql + ArrCommex[0].Trim() + "." + ArrCommex[1].Trim() + "." + ArrCommex[2].Trim() + ".DocumentType_master";
+                    strsql = strsql + " where dd_clientcd = '" + userId + "'";
+                    if (cmbDocumentTypeValue == "Combine Contract" || cmbDocumentTypeValue == "Periodic Settlement")
+                    {
+                        strsql = strsql + " and dd_dt between '" + fromDate + "' and '" + fromDate + "'"; ;
+                    }
+                    else
+                    {
+                        strsql = strsql + " and dd_dt='" + fromDate + "'";
+                    }
+                    strsql = strsql + "and dd_filetype = do_cd ";
+                    strsql = strsql + " and dd_filetype='" + getdoc(cmbDocumentTypeValue, cmbExchangeValue) + "' ";
+                    strsql = strsql + " order by dd_dt desc ";
+                }
+            }
+            else
+            {
+                strsql = "select 'Tplus' doctype,'Download'as download,dd_srno,do_desc,ltrim(rtrim(convert(char,convert(datetime,dd_dt),103))) as dd_dt,dd_stlmnt,dd_contractno,'" + fromDate + "' DT ";
+                strsql = strsql + "from digital_details ,DocumentType_master ";
+                strsql = strsql + "where dd_clientcd = '" + userId + "'";
+                if (cmbDocumentTypeValue == "Combine Contract" || cmbDocumentTypeValue == "Periodic Settlement" || cmbDocumentTypeValue == "Combine Margin Statement")
+                {
+                    strsql = strsql + " and dd_dt between '" + fromDate + "' and '" + fromDate + "'"; ;
+                }
+                else
+                {
+                    strsql = strsql + " and dd_dt='" + fromDate + "'";
+                }
+                strsql = strsql + " and dd_filetype = do_cd ";
+                strsql = strsql + " and dd_filetype='" + getdoc(cmbDocumentTypeValue, cmbExchangeValue) + "' ";
+                strsql = strsql + " order by dd_dt desc ";
+            }
+
+            DataSet ObjDataSet1 = new DataSet();
+            if (strsql != null && strsql != "")
+            {
+                SqlConnection ObjConnection = new SqlConnection(objUtility.EsignConnectionString(IsCommexES, fromDate));
+                if (ObjConnection.State == ConnectionState.Closed)
+                { ObjConnection.Open(); }
+
+                SqlDataAdapter ObjAdpater = new SqlDataAdapter();
+                SqlCommand sqlCommand = new SqlCommand(strsql, ObjConnection);
+                ObjAdpater.SelectCommand = sqlCommand;
+                ObjAdpater.Fill(ObjDataSet1);
+                ObjAdpater.Dispose();
+            }
+
+            return ObjDataSet1;
+
+            //if (ObjDataSet1?.Tables?.Count > 0 && ObjDataSet1?.Tables[0]?.Rows?.Count > 0)
+            //{
+            //    var json = JsonConvert.SerializeObject(ObjDataSet1.Tables[0], Formatting.Indented);
+            //    return json;
+            //}
+        }
+
+        public DigitalDocumentModel DownloadDocument(string docType, string date, string srNo)
+        {
+            Boolean IsCommex = false;
+            strsql = "select dd_filename from ";
+            if (docType == "Tplus")
+            {
+                strsql += " digital_details ";
+            }
+            else if (docType == "Commex")
+            {
+                IsCommex = true;
+                char[] ArrSeparators = new char[1];
+                ArrSeparators[0] = '/';
+                string[] ArrCommex = _configuration["CommexES"].Split(ArrSeparators);
+                strsql = strsql + ArrCommex[0].Trim() + "." + ArrCommex[1].Trim() + "." + ArrCommex[2].Trim() + ".digital_details";
+            }
+            strsql += " where dd_srno = '" + srNo + "'";
+            DataSet DataSet = new DataSet();
+            SqlConnection ObjConnection = new SqlConnection(objUtility.EsignConnectionString(IsCommex, date.Trim()));
+            SqlCommand cmd1 = new SqlCommand(strsql, ObjConnection);
+            SqlDataAdapter adp = new SqlDataAdapter();
+            adp.SelectCommand = cmd1;
+            adp.Fill(DataSet);
+            if (DataSet.Tables[0].Rows.Count > 0)
+            {
+                strsql = "select dd_document from ";
+                if (docType == "Tplus")
+                {
+                    strsql += " digital_details ";
+                }
+                else if (docType == "Commex")
+                {
+                    char[] ArrSeparators = new char[1];
+                    ArrSeparators[0] = '/';
+                    string[] ArrCommex = _configuration["CommexES"].Split(ArrSeparators);
+                    strsql = strsql + ArrCommex[0].Trim() + "." + ArrCommex[1].Trim() + "." + ArrCommex[2].Trim() + ".digital_details";
+                }
+                strsql += " where dd_srno = '" + srNo + "'";
+                if (ObjConnection.State == ConnectionState.Closed)
+                {
+                    ObjConnection.Open();
+                }
+                SqlCommand cmd = new SqlCommand(strsql, ObjConnection);
+
+                SqlDataReader ObjReader = cmd.ExecuteReader(CommandBehavior.CloseConnection);
+                if (ObjReader.HasRows == true)
+                {
+                    ObjReader.Read();
+                    var bytes = (byte[])ObjReader["dd_document"];
+                    var result = Convert.ToBase64String(bytes, 0, bytes.Length);
+
+                    return new DigitalDocumentModel { FileName = DataSet.Tables[0].Rows[0]["dd_filename"].ToString().Trim(), FileData = result };
+                }
+                ObjReader.Close();
+            }
+            return null;
         }
 
         // Add new item comodity in dropdown product list
@@ -9271,7 +9423,7 @@ namespace TradeWeb.API.Repository
             if (model.SelectedValue == "Journals" || model.SelectedValue == "Receipts/Payments")
             {
                 var ObjDataSet = ShowFamilyTrxReceipts(SelectedCLCode, model.SelectedValue, model.FromDate, model.ToDate);
-                
+
                 if (model.SelectedValue == "Receipts/Payments")
                 {
                     List<TransactionRecieptResponse> transactionReciepts = new List<TransactionRecieptResponse>();
@@ -9364,6 +9516,316 @@ namespace TradeWeb.API.Repository
             }
         }
         #endregion
+
+        #endregion
+
+        #region new margin handler
+
+        // For getting margin data
+        public dynamic MarginMainData(string cm_cd, string strCompanyCode, string date)
+        {
+            try
+            {
+                var ds = GetQueryMarginMainData(cm_cd, strCompanyCode, date);
+                if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                {
+                    var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
+                    return json;
+                }
+                return new List<string>();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        // get data for margin main grid
+        private DataSet GetQueryMarginMainData(string cm_cd, string strCompanyCode, string date)
+        {
+            DataSet objdataset = new DataSet();
+            if (_configuration["IsTradeWeb"] == "O")//Live DB {
+            {
+                objdataset = fnNewGetRptSQL(true, cm_cd, strCompanyCode, date);
+            }
+            else
+            {
+                strsql = " Select case right(fm_companycode,2) When 'BF' Then 'BSE F&O' When 'NF' Then 'NSE F&O' When 'MF' Then 'MCX F&O' else '' end ExchSeg,";
+                strsql += " fm_clientcd,cast(fm_spanmargin as decimal(15,2)) as fm_spanmargin,cast(fm_exposurevalue as decimal(15,2)) as fm_exposurevalue, cast(fm_buypremmargin as decimal(15,2)) as fm_buypremmargin,";
+                strsql += " cast(fm_initialmargin as decimal(15,2)) as fm_initialmargin,cast(fm_additionalmargin as decimal(15,2)) as fm_additionalmargin, cast(fm_collected as decimal(15,2)) as fm_collected,cast(isnull(fm_spanmargin,0 )+ isnull(fm_exposurevalue,0) as decimal(15,2)) 'margin',";
+                strsql += " cast(case when (fm_initialmargin + fm_exposurevalue- case when fm_collected > 0 then fm_collected else 0 end) >0 then (fm_initialmargin + fm_exposurevalue- case when fm_collected > 0 then fm_collected else 0 end) else 0 end as decimal(15,2)) ShortFall";
+                strsql += " ,convert(char,convert(datetime, fm_dt),103) as DisplayDate from fmargins where right(fm_companycode,1) = 'F' and fm_dt = (select max(fm_Dt) from fmargins Where right(fm_companycode,1) = 'F' ) and fm_clientcd='" + cm_cd + "'";
+                strsql += " union all";
+                strsql += " Select case right(fm_companycode,2) When 'BK' Then 'BSE FX' When 'NK' Then 'NSE FX' When 'MK' Then 'MCX FX' else '' end ExchSeg,";
+                strsql += " fm_clientcd,cast(fm_spanmargin as decimal(15,2)) as fm_spanmargin,cast(fm_exposurevalue as decimal(15,2)) as fm_exposurevalue, cast(fm_buypremmargin as decimal(15,2)) as fm_buypremmargin,";
+                strsql += " cast(fm_initialmargin as decimal(15,2)) as fm_initialmargin,cast(fm_additionalmargin as decimal(15,2)) as fm_additionalmargin, cast(fm_collected as decimal(15,2)) as fm_collected,cast(isnull(fm_spanmargin,0 )+ isnull(fm_exposurevalue,0) as decimal(15,2)) 'margin',";
+                strsql += " cast(case when (fm_initialmargin + fm_exposurevalue- case when fm_collected > 0 then fm_collected else 0 end) >0 then (fm_initialmargin + fm_exposurevalue- case when fm_collected > 0 then fm_collected else 0 end) else 0 end as decimal(15,2)) ShortFall";
+                strsql += " ,convert(char,convert(datetime, fm_dt),103) as DisplayDate from fmargins where right(fm_companycode,1) = 'K' and fm_dt = (select max(fm_Dt) from fmargins Where right(fm_companycode,1) = 'K' ) and fm_clientcd='" + cm_cd + "'";
+                strsql += " union all";
+                strsql += " Select case right(fm_companycode,2) When 'MX' Then 'MCX Commodity' When 'NX' Then 'NCDEX Commodity' else '' end ExchSeg,fm_clientcd,cast(fm_spanmargin as decimal(15,2)) as fm_spanmargin,";
+                strsql += " cast(fm_exposurevalue as decimal(15,2)) as fm_exposurevalue, cast(fm_buypremmargin as decimal(15,2)) as fm_buypremmargin,cast(fm_initialmargin as decimal(15,2)) as fm_initialmargin,cast(fm_additionalmargin as decimal(15,2)) as fm_additionalmargin, cast(fm_collected as decimal(15,2)) as fm_collected,";
+                strsql += " cast(isnull(fm_spanmargin,0 )+ isnull(fm_exposurevalue,0) as decimal(15,2)) 'margin',cast(case when (fm_initialmargin + fm_exposurevalue- case when fm_collected > 0 then fm_collected else 0 end) >0 then (fm_initialmargin + fm_exposurevalue- case when fm_collected > 0 then fm_collected else 0 end) else 0 end as decimal(15,2)) ShortFall,convert(char,convert(datetime, fm_dt),103) as  DisplayDate ";
+                strsql += " from fmargins  where right(fm_companycode,1) = 'X' and fm_dt = (select max(fm_Dt)  from fmargins Where right(fm_companycode,1) = 'X' ) and fm_clientcd='" + cm_cd + "'";
+                objdataset = objUtility.OpenDataSet(strsql);
+
+            }
+            return objdataset;
+        }
+
+        // used for getting margin main data
+        public DataSet fnNewGetRptSQL(bool blnisLetter, string cm_cd, string strCompanyCode, string date)
+        {
+            string StrConn = _configuration.GetConnectionString("DefaultConnection");
+            string strCase = "";
+            string strFild = "";
+            string strExchSegme = "";
+            string strSegCode = "";
+            DataSet rsExcgSeg;
+
+            string strTotalShortFallX = "";
+            string strTotalCollectedX = "";
+            string strClientWhere = "";
+
+            using (SqlConnection ObjConnectionTmp = new SqlConnection(StrConn))
+            {
+                string StrCommexConn = "";
+                if (objUtility.GetWebParameter("Commex") != null && objUtility.GetWebParameter("Commex") != string.Empty)
+                {
+                    StrCommexConn = objUtility.GetCommexConnection();
+                }
+
+                string strSql = "";
+                ObjConnectionTmp.Open();
+                objUtility.ExecuteSQLTmp("if OBJECT_ID('tempdb..#TmpPeakColl') is not null Drop Table #TmpPeakColl", ObjConnectionTmp);
+                objUtility.ExecuteSQLTmp("Create Table #TmpPeakColl (Tmp_Clientcd VarChaR(8),Tmp_CompanyCode VarChaR(3),Tmp_PeakMargin Money,Tmp_PeakColl Money,Tmp_Shortfall Money, Tmp_exchange char(1), Tmp_segment char(1) , Tmp_Nfiller4 money, Tmp_Nfiller5 money )", ObjConnectionTmp);
+
+                string strdate = "";
+                strdate = objUtility.fnFireQueryTradeWeb("Fmargins", "max(fm_Dt)", "1", "1", true).ToString().Trim();
+                if (Conversion.Val(objUtility.fnFireQueryTradeWeb("Fmargin_PeakMargin", "Count(0)", "fc_companycode='" + strCompanyCode + "' and fc_dt ", "(select max(fc_dt) from Fmargin_PeakMargin)", true).ToString()) > 0)
+                {
+
+                    strSql = " insert into #TmpPeakColl ";
+                    strSql += " select fm_clientcd,'" + strCompanyCode + "'+fm_exchange+fm_Segment ,isNull(fm_NFiller4,0), isNull(fm_NFiller5,0) , 0,  fm_exchange, fm_Segment ,isNull(fm_NFiller4,0), isNull(fm_NFiller5,0) ";
+                    strSql += " from Fmargins, Client_master ";
+                    strSql += " Where fm_clientcd=cm_cd and fm_Companycode ='" + strCompanyCode + "' and fm_dt = '" + date + "'";
+                    if (objUtility.GetWebParameter("Commex") != null && objUtility.GetWebParameter("Commex") != string.Empty)
+                    {
+                        strSql += " union ";
+                        strSql += " select fm_clientcd,'" + strCompanyCode + "'+fm_exchange+'X',isNull(fm_PeakMargin,0)+isNull(fm_Filler2,0),isNull(fm_Filler1,0), 0 ,  fm_exchange, 'X' fm_Segment ,isNull(fm_PeakMargin,0)+isNull(fm_Filler2,0),isNull(fm_Filler1,0)";
+                        strSql += " from " + StrCommexConn + ".Fmargins, Client_master ";
+                        strSql += " Where fm_clientcd=cm_cd and fm_Companycode ='" + strCompanyCode + "' and fm_dt = '" + date + "' and fm_clientcd ='" + cm_cd + "'";
+                    }
+                    objUtility.ExecuteSQLTmp(strSql, ObjConnectionTmp);
+
+                    strSql = " Update #TmpPeakColl set Tmp_PeakMargin = Round(Tmp_PeakMargin * " + objUtility.fnPeakFactor(strdate) + "/100,2) Where Right(Tmp_CompanyCode,2) <> 'MX' ";
+                    objUtility.ExecuteSQLTmp(strSql, ObjConnectionTmp);
+                }
+                else
+                {
+                    strSql = " insert into #TmpPeakColl ";
+                    strSql += " select fm_clientcd,fm_exchange+fm_Segment,isNull(fm_NFiller4,0), 0 , 0 , fm_exchange, fm_Segment ,isNull(fm_NFiller4,0), isNull(fm_NFiller5,0)";
+                    strSql += " from Fmargins, Client_master ";
+                    strSql += " Where fm_clientcd=cm_cd and fm_Companycode ='" + strCompanyCode + "' and fm_dt = '" + date + "' ";
+                    if (objUtility.GetWebParameter("Commex") != null && objUtility.GetWebParameter("Commex") != string.Empty)
+                    {
+                        strSql += " union ";
+                        strSql += " select fm_clientcd,fm_exchange+'X',isNull(fm_PeakMargin,0)+isNull(fm_Filler2,0), 0 , 0 , fm_exchange, 'X' fm_Segment, isNull(fm_PeakMargin,0)+isNull(fm_Filler2,0),isNull(fm_Filler1,0) ";
+                        strSql += " from " + StrCommexConn + ".Fmargins, Client_master ";
+                        strSql += " Where fm_clientcd=cm_cd and fm_Companycode ='" + strCompanyCode + "' and fm_dt = '" + date + "'";
+                    }
+                    objUtility.ExecuteSQLTmp(strSql, ObjConnectionTmp);
+
+                    strSql = " Update #TmpPeakColl set Tmp_PeakMargin = Round(Tmp_PeakMargin * " + objUtility.fnPeakFactor(strdate) + "/100,2) Where Right(Tmp_CompanyCode,2) <> 'MX'";
+                    objUtility.ExecuteSQLTmp(strSql, ObjConnectionTmp);
+
+                    strSql = " Update #TmpPeakColl set Tmp_PeakColl = case When isNull(fc_FillerN9,0) > 0 then isNull(fc_FillerN9,0) else 0 end ";
+                    strSql += " from Fmargin_clients ";
+                    strSql += " Where fc_clientcd=Tmp_clientcd and fc_Companycode ='" + strCompanyCode + "' and fc_Exchange = '' and fc_dt = '" + date + "'";
+                    objUtility.ExecuteSQLTmp(strSql, ObjConnectionTmp);
+                }
+                strSql = " Update #TmpPeakColl set Tmp_PeakMargin=0,Tmp_PeakColl=0 Where Tmp_PeakColl>=Tmp_PeakMargin";
+                objUtility.ExecuteSQLTmp(strSql, ObjConnectionTmp);
+
+
+                if (blnisLetter)
+                {
+                    strSql = " Update #TmpPeakColl set Tmp_ShortFall = case When (Tmp_PeakMargin-Tmp_PeakColl) > 0 then (Tmp_PeakMargin-Tmp_PeakColl) else 0 end";
+                    objUtility.ExecuteSQLTmp(strSql, ObjConnectionTmp);
+                }
+
+                strClientWhere += " and cm_cd = '" + cm_cd + "'";
+                strClientWhere += " and cm_type <> 'I'";
+
+
+                strCase = "";
+                strFild = "";
+
+                if (objUtility.GetWebParameter("Commex") != null && objUtility.GetWebParameter("Commex") != string.Empty)
+                {
+                    try
+                    {
+                        strSql = "Drop table #FmarginsRpt";
+                        objUtility.ExecuteSQLTmp(strSql, ObjConnectionTmp);
+                    }
+                    catch (Exception ex)
+                    {
+                    }
+                    finally
+                    {
+                        strSql = " CREATE TABLE [#FmarginsRpt]( ";
+                        strSql += " [fm_companycode] [char](1) NOT NULL,[fm_exchange] [char](1) NOT NULL,[fm_dt] [char](8) NOT NULL, ";
+                        strSql += " [fm_clientcd] [char](8) NOT NULL,[fm_spanmargin] [money] NOT NULL,[fm_buypremmargin] [money] NOT NULL, ";
+                        strSql += " [fm_initialmargin] [money] NOT NULL,[fm_exposurevalue] [money] NOT NULL,[fm_clienttype] [char](1) NOT NULL, ";
+                        strSql += " [fm_additionalmargin] [money] NOT NULL,[fm_collected] [money] NOT NULL,[fm_mainbrcd] [char](8) NOT NULL, ";
+                        strSql += " [mkrid] [char](8) NOT NULL,[mkrdt] [char](8) NOT NULL,[fm_Regmargin] [money] NULL,[fm_Tndmargin] [money] NULL, ";
+                        strSql += " [fm_Dlvmargin] [money] NULL,[fm_SpreadBen] [money] NULL,[fm_SplMargin] [money] NULL,[fm_collectedT2] [money] NOT NULL, ";
+                        strSql += " [fm_InitShort] [money] NOT NULL,[fm_MTMAddShort] [money] NOT NULL,[fm_OthShort] [money] NOT NULL,[fm_ConcMargin] [money] NOT NULL, ";
+                        strSql += " [fm_DelvPMargin] [money] NOT NULL,[fm_MTMLoss] [money] NOT NULL) ";
+                        objUtility.ExecuteSQLTmp(strSql, ObjConnectionTmp);
+                    }
+
+
+                    strSql = " Insert into #FmarginsRpt select fm_companycode,fm_exchange,fm_dt,fm_clientcd,Sum(fm_spanmargin),Sum(fm_buypremmargin),Sum(fm_initialmargin),Sum(fm_exposurevalue),''fm_clienttype,";
+                    strSql += " Sum(fm_additionalmargin),Sum(fm_collected),'' fm_mainbrcd,'' mkrid,'' mkrdt,Sum(fm_Regmargin),Sum(fm_Tndmargin),Sum(fm_Dlvmargin),Sum(fm_SpreadBen),Sum(fm_SplMargin),Sum(fm_collectedT2),Sum(fm_InitShort),";
+                    strSql += " Sum(fm_MTMAddShort),Sum(fm_OthShort),Sum(fm_ConcMargin),Sum(fm_DelvPMargin),Sum(fm_MTMLoss) from ( ";
+                    strSql += " select fm_companycode,fm_exchange,fm_dt,fm_clientcd,fm_spanmargin,fm_buypremmargin,fm_initialmargin,fm_exposurevalue,''fm_clienttype,fm_additionalmargin,fm_collected,";
+                    strSql += " ''fm_mainbrcd,''mkrid,''mkrdt,fm_Regmargin,fm_Tndmargin,fm_Dlvmargin,fm_SpreadBen,fm_SplMargin,fm_collectedT2,fm_InitShort,fm_MTMAddShort,fm_OthShort,fm_ConcMargin,fm_DelvPMargin,0 fm_MTMLoss ";
+                    strSql += " from  " + StrCommexConn + ".Fmargins, " + StrCommexConn + ".Client_master ";
+                    strSql += " Where fm_clientcd = cm_cd and fm_Companycode ='" + strCompanyCode + "' and fm_dt = '" + date + "'" + strClientWhere;
+                    strSql += " union all ";
+                    strSql += " select po_companycode,po_exchange,po_dt,po_clientcd,0 fm_spanmargin,0 fm_buypremmargin,0 fm_initialmargin,0 fm_exposurevalue,0 fm_clienttype,0 fm_additionalmargin,";
+                    strSql += " 0 fm_collected,'' fm_mainbrcd,'' mkrid,'' mkrdt,0 fm_Regmargin,0 fm_Tndmargin,0 fm_Dlvmargin,0 fm_SpreadBen,0 fm_SplMargin,0 fm_collectedT2,0 fm_InitShort,";
+                    strSql += " 0 fm_MTMAddShort,0 fm_OthShort,0 fm_ConcMargin,0 fm_DelvPMargin,case When -sum(po_futvalue) > 0 Then -sum(po_futvalue) else 0 end MarginReq ";
+                    strSql += " from  " + StrCommexConn + ".Fpositions,  " + StrCommexConn + ".Client_master";
+                    strSql += " Where po_companycode='" + strCompanyCode + "' and po_clientcd = cm_cd ";
+                    strSql += " and po_dt = '" + date + "' " + strClientWhere;
+                    strSql += " Group by po_clientcd,po_companycode,po_exchange,po_dt";
+                    strSql += " Having case When -sum(po_futvalue) > 0 Then -sum(po_futvalue) else 0 end > 0 ";
+                    strSql += " ) a Group by fm_companycode,fm_exchange,fm_dt,fm_clientcd ";
+                    objUtility.ExecuteSQLTmp(strSql, ObjConnectionTmp);
+
+                    strSql = " Update #FmarginsRpt set fm_collected = fc_collected , fm_collectedT2  = fc_Collected1 ";
+                    strSql += " From Fmargin_Clients  ";
+                    strSql += " Where fc_companycode = '" + strCompanyCode + "' and fc_exchange = fm_Exchange and fc_Segment = 'X' and fc_dt = '" + date + "' and fm_clientcd = fc_clientcd ";
+                    strSql += " and not exists ( Select fm_clientcd from " + StrCommexConn + ".Fmargins Where fm_companycode = '" + strCompanyCode + "' and fm_dt = '" + date + "' and fc_clientcd  = fm_clientcd and fm_Exchange = fc_Exchange ) ";
+                    objUtility.ExecuteSQLTmp(strSql, ObjConnectionTmp);
+
+                }
+
+                strSql = "select  distinct  '0' 'Product' ,(fm_exchange+fm_segment) fm_ExchSeg,fm_segment Seg from Fmargins, Client_master ";
+                strSql += " Where fm_clientcd=cm_cd and fm_Companycode ='" + strCompanyCode + "' and fm_dt = '" + date + "'";
+                if (objUtility.GetWebParameter("Commex") != null && objUtility.GetWebParameter("Commex") != string.Empty)
+                {
+                    strSql += " union ";
+                    strSql += " select distinct '1' 'Product' ,(fm_exchange+'X') fm_ExchSeg,'X' Seg from #FmarginsRpt ";
+                    strSql += " Where fm_Companycode ='" + strCompanyCode + "' and fm_dt = '" + date + "' ";
+                }
+                strSql += " Order by Product,Seg,fm_ExchSeg ";
+                rsExcgSeg = objUtility.OpenDataSetTmp(strSql, ObjConnectionTmp);
+                string strTemp = "";
+                strFild = "";
+                foreach (DataRow objrow in rsExcgSeg.Tables[0].Rows)
+                {
+                    strExchSegme = objrow["fm_ExchSeg"].ToString();
+                    if (Strings.Right(strExchSegme, 1) == "C")
+                    { strSegCode = "Cash"; }
+                    else if (Strings.Right(strExchSegme, 1) == "F")
+                    { strSegCode = "Fo"; }
+                    else if (Strings.Right(strExchSegme, 1) == "K")
+                    { strSegCode = "Fx"; }
+                    else if (Strings.Right(strExchSegme, 1) == "X")
+                    { strSegCode = "Cx"; }
+
+                    strCase = strCase + " case fm_exchange+fm_Segment when '" + strExchSegme + "' then case When (fm_TotalMrgn-(fm_collected+fm_collected1)) > 0 Then (fm_TotalMrgn-(fm_collected+fm_collected1)) else 0 end else 0 end TotalShort" + strSegCode + strExchSegme + ",";
+                    strTotalShortFallX += "sum(TotalShort" + strSegCode + strExchSegme + ")+";
+
+                    strCase = strCase + " case fm_exchange+fm_Segment when '" + strExchSegme + "' then (fm_collected+fm_collected1) else 0 end Collected" + strSegCode + strExchSegme + ",";
+                    strTotalCollectedX += "sum(Collected" + strSegCode + strExchSegme + ")+";
+
+                    strCase = strCase + " case fm_exchange+fm_Segment when '" + strExchSegme + "' then fm_TotalMrgn else 0 end TotalMrgn" + strSegCode + strExchSegme + ",";
+                    strTemp = strTemp + "sum(TotalMrgn" + strSegCode + strExchSegme + ") TotalMrgn" + strSegCode + strExchSegme + ",";
+                }
+
+                if (strCase.Trim() != "")
+                //{ Return "";}
+                {
+                    if (blnisLetter)
+                    {
+                        strCase = Strings.Left(strCase.Trim(), Strings.Len(strCase.Trim()) - 1);
+                        strFild = "";
+                        strFild = " fm_clientcd,fm_exchange,fm_segment,isNull(cm_Name,'Not Found') cm_Name,cm_email,bm_email,cm_brboffcode,bm_branchname,bm_add1 ,cm_add1,bm_add2 ,cm_add2,bm_add3 ,cm_add3,";
+                        strFild += " Tmp_Shortfall PeakShort, Tmp_NFiller4, Tmp_NFiller5 , Tmp_PeakColl , Tmp_PeakMargin ,";
+
+                        if (Strings.Right(strTotalShortFallX.Trim(), 1) == "+")
+                        {
+                            strTotalShortFallX = Strings.Left(strTotalShortFallX, Strings.Len(strTotalShortFallX) - 1) + " TotalShort";
+                            strFild += strTotalShortFallX + ", ";
+                        }
+                        if (Strings.Right(strTotalCollectedX.Trim(), 1) == "+")
+                        {
+                            strTotalCollectedX = Strings.Left(strTotalCollectedX, Strings.Len(strTotalCollectedX) - 1) + " Collected";
+                            strFild += strTotalCollectedX + ", ";
+                        }
+                        strFild += strTemp;
+                        strFild = Strings.Left(strFild.Trim(), Strings.Len(strFild.Trim()) - 1);
+
+                        strCase += " , fm_TotalMrgn ";
+                        strFild += " , Sum(fm_TotalMrgn) fm_TotalMrgn ";
+
+                        strSql = " Select case fm_exchange when 'B' then 'BSE-' when 'N' then 'NSE-' when 'M' then 'MCX-' when 'F' then 'NCDEX-' else '' end + case fm_segment when 'C' then 'CASH'  when 'F' then 'FO'  when 'K' then 'FX' when 'M' then 'MF' when 'X' then 'COMM' else '' end ExchSeg,cast(fm_TotalMrgn as decimal(15,2)) fm_TotalMrgn,cast(Collected as decimal(15,2)) Collected,cast(TotalShort as decimal(15,2)) TotalShort,";
+                        strSql += " cast(case when fm_TotalMrgn > 0 then ((TotalShort * 100)/ fm_TotalMrgn) else 0 end as decimal(15,2)) TotalShortPER,cast(Tmp_NFiller4 as decimal(15,2)) Tmp_NFiller4,cast(Tmp_PeakMargin as decimal(15,2)) Tmp_PeakMargin,";
+                        strSql += " cast(Tmp_NFiller5 as decimal(15,2)) Tmp_NFiller5,cast(PeakShort as decimal(15,2)) PeakShort,cast(Case When PeakShort > TotalShort then PeakShort else TotalShort end as decimal(15,2)) 'Tmp_HighestShortFall' ";
+
+                        if (Conversion.Val(objUtility.fnFireQueryTradeWeb("Sysparameter", "Count(0)", "sp_parmcd", "MGPENALTY", true)) > 0)
+                        {
+                            strSql += ",";
+                            strSql += " Convert(Decimal(15,2), Round(( ((Case When PeakShort > TotalShort then PeakShort else TotalShort end)) *  ";
+                            strSql += " (Case When ((Case When PeakShort > TotalShort then PeakShort else TotalShort end)) < 100000  ";
+                            strSql += " and Case When  fm_TotalMrgn = 0 then 0 else ((((Case When PeakShort > TotalShort then PeakShort else TotalShort end))*100) / (fm_TotalMrgn)) end < 10 Then 0.5 Else 1 End/100)),2)  ";
+                            strSql += " ) ShortPenalty ";
+                        }
+                        strSql += "  from ( ";
+                        strSql += "  select " + strFild + " From (";
+                        strSql += " Select fm_clientcd,fm_exchange,fm_segment," + strCase;
+                        strSql += " from ( select fm_clientcd,fm_exchange,fm_Segment,Sum(fm_TotalMrgn) fm_TotalMrgn,Sum(fm_collected) fm_collected,Sum(fm_collected1) fm_collected1 from ( ";
+                        strSql += " select fm_clientcd,fm_exchange,fm_Segment,fm_TotalMrgn,fm_collected,fm_collected1  from Fmargins, Client_master Where cm_cd=fm_clientcd and fm_Companycode ='" + strCompanyCode + "' and fm_dt = '" + date + "'";
+                        if (objUtility.GetSysParmSt("FMRGCombined", "").Trim() == "F")
+                        {
+                            strSql += " union all ";
+                            strSql += " select fc_Filler1,fc_exchange,fc_Segment,0 fm_TotalMrgn,fc_collected,fc_collected1  from Fmargin_Clients, Client_master Where cm_cd=fc_clientcd and fc_exchange <> '' and fc_Companycode ='" + strCompanyCode + "' and fc_dt = '" + date + "'";
+                        }
+                        strSql += " ) a Group By fm_clientcd,fm_exchange,fm_Segment ";
+                        strSql += " ) z , Client_master,branch_master ";
+                        strSql += " Where fm_clientcd = cm_cd and cm_brboffcode = bm_branchcd " + strClientWhere;
+                        if (objUtility.GetWebParameter("Commex") != null && objUtility.GetWebParameter("Commex") != string.Empty)
+                        {
+                            strSql += " union all ";
+                            string strTotalMargin = "";
+                            strTotalMargin = " (case fm_exchange When 'M' Then fm_Regmargin + fm_exposurevalue + fm_buypremmargin else fm_initialmargin + fm_exposurevalue end) + case fm_Exchange When 'M' Then fm_additionalmargin + fm_Tndmargin + fm_Dlvmargin - fm_SpreadBen + fm_ConcMargin + fm_DelvPMargin else fm_additionalmargin + fm_SplMargin end + fm_MTMLoss ";
+                            strCase = strCase.Replace("fm_Segment", "'X'");
+                            strCase = strCase.Replace("fm_TotalMrgn", strTotalMargin);
+                            strCase = strCase.Replace("(fm_collected+fm_collected1)", "(fm_collected+fm_collectedt2)");
+                            strSql += " Select fm_clientcd,fm_exchange,'X' fm_Segment," + strCase;
+                            strSql += " from #FmarginsRpt," + StrCommexConn + ".Client_master," + StrCommexConn + ".branch_master Where fm_clientcd = cm_cd and cm_brboffcode = bm_branchcd and fm_Companycode ='" + strCompanyCode + "' and fm_dt = '" + date + "'";
+                        }
+                        strSql += " ) a , Client_master,branch_master , #TmpPeakColl p ";
+                        strSql += " Where fm_clientcd = cm_cd and fm_exchange=tmp_exchange and fm_segment=tmp_segment and cm_brboffcode = bm_branchcd and fm_clientcd = Tmp_Clientcd ";
+                        strSql += " Group by fm_clientcd,fm_exchange,fm_Segment,cm_Name,cm_email,bm_email,cm_brboffcode,bm_branchname,bm_add1 ,cm_add1,bm_add2 ,cm_add2,bm_add3 ,cm_add3,Tmp_Shortfall,Tmp_NFiller4, Tmp_Nfiller5, Tmp_PeakColl, Tmp_PeakMargin ";
+                        if (Conversion.Val(objUtility.fnFireQueryTradeWeb("Sysparameter", "Count(0)", "sp_parmcd", "MGPENALTY", true)) > 0)
+                        {
+                            strSql += " Having Sum(fm_TotalMrgn) > 0  ";
+                        }
+                        strSql += " ) b ";
+
+                        //strSql += " Where PeakShort > 0 Or TotalShort > 0 ";
+
+                        strSql += " Order By fm_clientcd ";
+                    }
+                    return objUtility.OpenDataSetTmp(strSql, ObjConnectionTmp);
+                }
+                return null;
+            }
+        }
 
         #endregion
     }

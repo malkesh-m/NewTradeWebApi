@@ -206,6 +206,37 @@ namespace TradeWeb.API.Controllers
             return BadRequest();
         }
 
+        // get dropdown Exchange list
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpGet("GetDigitalDocumentDownload", Name = "GetDigitalDocumentDownload")]
+        public IActionResult GetDigitalDocumentDownload([FromQuery] string productType, string documentType, string exchangeType, string fromDate)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var tokenS = GetToken();
+                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
+
+                    var getData = _tradeWebRepository.GetDigitalDocumentDownload(userId, productType, documentType, exchangeType, fromDate);
+                    if (getData != null)
+                    {
+                        return Ok(getData.FileData);
+                    }
+                    else
+                    {
+                        return NotFound("records not found");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new commonResponse { status = false, message = "error", status_code = (int)HttpStatusCode.InternalServerError, error_message = ex.Message.ToString() });
+                }
+            }
+            return BadRequest();
+        }
+
+
         // Add new item comodity in dropdown product list
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpGet("AddDdlProductListItem", Name = "AddDdlProductListItem")]

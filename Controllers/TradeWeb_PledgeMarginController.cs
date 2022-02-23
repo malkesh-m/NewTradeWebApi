@@ -179,6 +179,42 @@ namespace TradeWeb.API.Controllers
 
         #endregion
 
+        #region New margin api
+
+        // TODO : Get margin grid main data
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpGet("Margin", Name = "Margin")]
+        public IActionResult Margin(string date)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var tokenS = GetToken();
+                    var compCode = tokenS.Claims.First(claim => claim.Type == "companyCode").Value;
+                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
+
+                    var getData = _tradeWebRepository.MarginMainData(userId, compCode, date);
+                    if (getData != null)
+                    {
+                        return Ok(getData);
+                    }
+                    else
+                    {
+                        return NotFound("records not found");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(ex.Message.ToString());
+                }
+            }
+            return BadRequest();
+        }
+
+
+        #endregion
+
         private JwtSecurityToken GetToken()
         {
             var handler = new JwtSecurityTokenHandler();
