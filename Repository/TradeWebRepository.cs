@@ -9529,8 +9529,25 @@ namespace TradeWeb.API.Repository
                 var ds = GetQueryMarginMainData(cm_cd, strCompanyCode, date);
                 if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
                 {
-                    var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
-                    return json;
+                    List<MarginResponse> marginResponse = new List<MarginResponse>();
+                    for (int i = 0; i < ds.Tables[0].Rows.Count; i++)
+                    {
+                        marginResponse.Add(new MarginResponse
+                        {
+                            ExchSeg = ds.Tables[0].Rows[i]["ExchSeg"].ToString(),
+                            EOD_Margin_Required = Convert.ToDecimal(ds.Tables[0].Rows[i]["fm_TotalMrgn"]),
+                            EOD_Margin_Available = Convert.ToDecimal(ds.Tables[0].Rows[i]["Collected"]),
+                            EOD_ShortFall_Amount = Convert.ToDecimal(ds.Tables[0].Rows[i]["TotalShort"]),
+                            EOD_ShortFall_Per = Convert.ToDecimal(ds.Tables[0].Rows[i]["TotalShortPER"]),
+                            Peak_Margin_Required = Convert.ToDecimal(ds.Tables[0].Rows[i]["Tmp_NFiller4"]),
+                            Peak_Margin_To_Be_Collected = Convert.ToDecimal(ds.Tables[0].Rows[i]["Tmp_PeakMargin"]),
+                            Peak_Margin_Available = Convert.ToDecimal(ds.Tables[0].Rows[i]["fm_TotalMrgn"]),
+                            Peak_Margin_Shortfall = Convert.ToDecimal(ds.Tables[0].Rows[i]["PeakShort"]),
+                            Peak_Margin_Highest_Shortfall = Convert.ToDecimal(ds.Tables[0].Rows[i]["Tmp_HighestShortFall"])
+                        });
+                    }
+                    
+                    return marginResponse;
                 }
                 return new List<string>();
             }
