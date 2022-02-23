@@ -9535,10 +9535,10 @@ namespace TradeWeb.API.Repository
                         marginResponse.Add(new MarginResponse
                         {
                             ExchSeg = ds.Tables[0].Rows[i]["ExchSeg"].ToString(),
-                            EOD_Margin_Required = Convert.ToDecimal(ds.Tables[0].Rows[i]["fm_TotalMrgn"]),
-                            EOD_Margin_Available = Convert.ToDecimal(ds.Tables[0].Rows[i]["Collected"]),
-                            EOD_ShortFall_Amount = Convert.ToDecimal(ds.Tables[0].Rows[i]["TotalShort"]),
-                            EOD_ShortFall_Per = Convert.ToDecimal(ds.Tables[0].Rows[i]["TotalShortPER"]),
+                            Eod_Margin_Required = Convert.ToDecimal(ds.Tables[0].Rows[i]["fm_TotalMrgn"]),
+                            Eod_Margin_Available = Convert.ToDecimal(ds.Tables[0].Rows[i]["Collected"]),
+                            Eod_ShortFall_Amount = Convert.ToDecimal(ds.Tables[0].Rows[i]["TotalShort"]),
+                            Eod_ShortFall_Percentage = Convert.ToDecimal(ds.Tables[0].Rows[i]["TotalShortPER"]),
                             Peak_Margin_Required = Convert.ToDecimal(ds.Tables[0].Rows[i]["Tmp_NFiller4"]),
                             Peak_Margin_To_Be_Collected = Convert.ToDecimal(ds.Tables[0].Rows[i]["Tmp_PeakMargin"]),
                             Peak_Margin_Available = Convert.ToDecimal(ds.Tables[0].Rows[i]["fm_TotalMrgn"]),
