@@ -9,7 +9,7 @@ $(document).ready(function(){
 		$.ajax({
             type: "Get",
 			async: false,
-            url:"https://localhost:5001/api/TradeWeb/DownloadDigitalDocument?docType=Tplus&date=20210101&srNo=50.0",
+            url:"https://localhost:5001/api/TradeWeb_Miscellanious/GetDigitalDocumentDownload?productType=T&documentType=Contract&exchangeType=BSE%20Cash&fromDate=20210101",
             <!-- contentType : "application/json; charset=utf-8", -->
 			dataType: "text",
             success: function (result) {

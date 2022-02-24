@@ -9541,7 +9541,7 @@ namespace TradeWeb.API.Repository
                             Eod_ShortFall_Percentage = Convert.ToDecimal(ds.Tables[0].Rows[i]["TotalShortPER"]),
                             Peak_Margin_Required = Convert.ToDecimal(ds.Tables[0].Rows[i]["Tmp_NFiller4"]),
                             Peak_Margin_To_Be_Collected = Convert.ToDecimal(ds.Tables[0].Rows[i]["Tmp_PeakMargin"]),
-                            Peak_Margin_Available = Convert.ToDecimal(ds.Tables[0].Rows[i]["fm_TotalMrgn"]),
+                            Peak_Margin_Available = Convert.ToDecimal(ds.Tables[0].Rows[i]["Tmp_NFiller5"]),
                             Peak_Margin_Shortfall = Convert.ToDecimal(ds.Tables[0].Rows[i]["PeakShort"]),
                             Peak_Margin_Highest_Shortfall = Convert.ToDecimal(ds.Tables[0].Rows[i]["Tmp_HighestShortFall"])
                         });
