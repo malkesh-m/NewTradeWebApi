@@ -221,7 +221,7 @@ namespace TradeWeb.API.Controllers
                     var getData = _tradeWebRepository.GetDigitalDocumentDownload(userId, productType, documentType, exchangeType, fromDate);
                     if (getData != null)
                     {
-                        return Ok(getData.FileData);
+                        return Ok(getData);
                     }
                     else
                     {
