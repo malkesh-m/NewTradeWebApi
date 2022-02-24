@@ -7057,9 +7057,9 @@ namespace TradeWeb.API.Repository
                 {
                     payOutRequest.Data.Add(new RmsRequest
                     {
-                        Exch = Dstemp.Tables[0].Rows[i]["Exch"].ToString(),
-                        ld_dpid = Dstemp.Tables[0].Rows[i]["ld_dpid"].ToString(),
-                        amt = Convert.ToDouble(Dstemp.Tables[0].Rows[i]["amt"]),
+                        CompanyExchangeSegment = Dstemp.Tables[0].Rows[i]["Exch"].ToString(),
+                        dpId = Dstemp.Tables[0].Rows[i]["ld_dpid"].ToString(),
+                        PayOut = Convert.ToDouble(Dstemp.Tables[0].Rows[i]["amt"]),
                     });
                 }
 

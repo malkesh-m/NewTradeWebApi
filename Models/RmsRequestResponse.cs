@@ -7,9 +7,9 @@ namespace TradeWeb.API.Models
 {
     public class RmsRequest
     {
-        public string Exch { get; set; }
-        public string ld_dpid { get; set; }
-        public double amt { get; set; }
+        public string CompanyExchangeSegment { get; set; }
+        public string dpId { get; set; }
+        public double PayOut { get; set; }
     }
 
     public class PayOutRequest
