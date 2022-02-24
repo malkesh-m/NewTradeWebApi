@@ -88,9 +88,10 @@ namespace TradeWeb.API.Controllers
 
         // TODO : Get margin pledge data
         [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("GetMarginPledgeData", Name = "GetMarginPledgeData")]
-        public IActionResult GetMarginPledgeData([FromQuery] string DPIDValue)
+        [HttpGet("Request_Get_PledgeForMargin", Name = "Request_Get_PledgeForMargin")]
+        public IActionResult Request_Get_PledgeForMargin([FromQuery] string dematActNo)
         {
+
             if (ModelState.IsValid)
             {
                 try
@@ -99,7 +100,7 @@ namespace TradeWeb.API.Controllers
                     var compCode = tokenS.Claims.First(claim => claim.Type == "companyCode").Value;
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.GetMarginPledgeData(userId, userId.ToUpper(), compCode, DPIDValue);
+                    var getData = _tradeWebRepository.GetMarginPledgeData(userId, userId.ToUpper(), compCode, dematActNo);
                     if (getData != null)
                     {
                         return Ok(getData);

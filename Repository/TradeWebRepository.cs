@@ -5073,8 +5073,25 @@ namespace TradeWeb.API.Repository
                 //var ds = CommonRepository.OpenDataSetTmp(query);
                 if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
                 {
-                    var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
-                    return json;
+                    List<PledgeForMarginResponse> pledgeForMargins = new List<PledgeForMarginResponse>();
+
+                    for (int i = 0; i < ds.Tables[0].Rows.Count; i++)
+                    {
+                        pledgeForMargins.Add(new PledgeForMarginResponse
+                        {
+                            Securities_Code = ds.Tables[0].Rows[i]["th_scripcd"].ToString(),
+                            Securities_Name = ds.Tables[0].Rows[i]["ss_Name"].ToString(),
+                            Securities_ISIN = ds.Tables[0].Rows[i]["th_ISIN"].ToString(),
+                            Holding_Rate = Convert.ToDouble(ds.Tables[0].Rows[i]["th_rate"]),
+                            Holding_Qty = Convert.ToDouble(ds.Tables[0].Rows[i]["th_qty"]),
+                            Holding_Value = Convert.ToDouble(ds.Tables[0].Rows[i]["th_rate"]) * Convert.ToDouble(ds.Tables[0].Rows[i]["th_qty"]),
+                            HairCut = Convert.ToDouble(ds.Tables[0].Rows[i]["th_HairCut"]),
+                            NetValue = Convert.ToDouble(ds.Tables[0].Rows[i]["th_netValue"]),
+                            Request_Qty = Convert.ToDouble(ds.Tables[0].Rows[i]["Retain"]),
+                            Request_Value = Convert.ToDouble(ds.Tables[0].Rows[i]["Retain"]) * Convert.ToDouble(ds.Tables[0].Rows[i]["th_rate"]),
+                        });
+                    }
+                    return pledgeForMargins;
                 }
                 return new List<string>();
             }
