@@ -6876,10 +6876,9 @@ namespace TradeWeb.API.Repository
             try
             {
                 var ds = GetRmsRequestQuery(cm_cd);
-                if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                if (ds != null)
                 {
-                    var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
-                    return json;
+                    return ds;
                 }
                 return new List<string>();
             }
@@ -7035,8 +7034,9 @@ namespace TradeWeb.API.Repository
         }
 
         //// Get rms request
-        private DataSet GetRmsRequestQuery(string cm_cd)
+        private PayOutRequest GetRmsRequestQuery(string cm_cd)
         {
+            DataSet Dstemp = new DataSet();
             StringBuilder strsql = new StringBuilder();
             strsql.Append("select  (ltrim(rtrim(ces_exchange)) + '/' + ltrim(rtrim(ces_segment)))Exch ,cm_cd ,cm_name,ld_dpid,  cast((-1*sum(ld_amount)) as decimal(15,2)) amt, ");
             strsql.Append(" isNull((select CAST(Sum(Rq_Amount) as decimal(15,2)) from FundsRequest Where rq_clientcd = ld_clientcd and Rq_Note = ld_dpid and Rq_Satus1 = 'P' ),0) rq_amt ");
@@ -7044,8 +7044,43 @@ namespace TradeWeb.API.Repository
             strsql.Append(" where ld_clientcd = cm_cd and CES_Cd=ld_dpid  and ld_clientcd = '" + cm_cd + "'  ");
             strsql.Append("group by  ld_clientcd ,cm_brkggroup,cm_cd,cm_name,ld_dpid,ltrim(rtrim(ces_exchange)) + '/' + ltrim(rtrim(ces_segment)),ld_dpid,ld_clientcd having abs(sum(ld_amount)) > 0");
 
-            return objUtility.OpenDataSet(strsql.ToString());
+            Dstemp = objUtility.OpenDataSet(strsql.ToString());
 
+            if (Dstemp.Tables[0].Rows.Count > 0)
+            {
+                PayOutRequest payOutRequest = new PayOutRequest();
+                double rmsAmount = 0;
+                double branchRequestAmount = 0;
+                payOutRequest.Data = new List<RmsRequest>();
+
+                for (int i = 0; i < Dstemp.Tables[0].Rows.Count; i++)
+                {
+                    payOutRequest.Data.Add(new RmsRequest
+                    {
+                        Exch = Dstemp.Tables[0].Rows[i]["Exch"].ToString(),
+                        ld_dpid = Dstemp.Tables[0].Rows[i]["ld_dpid"].ToString(),
+                        amt = Convert.ToDouble(Dstemp.Tables[0].Rows[i]["amt"]),
+                    });
+                }
+
+                if (_configuration["IsTradeWeb"] == "O")//live
+                {
+                    if (Convert.ToInt16(objUtility.fnFireQueryTradeWeb("Sysparameter", "count(0)", "sp_parmcd Like 'RMSHEAD%' and sp_sysvalue", "FUNDPAYOUT", true)) > 0)
+                    {
+                        rmsAmount = Convert.ToDouble(objUtility.fnFireQueryTradeWeb("Rms_summary", "isnull(CAST((-1 * sum(rs_fundpayout)) as decimal(15,2)),0) Rmsamt", " rs_Dt = (select MAX(rs_Dt) From RMS_Summary)  and  rs_clientcd", cm_cd, true));
+                    }
+
+                    branchRequestAmount = Microsoft.VisualBasic.Conversion.Val(objUtility.fnFireQueryTradeWeb("PayOut_release", "isnull(cast(sum(rq_amt) as decimal(15,2)),0) rq_amt", "rq_relflag='N' and rq_clientcd", cm_cd, true));
+                }
+                payOutRequest.RmsAmount = rmsAmount;
+                payOutRequest.BranchRequestAmount = branchRequestAmount;
+
+                return payOutRequest;
+            }
+            else
+            {
+                return null;
+            }
         }
 
         #region Request Report module
@@ -9546,7 +9581,7 @@ namespace TradeWeb.API.Repository
                             Peak_Margin_Highest_Shortfall = Convert.ToDecimal(ds.Tables[0].Rows[i]["Tmp_HighestShortFall"])
                         });
                     }
-                    
+
                     return marginResponse;
                 }
                 return new List<string>();
