@@ -146,6 +146,8 @@ namespace TradeWeb.API.Repository
 
         public dynamic GetDigitalDocumentDownload(string userId, string cmbProductValue, string cmbDocumentTypeValue, string cmbExchangeValue, string fromDate);
 
+        public dynamic DigitalDocument_List(string userId, string cmbProductValue, string fromDate, string toDate);
+
         public dynamic AddDdlProductListItem();
 
         public dynamic Family_List(string userId);
@@ -173,6 +175,8 @@ namespace TradeWeb.API.Repository
         public dynamic Family_TransactionJson(FamilyTransactionModel model);
 
         public dynamic Family_TransactionDetailJson(string Client, string Type, string FromDate, string ToDate);
+
+        public dynamic DigitalDocument_File(string docType, string date, string srNo);
     }
 
     public class TradeWebRepository : ITradeWebRepository
@@ -7333,6 +7337,56 @@ namespace TradeWeb.API.Repository
             }
         }
 
+        // get digital document main data
+        public dynamic DigitalDocument_List(string userId, string cmbProductValue, string fromDate, string toDate)
+        {
+            try
+            {
+                var ds = DigitalDocument_ListQuery(userId, cmbProductValue, fromDate, toDate);
+                if (ds != null)
+                {
+                    if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                    {
+                        List<DigitalDocumentResponse> digitalDocuments = new List<DigitalDocumentResponse>();
+
+                        for (int i = 0; i < ds.Tables[0].Rows.Count; i++)
+                        {
+                            digitalDocuments.Add(new DigitalDocumentResponse
+                            {
+                                SrNo = ds.Tables[0].Rows[i]["dd_srno"].ToString(),
+                                DocumentType = ds.Tables[0].Rows[i]["doctype"].ToString(),
+                                Date = ds.Tables[0].Rows[i]["DT"].ToString(),
+                            });
+                        }
+
+                        return digitalDocuments;
+                    }
+                }
+                return new List<string>();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        public dynamic DigitalDocument_File(string docType, string date, string srNo)
+        {
+            try
+            {
+                var Document = DigitalDocument_FileQuery(docType, date, srNo);
+                if (Document != null)
+                {
+                        return Document;
+                }
+                return new List<string>();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
         #region DigitalDocument usefull method
 
         public DataSet GetQueryDdlExchangeList(string cmbProductValue, string cmbDocumentTypeValue)
@@ -7551,6 +7605,114 @@ namespace TradeWeb.API.Repository
                     var result = Convert.ToBase64String(bytes, 0, bytes.Length);
 
                     return new DigitalDocumentModel { FileName = DataSet.Tables[0].Rows[0]["dd_filename"].ToString().Trim(), FileData = result };
+                }
+                ObjReader.Close();
+            }
+            return null;
+        }
+
+        public DataSet DigitalDocument_ListQuery(string userId, string cmbProductValue, string fromDate, string toDate)
+        {
+            Boolean IsCommexES = false;
+            string strsql = "";
+            if (cmbProductValue == "X")
+            {
+                if (_configuration["CommexES"] != null && _configuration["CommexES"] != string.Empty)
+                {
+                    IsCommexES = true;
+                    strsql = "select 'Commex' doctype,'DownLoad'as download,dd_srno,do_desc,ltrim(rtrim(convert(char,convert(datetime,dd_dt),103))) as dd_dt,dd_stlmnt,dd_contractno,'' DT ";
+                    char[] ArrSeparators = new char[1];
+                    ArrSeparators[0] = '/';
+                    string[] ArrCommex = _configuration["CommexES"].Split(ArrSeparators);
+                    strsql = strsql + " from   " + ArrCommex[0].Trim() + "." + ArrCommex[1].Trim() + "." + ArrCommex[2].Trim() + ".digital_details,";
+                    strsql = strsql + ArrCommex[0].Trim() + "." + ArrCommex[1].Trim() + "." + ArrCommex[2].Trim() + ".DocumentType_master";
+                    strsql = strsql + " where dd_clientcd = '" + userId + "'";
+
+                    strsql = strsql + " and dd_dt between '" + fromDate + "' and '" + toDate + "'"; ;
+                    strsql = strsql + "and dd_filetype = do_cd ";
+                    strsql = strsql + " order by dd_dt desc ";
+                }
+            }
+            else
+            {
+                strsql = "select 'Tplus' doctype,'Download'as download,dd_srno,do_desc,ltrim(rtrim(convert(char,convert(datetime,dd_dt),103))) as dd_dt,dd_stlmnt,dd_contractno,'" + fromDate + "' DT ";
+                strsql = strsql + "from digital_details ,DocumentType_master ";
+                strsql = strsql + "where dd_clientcd = '" + userId + "'";
+
+                strsql = strsql + " and dd_dt between '" + fromDate + "' and '" + toDate + "'"; ;
+
+                strsql = strsql + " and dd_filetype = do_cd ";
+                strsql = strsql + " order by dd_dt desc ";
+            }
+
+            DataSet ObjDataSet1 = new DataSet();
+            if (strsql != null && strsql != "")
+            {
+                SqlConnection ObjConnection = new SqlConnection(objUtility.EsignConnectionString(IsCommexES, fromDate));
+                if (ObjConnection.State == ConnectionState.Closed)
+                { ObjConnection.Open(); }
+
+                SqlDataAdapter ObjAdpater = new SqlDataAdapter();
+                SqlCommand sqlCommand = new SqlCommand(strsql, ObjConnection);
+                ObjAdpater.SelectCommand = sqlCommand;
+                ObjAdpater.Fill(ObjDataSet1);
+                ObjAdpater.Dispose();
+            }
+            return ObjDataSet1;
+        }
+
+        public string DigitalDocument_FileQuery(string docType, string date, string srNo)
+        {
+            Boolean IsCommex = false;
+            strsql = "select dd_filename from ";
+            if (docType == "Tplus")
+            {
+                strsql += " digital_details ";
+            }
+            else if (docType == "Commex")
+            {
+                IsCommex = true;
+                char[] ArrSeparators = new char[1];
+                ArrSeparators[0] = '/';
+                string[] ArrCommex = _configuration["CommexES"].Split(ArrSeparators);
+                strsql = strsql + ArrCommex[0].Trim() + "." + ArrCommex[1].Trim() + "." + ArrCommex[2].Trim() + ".digital_details";
+            }
+            strsql += " where dd_srno = '" + srNo + "'";
+            DataSet DataSet = new DataSet();
+            SqlConnection ObjConnection = new SqlConnection(objUtility.EsignConnectionString(IsCommex, date.Trim()));
+            SqlCommand cmd1 = new SqlCommand(strsql, ObjConnection);
+            SqlDataAdapter adp = new SqlDataAdapter();
+            adp.SelectCommand = cmd1;
+            adp.Fill(DataSet);
+            if (DataSet.Tables[0].Rows.Count > 0)
+            {
+                strsql = "select dd_document from ";
+                if (docType == "Tplus")
+                {
+                    strsql += " digital_details ";
+                }
+                else if (docType == "Commex")
+                {
+                    char[] ArrSeparators = new char[1];
+                    ArrSeparators[0] = '/';
+                    string[] ArrCommex = _configuration["CommexES"].Split(ArrSeparators);
+                    strsql = strsql + ArrCommex[0].Trim() + "." + ArrCommex[1].Trim() + "." + ArrCommex[2].Trim() + ".digital_details";
+                }
+                strsql += " where dd_srno = '" + srNo + "'";
+                if (ObjConnection.State == ConnectionState.Closed)
+                {
+                    ObjConnection.Open();
+                }
+                SqlCommand cmd = new SqlCommand(strsql, ObjConnection);
+
+                SqlDataReader ObjReader = cmd.ExecuteReader(CommandBehavior.CloseConnection);
+                if (ObjReader.HasRows == true)
+                {
+                    ObjReader.Read();
+                    var bytes = (byte[])ObjReader["dd_document"];
+                    var result = Convert.ToBase64String(bytes, 0, bytes.Length);
+
+                    return result;
                 }
                 ObjReader.Close();
             }

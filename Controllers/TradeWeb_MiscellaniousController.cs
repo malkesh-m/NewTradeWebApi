@@ -264,9 +264,69 @@ namespace TradeWeb.API.Controllers
             return BadRequest();
         }
 
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpGet("DigitalDocument_List", Name = "DigitalDocument_List")]
+        public IActionResult DigitalDocument_List([FromQuery] string product, string fromDate, string toDate)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var tokenS = GetToken();
+                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
+
+                    var getData = _tradeWebRepository.DigitalDocument_List(userId, product, fromDate, toDate);
+                    if (getData != null)
+                    {
+                        return Ok(getData);
+                    }
+                    else
+                    {
+                        return NotFound("records not found");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(ex.Message.ToString());
+                }
+            }
+            return BadRequest();
+        }
+
+
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpGet("DigitalDocument_File", Name = "DigitalDocument_File")]
+        public IActionResult DigitalDocument_File([FromQuery] string docType, string date, string srNo)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var tokenS = GetToken();
+                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
+
+                    var getData = _tradeWebRepository.DigitalDocument_File(docType, date, srNo);
+                    if (getData != null)
+                    {
+                        return Ok( new { Document = getData });
+                    }
+                    else
+                    {
+                        return NotFound("records not found");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(ex.Message.ToString());
+                }
+            }
+            return BadRequest();
+        }
+
+
         #endregion
 
-        
+
         private JwtSecurityToken GetToken()
         {
             var handler = new JwtSecurityTokenHandler();
