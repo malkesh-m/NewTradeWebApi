@@ -7,6 +7,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Net;
 using TradeWeb.API.Entity;
+using TradeWeb.API.Models;
 using TradeWeb.API.Repository;
 
 namespace TradeWeb.API.Controllers
@@ -168,6 +169,37 @@ namespace TradeWeb.API.Controllers
             }
             return BadRequest();
         }
+
+        //// Insert Fund Request value after button click
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpPost("Request_Post_FundRequest", Name = "Request_Post_FundRequest")]
+        public IActionResult Request_Post_FundRequest(FundRequestModel model)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var tokenS = GetToken();
+                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
+
+                    var getData = _tradeWebRepository.InsertFundRequestValue(userId, model.Amount, model.Note);
+                    if (getData != null)
+                    {
+                        return Ok(getData);
+                    }
+                    else
+                    {
+                        return NotFound("records not found");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(ex.Message.ToString());
+                }
+            }
+            return BadRequest();
+        }
+
 
         #endregion
 

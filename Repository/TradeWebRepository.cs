@@ -126,6 +126,8 @@ namespace TradeWeb.API.Repository
 
         public dynamic InsertRequestValues(string userId, string strLstSeg, string cmbRequest, string strFromDt, string strToDt);
 
+        public dynamic InsertFundRequestValue(string userId, string Amount, string Rq_Note);
+
         public dynamic GetTradesData(string cm_cd, string FromDate, string ToDate, string SelectedIndex);
 
         public dynamic GetTempRMSSummaryData(string cm_cd, string strCompanyCode);
@@ -5748,7 +5750,7 @@ namespace TradeWeb.API.Repository
         {
             string gstrToday = DateTime.Today.ToString("yyyyMMdd");
             string strHostAdd = Dns.GetHostName();
-                
+
             strsql = "insert into PledgeRequest values ( ";
 
             strsql += " '" + UserId + "','" + CmbDPID_Value.Trim() + "','" + lblScripcd.Trim() + "','" + Conversion.Val(txtQty) + "','" + strHostAdd + "',";
@@ -6933,6 +6935,21 @@ namespace TradeWeb.API.Repository
             }
         }
 
+        //// Insert Fund Request value after button click
+        public dynamic InsertFundRequestValue(string userId, string Amount, string Rq_Note)
+        {
+            try
+            {
+                var result = InsertFundRequestValueQuery(userId, Amount, Rq_Note);
+                var json = JsonConvert.SerializeObject(result);
+                return json;
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
         #region Request usefull method
 
         //// create table for fund request or share requrest.
@@ -7208,6 +7225,24 @@ namespace TradeWeb.API.Repository
             objUtility.ExecuteSQL(strsql);
 
             return intcnt.ToString();
+        }
+
+        private string InsertFundRequestValueQuery(string userId, string Amount, string Rq_Note)
+        {
+            string gstrToday = DateTime.Today.ToString("yyyyMMdd");
+            string strHostAdd = Dns.GetHostName();
+
+            objUtility.ExecuteSQL("delete  from FundsRequest  where rq_clientcd='" + userId + "' and  Rq_Satus1 = 'P'");
+
+            strsql = "insert into FundsRequest values ( ";
+
+            strsql += " '" + userId + "','A'," + Conversion.Val(Amount) + ",'" + strHostAdd + "',";
+            strsql += " '" + gstrToday + "',";
+            strsql += " convert(char(8),getdate(),108),";
+            strsql += " 'P','P','P','" + objUtility.Encrypt(gstrToday).ToString().Trim() + "','" + Rq_Note + "')";
+            objUtility.ExecuteSQL(strsql);
+
+            return "Success";
         }
 
         #endregion
