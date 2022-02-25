@@ -92,7 +92,7 @@ namespace TradeWeb.API.Repository
 
         public dynamic GetCurrentPledgeRequest(string UserId);
 
-        public dynamic AddPledgeRequest(string UserId, string CmbDPID_Value, bool blnIdentityOn, string intcnt, string lblScripcd, string txtQty);
+        public dynamic AddPledgeRequest(string UserId, string CmbDPID_Value, string lblScripcd, string txtQty);
 
         public dynamic Get_Page_Load_Data(string cm_cd);
 
@@ -5122,11 +5122,11 @@ namespace TradeWeb.API.Repository
         }
 
         // For insert margin pledge request
-        public dynamic AddPledgeRequest(string UserId, string CmbDPID_Value, bool blnIdentityOn, string intcnt, string lblScripcd, string txtQty)
+        public dynamic AddPledgeRequest(string UserId, string CmbDPID_Value, string lblScripcd, string txtQty)
         {
             try
             {
-                var ds = AddQueryPledgeRequest(UserId, CmbDPID_Value, blnIdentityOn, intcnt, lblScripcd, txtQty);
+                var ds = AddQueryPledgeRequest(UserId, CmbDPID_Value, lblScripcd, txtQty);
                 var json = JsonConvert.SerializeObject(ds);
                 return json;
             }
@@ -5744,14 +5744,12 @@ namespace TradeWeb.API.Repository
         }
 
         // insert margin pledge request
-        public string AddQueryPledgeRequest(string UserId, string CmbDPID_Value, bool blnIdentityOn, string intcnt, string lblScripcd, string txtQty)
+        public string AddQueryPledgeRequest(string UserId, string CmbDPID_Value, string lblScripcd, string txtQty)
         {
             string gstrToday = DateTime.Today.ToString("yyyyMMdd");
             string strHostAdd = Dns.GetHostName();
-            if (blnIdentityOn)
-                strsql = "insert into PledgeRequest values ( ";
-            else
-                strsql = "insert into PledgeRequest values ( " + Convert.ToInt64(intcnt) + ",";
+                
+            strsql = "insert into PledgeRequest values ( ";
 
             strsql += " '" + UserId + "','" + CmbDPID_Value.Trim() + "','" + lblScripcd.Trim() + "','" + Conversion.Val(txtQty) + "','" + strHostAdd + "',";
             strsql += " '" + gstrToday + "',";
