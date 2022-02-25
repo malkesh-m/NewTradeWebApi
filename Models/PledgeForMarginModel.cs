@@ -8,7 +8,7 @@ namespace TradeWeb.API.Models
     public class PledgeForMarginModel
     {
         public string DematActNo { get; set; }
-        public string Securities_Code { get; set; }
+        public string ScripCode { get; set; }
         public string Quantity { get; set; }
     }
 }

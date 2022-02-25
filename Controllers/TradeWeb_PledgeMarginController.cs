@@ -150,8 +150,8 @@ namespace TradeWeb.API.Controllers
 
         // TODO : Add margin pledge request
         [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpPost("AddPledgeRequest", Name = "AddPledgeRequest")]
-        public IActionResult AddPledgeRequest(PledgeForMarginModel model)
+        [HttpPost("Request_Post_PledgeForMargin", Name = "Request_Post_PledgeForMargin")]
+        public IActionResult Request_Post_PledgeForMargin(PledgeForMarginModel model)
         {
             if (ModelState.IsValid)
             {
@@ -160,7 +160,7 @@ namespace TradeWeb.API.Controllers
                     var tokenS = GetToken();
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.AddPledgeRequest(userId.ToUpper(), model.DematActNo, model.Securities_Code, model.Quantity);
+                    var getData = _tradeWebRepository.AddPledgeRequest(userId.ToUpper(), model.DematActNo, model.ScripCode, model.Quantity);
                     if (getData != null)
                     {
                         return Ok(getData);
