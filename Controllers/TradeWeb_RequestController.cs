@@ -54,8 +54,8 @@ namespace TradeWeb.API.Controllers
 
         // Radio button shares checked
         [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("RdButtonSharesChecked", Name = "RdButtonSharesChecked")]
-        public IActionResult RdButtonSharesChecked()
+        [HttpGet("Request_Get_ShareRequest", Name = "Request_Get_ShareRequest")]
+        public IActionResult Request_Get_ShareRequest()
         {
             if (ModelState.IsValid)
             {
@@ -64,7 +64,7 @@ namespace TradeWeb.API.Controllers
                     var tokenS = GetToken();
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.RdButtonSharesChecked(userId);
+                    var getData = _tradeWebRepository.Request_Get_ShareRequest(userId);
                     if (getData != null)
                     {
                         return Ok(getData);

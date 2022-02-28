@@ -42,6 +42,7 @@ namespace TradeWeb.API.Repository
         public dynamic Transaction_Accounts(string userId, string type, string fromDate, string toDate);
 
         public dynamic Transaction_AGTS(string userId, string seg, string fromDate, string toDate);
+
         public DataTable Ledger_Summary(string userId, string type, string fromdate, string toDate);
 
         public dynamic Ledger_Year();
@@ -65,6 +66,7 @@ namespace TradeWeb.API.Repository
         public dynamic Holding_Broker_Ason(string userid, string AsOnDt);
 
         public dynamic Holding_MyDematAct_List(string userid);
+
         public dynamic Holding_MyDemat_Current(string userid, string dematActNo, string strtable);
 
         public dynamic Holding_MyDematAct_HoldingDates_Execute();
@@ -75,7 +77,6 @@ namespace TradeWeb.API.Repository
         public dynamic Bill_data(string userId, string exchSeg, string settType, string dt);
 
         public dynamic CommonGetSysParmStHandler(string param1, string param2);
-
 
         public dynamic Confirmation(string userId, int type, string dt);
 
@@ -118,7 +119,7 @@ namespace TradeWeb.API.Repository
 
         public dynamic UpdateFundAndSharesRequest(bool isPostBack);
 
-        public dynamic RdButtonSharesChecked(string cm_cd);
+        public dynamic Request_Get_ShareRequest(string cm_cd);
 
         public dynamic GetRmsRequest(string cm_cd);
 
@@ -6873,15 +6874,28 @@ namespace TradeWeb.API.Repository
         }
 
         //// Radio button shares checked
-        public dynamic RdButtonSharesChecked(string cm_cd)
+        public dynamic Request_Get_ShareRequest(string cm_cd)
         {
             try
             {
                 var ds = RdButtonSharesCheckedQuery(cm_cd);
                 if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
                 {
-                    var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
-                    return json;
+                    List<ShareResponse> shareResponses = new List<ShareResponse>();
+                    for (int i = 0; i < ds.Tables[0].Rows.Count; i++)
+                    {
+                        shareResponses.Add(new ShareResponse
+                        {
+                            Scrip_Code = ds.Tables[0].Rows[i]["bh_scripcd"].ToString(),
+                            Scrip_Name = ds.Tables[0].Rows[i]["bh_Scripname"].ToString(),
+                            ISIN = ds.Tables[0].Rows[i]["bh_isin"].ToString(),
+                            Holding_Quantity = Convert.ToDouble(ds.Tables[0].Rows[i]["bh_qty"]),
+                            Holding_Value = Convert.ToDouble(ds.Tables[0].Rows[i]["bh_valuation"]),
+                            Request_Quantity = Convert.ToDouble(ds.Tables[0].Rows[i]["ReqQty"]),
+                            Request_Value = Convert.ToDouble(ds.Tables[0].Rows[i]["Rate"]),
+                        });
+                    }
+                    return shareResponses;
                 }
                 return new List<string>();
             }
@@ -7377,7 +7391,7 @@ namespace TradeWeb.API.Repository
                 var Document = DigitalDocument_FileQuery(docType, date, srNo);
                 if (Document != null)
                 {
-                        return Document;
+                    return Document;
                 }
                 return new List<string>();
             }
