@@ -121,6 +121,8 @@ namespace TradeWeb.API.Repository
 
         public dynamic Request_Get_ShareRequest(string cm_cd);
 
+        public dynamic Request_Post_ShareRequest(string userId, string scripCode, string quantity);
+
         public dynamic GetRmsRequest(string cm_cd);
 
         public dynamic ExecuteRequestReportPageLoad(bool isPostBack);
@@ -6905,6 +6907,25 @@ namespace TradeWeb.API.Repository
             }
         }
 
+
+        //// Radio button shares checked
+        public dynamic Request_Post_ShareRequest(string userId, string scripCode, string quantity)
+        {
+            try
+            {
+                var ds = InsertSharesRequestValue(userId, scripCode, quantity);
+                if (ds != null)
+                {
+                    return ds;
+                }
+                return new List<string>();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
         //// Get rms request
         public dynamic GetRmsRequest(string cm_cd)
         {
@@ -7081,6 +7102,24 @@ namespace TradeWeb.API.Repository
             }
 
             return objUtility.OpenDataSet(strsql);
+        }
+
+        private string InsertSharesRequestValue(string userId, string scripCode, string Quantity)
+        {
+            string gstrToday = DateTime.Today.ToString("yyyyMMdd");
+            string strHostAdd = Dns.GetHostName();
+
+            objUtility.ExecuteSQL("delete from SharesRequest where Rq_Clientcd='" + userId + "' and Rq_Satus1='P'");
+            
+            strsql = "insert into SharesRequest values ( ";
+
+            strsql += " '" + userId + "','" + scripCode + "','" + Conversion.Val(Quantity) + "','" + strHostAdd + "',";
+            strsql += " '" + gstrToday + "',";
+            strsql += " convert(char(8),getdate(),108),";
+            strsql += " 'P','P','P','" + objUtility.Encrypt((gstrToday).ToString().Trim()) + "','')";
+            objUtility.ExecuteSQL(strsql);
+
+            return "Success";
         }
 
         //// Get rms request

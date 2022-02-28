@@ -82,6 +82,37 @@ namespace TradeWeb.API.Controllers
             return BadRequest();
         }
 
+
+        // Radio button shares checked
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpGet("Request_Post_ShareRequest", Name = "Request_Post_ShareRequest")]
+        public IActionResult Request_Post_ShareRequest(string scripCode, string quantity)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var tokenS = GetToken();
+                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
+
+                    var getData = _tradeWebRepository.Request_Post_ShareRequest(userId, scripCode, quantity);
+                    if (getData != null)
+                    {
+                        return Ok(getData);
+                    }
+                    else
+                    {
+                        return NotFound("records not found");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(ex.Message.ToString());
+                }
+            }
+            return BadRequest();
+        }
+
         // Get Rms Request
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpGet("GetRmsRequest", Name = "GetRmsRequest")]
