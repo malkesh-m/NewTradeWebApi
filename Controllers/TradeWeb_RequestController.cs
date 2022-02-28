@@ -114,8 +114,8 @@ namespace TradeWeb.API.Controllers
 
         // Get Rms Request
         [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("GetRmsRequest", Name = "GetRmsRequest")]
-        public IActionResult GetRmsRequest()
+        [HttpGet("Request_Get_FundRequest", Name = "Request_Get_FundRequest")]
+        public IActionResult Request_Get_FundRequest()
         {
             if (ModelState.IsValid)
             {
