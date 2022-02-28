@@ -82,11 +82,10 @@ namespace TradeWeb.API.Controllers
             return BadRequest();
         }
 
-
         // Radio button shares checked
         [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("Request_Post_ShareRequest", Name = "Request_Post_ShareRequest")]
-        public IActionResult Request_Post_ShareRequest(string scripCode, string quantity)
+        [HttpPost("Request_Post_ShareRequest", Name = "Request_Post_ShareRequest")]
+        public IActionResult Request_Post_ShareRequest(string scrip_Code, string request_Quantity)
         {
             if (ModelState.IsValid)
             {
@@ -95,7 +94,7 @@ namespace TradeWeb.API.Controllers
                     var tokenS = GetToken();
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.Request_Post_ShareRequest(userId, scripCode, quantity);
+                    var getData = _tradeWebRepository.Request_Post_ShareRequest(userId, scrip_Code, request_Quantity);
                     if (getData != null)
                     {
                         return Ok(getData);
@@ -170,7 +169,6 @@ namespace TradeWeb.API.Controllers
             return BadRequest();
         }
 
-
         //// Insert Request value after button click
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpGet("InsertRequestValues", Name = "InsertRequestValues")]
@@ -213,7 +211,7 @@ namespace TradeWeb.API.Controllers
                     var tokenS = GetToken();
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.InsertFundRequestValue(userId, model.Amount, model.Note);
+                    var getData = _tradeWebRepository.InsertFundRequestValue(userId, model.Amount, model.DpId);
                     if (getData != null)
                     {
                         return Ok(getData);

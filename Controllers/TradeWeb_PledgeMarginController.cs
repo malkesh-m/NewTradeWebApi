@@ -160,7 +160,7 @@ namespace TradeWeb.API.Controllers
                     var tokenS = GetToken();
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.AddPledgeRequest(userId.ToUpper(), model.DematActNo, model.ScripCode, model.Quantity);
+                    var getData = _tradeWebRepository.AddPledgeRequest(userId.ToUpper(), model.DematActNo, model.Securities_Code, model.Request_Qty);
                     if (getData != null)
                     {
                         return Ok(getData);
