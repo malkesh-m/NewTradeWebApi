@@ -74,7 +74,7 @@ namespace TradeWeb.API.Controllers
 
         #region DigitalDocument Api
 
-        // get dropdown Exchange list
+        /*// get dropdown Exchange list
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpGet("GetDdlExchangeList", Name = "GetDdlExchangeList")]
         public IActionResult GetDdlExchangeList([FromQuery] string productType, string documentType)
@@ -262,7 +262,7 @@ namespace TradeWeb.API.Controllers
                 }
             }
             return BadRequest();
-        }
+        }*/
 
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpGet("DigitalDocument_List", Name = "DigitalDocument_List")]

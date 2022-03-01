@@ -25,7 +25,7 @@ namespace TradeWeb.API.Controllers
 
         #region Request Api
 
-        // update fund request or share requrest
+        /*// update fund request or share requrest
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpGet("UpdateFundAndSharesRequest", Name = "UpdateFundAndSharesRequest")]
         public IActionResult UpdateFundAndSharesRequest(bool isPostBack)
@@ -50,7 +50,7 @@ namespace TradeWeb.API.Controllers
                 }
             }
             return BadRequest();
-        }
+        }*/
 
         // Radio button shares checked
         [Authorize(AuthenticationSchemes = "Bearer")]
@@ -142,7 +142,7 @@ namespace TradeWeb.API.Controllers
             return BadRequest();
         }
 
-        //// Execute page request report page load query
+        /*//// Execute page request report page load query
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpGet("ExecuteRequestReportPageLoad", Name = "ExecuteRequestReportPageLoad")]
         public IActionResult ExecuteRequestReportPageLoad(bool isPostBack)
@@ -167,9 +167,9 @@ namespace TradeWeb.API.Controllers
                 }
             }
             return BadRequest();
-        }
+        }*/
 
-        //// Insert Request value after button click
+        /*//// Insert Request value after button click
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpGet("InsertRequestValues", Name = "InsertRequestValues")]
         public IActionResult InsertRequestValues([FromQuery] string lstSegment, string request, string fromDate, string toDate)
@@ -197,7 +197,7 @@ namespace TradeWeb.API.Controllers
                 }
             }
             return BadRequest();
-        }
+        }*/
 
         //// Insert Fund Request value after button click
         [Authorize(AuthenticationSchemes = "Bearer")]
@@ -260,7 +260,7 @@ namespace TradeWeb.API.Controllers
             return BadRequest();
         }
 
-        // TODO : Get margin pledge request
+        /*// TODO : Get margin pledge request
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpGet("GetCurrentPledgeRequest", Name = "GetCurrentPledgeRequest")]
         public IActionResult GetCurrentPledgeRequest()
@@ -288,7 +288,7 @@ namespace TradeWeb.API.Controllers
                 }
             }
             return BadRequest();
-        }
+        }*/
 
         // TODO : Add margin pledge request
         [Authorize(AuthenticationSchemes = "Bearer")]
@@ -323,8 +323,8 @@ namespace TradeWeb.API.Controllers
 
         // insert unpledge request
         [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpPost("Request_Post_UnPledgeRequest", Name = "Request_Post_UnPledgeRequest")]
-        public IActionResult Request_Post_UnPledgeRequest(UnPledgeRequestModel model)
+        [HttpPost("Request_Post_UnPledge", Name = "Request_Post_UnPledge")]
+        public IActionResult Request_Post_UnPledge(UnPledgeRequestModel model)
         {
             if (ModelState.IsValid)
             {
@@ -333,7 +333,7 @@ namespace TradeWeb.API.Controllers
                     var tokenS = GetToken();
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.AddUnPledgeRequest(userId, "Pledge", model.Securities_Code, model.Request_Qty);
+                    var getData = _tradeWebRepository.Request_Post_UnPledge_UnRepledge(userId, "Pledge", model.Securities_Code, model.Request_Qty);
                     if (getData != null)
                     {
                         return Ok(getData);
@@ -353,8 +353,8 @@ namespace TradeWeb.API.Controllers
 
         // insert unpledge request
         [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpPost("Request_Post_UnRePledgeRequest", Name = "Request_Post_UnRePledgeRequest")]
-        public IActionResult Request_Post_UnRePledgeRequest(UnPledgeRequestModel model)
+        [HttpPost("Request_Post_UnRePledge", Name = "Request_Post_UnRePledge")]
+        public IActionResult Request_Post_UnRePledge(UnPledgeRequestModel model)
         {
             if (ModelState.IsValid)
             {
@@ -363,7 +363,7 @@ namespace TradeWeb.API.Controllers
                     var tokenS = GetToken();
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.AddUnPledgeRequest(userId, "Un-Re-Pledge", model.Securities_Code, model.Request_Qty);
+                    var getData = _tradeWebRepository.Request_Post_UnPledge_UnRepledge(userId, "Un-Re-Pledge", model.Securities_Code, model.Request_Qty);
                     if (getData != null)
                     {
                         return Ok(getData);

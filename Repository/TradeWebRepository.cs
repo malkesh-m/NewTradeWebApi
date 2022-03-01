@@ -71,7 +71,7 @@ namespace TradeWeb.API.Repository
 
         public dynamic Holding_MyDematAct_HoldingDates_Execute();
 
-        public dynamic AddUnPledgeRequest(string userId, string unPledge, string dmScripcd, string txtReqQty);
+        public dynamic Request_Post_UnPledge_UnRepledge(string userId, string unPledge, string dmScripcd, string txtReqQty);
         public dynamic Bills_exchSeg();
         public dynamic Bills_cash_settTypes_list(string syExchange);
         public dynamic Bill_data(string userId, string exchSeg, string settType, string dt);
@@ -2578,7 +2578,7 @@ namespace TradeWeb.API.Repository
         }
 
         // insert unpledge request
-        public dynamic AddUnPledgeRequest(string userId, string unPledge, string dmScripcd, string txtReqQty)
+        public dynamic Request_Post_UnPledge_UnRepledge(string userId, string unPledge, string dmScripcd, string txtReqQty)
         {
             try
             {
