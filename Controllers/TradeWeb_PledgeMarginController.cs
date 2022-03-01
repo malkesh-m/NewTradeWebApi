@@ -25,38 +25,39 @@ namespace TradeWeb.API.Controllers
         }
 
         #region Margin Api
-        // TODO : Get margin grid main data
-        [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("GetMargin", Name = "GetMargin")]
-        public IActionResult GetMargin()
-        {
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    var tokenS = GetToken();
-                    var compCode = tokenS.Claims.First(claim => claim.Type == "companyCode").Value;
-                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
+        //// TODO : Get margin grid main data
+        //[Authorize(AuthenticationSchemes = "Bearer")]
+        //[HttpGet("GetMargin", Name = "GetMargin")]
+        //public IActionResult GetMargin()
+        //{
+        //    if (ModelState.IsValid)
+        //    {
+        //        try
+        //        {
+        //            var tokenS = GetToken();
+        //            var compCode = tokenS.Claims.First(claim => claim.Type == "companyCode").Value;
+        //            var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.GetMarginMainData(userId, compCode);
-                    if (getData != null)
-                    {
-                        return Ok(getData);
-                    }
-                    else
-                    {
-                        return NotFound("records not found");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    return BadRequest(ex.Message.ToString());
-                }
-            }
-            return BadRequest();
-        }
+        //            var getData = _tradeWebRepository.GetMarginMainData(userId, compCode);
+        //            if (getData != null)
+        //            {
+        //                return Ok(getData);
+        //            }
+        //            else
+        //            {
+        //                return NotFound("records not found");
+        //            }
+        //        }
+        //        catch (Exception ex)
+        //        {
+        //            return BadRequest(ex.Message.ToString());
+        //        }
+        //    }
+        //    return BadRequest();
+        //}
 
         // TODO : Get dropdown data
+
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpGet("GetDropdownData", Name = "GetDropdownData")]
         public IActionResult GetDropdownData()
@@ -87,7 +88,6 @@ namespace TradeWeb.API.Controllers
             return BadRequest();
         }
 
-        
         #endregion
 
         #region New margin api

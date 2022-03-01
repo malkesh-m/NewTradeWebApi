@@ -382,10 +382,6 @@ namespace TradeWeb.API.Controllers
         }
 
 
-
-
-
-
         #endregion
 
         private JwtSecurityToken GetToken()
