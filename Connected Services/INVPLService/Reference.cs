@@ -245,11 +245,11 @@ namespace INVPLService
         {
             if ((endpointConfiguration == EndpointConfiguration.INVPLSoap))
             {
-                return new System.ServiceModel.EndpointAddress("http://20.204.151.106:8091/INVPL.asmx");
+                return new System.ServiceModel.EndpointAddress("http://20.204.151.106:5003//INVPL.asmx");
             }
             if ((endpointConfiguration == EndpointConfiguration.INVPLSoap12))
             {
-                return new System.ServiceModel.EndpointAddress("http://20.204.151.106:8091/INVPL.asmx");
+                return new System.ServiceModel.EndpointAddress("http://20.204.151.106:5003//INVPL.asmx");
             }
             throw new System.InvalidOperationException(string.Format("Could not find endpoint with name \'{0}\'.", endpointConfiguration));
         }

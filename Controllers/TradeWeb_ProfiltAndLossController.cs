@@ -8,6 +8,7 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using TradeWeb.API.Entity;
+using TradeWeb.API.Models;
 using TradeWeb.API.Repository;
 
 namespace TradeWeb.API.Controllers
@@ -61,14 +62,6 @@ namespace TradeWeb.API.Controllers
             return BadRequest();
         }
 
-
-        /// <summary>
-        /// Get Portfolio Detail Data
-        /// </summary>
-        /// <param name="fromDate"></param>
-        /// <param name="toDate"></param>
-        /// <param name="scripcd"></param>
-        /// <returns></returns>
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpGet("ProfitLoss_Cash_Detail", Name = "ProfitLoss_Cash_Detail")]
         public IActionResult ProfitLoss_Cash_Detail([FromQuery] string fromDate, string toDate, string scripcd)
@@ -158,6 +151,37 @@ namespace TradeWeb.API.Controllers
             return BadRequest();
         }
 
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpGet("ProfitLoss_Combined", Name = "ProfitLoss_Combined")]
+        public IActionResult ProfitLoss_Combined([FromQuery] string fromDate, string toDate, string exchange, string segment)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var tokenS = GetToken();
+                    var companyCode = tokenS.Claims.First(claim => claim.Type == "companyCode").Value;
+                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
+
+                    var getData = _tradeWebRepository.ProfitLoss_Combined(userId, fromDate, toDate, exchange, segment);
+                    if (getData != null)
+                    {
+                        return Ok(getData);
+                    }
+                    else
+                    {
+                        return NotFound("records not found");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(ex.Message.ToString());
+                }
+            }
+            return BadRequest();
+        }
+
+
         private JwtSecurityToken GetToken()
         {
             var handler = new JwtSecurityTokenHandler();
@@ -174,7 +198,7 @@ namespace TradeWeb.API.Controllers
 
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpGet("CapitalGainLoss_Dividend", Name = "CapitalGainLoss_Dividend")]
-        public IActionResult CapitalGainLoss_Dividend(string fromDate, string toDate)
+        public IActionResult CapitalGainLoss_Dividend(GainLossDividendModel model)
         {
             if (ModelState.IsValid)
             {
@@ -183,7 +207,7 @@ namespace TradeWeb.API.Controllers
                     var tokenS = GetToken();
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.GetINVPLDivListing(userId, fromDate, toDate);
+                    var getData = _tradeWebRepository.GetINVPLDivListing(userId, model.FromDate, model.ToDate);
                     if (getData != null)
                     {
                         return Ok(getData);
@@ -203,7 +227,7 @@ namespace TradeWeb.API.Controllers
 
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpGet("CapitalGainLoss_ActualPLSummary", Name = "CapitalGainLoss_ActualPLSummary")]
-        public IActionResult CapitalGainLoss_ActualPLSummary(string fromDate, string toDate, Boolean chkJobing, Boolean chkDelivery, Boolean chkIgnoreSection, string trxType)
+        public IActionResult CapitalGainLoss_ActualPLSummary(GainLossActualPLSummaryModel model)
         {
             if (ModelState.IsValid)
             {
@@ -212,7 +236,7 @@ namespace TradeWeb.API.Controllers
                     var tokenS = GetToken();
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.GetINVPLGainLoss(userId, fromDate, toDate, chkJobing, chkDelivery, chkIgnoreSection, trxType);
+                    var getData = _tradeWebRepository.GetINVPLGainLoss(userId, model.FromDate, model.ToDate, model.ChkJobing, model.ChkDelivery, model.ChkIgnore112A, model.Type);
                     if (getData != null)
                     {
                         return Ok(getData);
@@ -232,7 +256,7 @@ namespace TradeWeb.API.Controllers
 
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpGet("CapitalGainLoss_ActualPLDetail", Name = "CapitalGainLoss_ActualPLDetail")]
-        public IActionResult CapitalGainLoss_ActualPLDetail(string fromDate, string toDate, string reportFor, string ignore112A, string scripCd)
+        public IActionResult CapitalGainLoss_ActualPLDetail(GainLossActualPLDetailModel model)
         {
             if (ModelState.IsValid)
             {
@@ -241,7 +265,7 @@ namespace TradeWeb.API.Controllers
                     var tokenS = GetToken();
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.GetINVPLGainLossDetails(userId, fromDate, toDate, reportFor, ignore112A, scripCd);
+                    var getData = _tradeWebRepository.GetINVPLGainLossDetails(userId, model.FromDate, model.ToDate, model.Type, model.Ignore112A, model.ScripCode);
                     if (getData != null)
                     {
                         return Ok(getData);
@@ -262,7 +286,7 @@ namespace TradeWeb.API.Controllers
 
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpGet("CapitalGainLoss_TradeListingSummary", Name = "CapitalGainLoss_TradeListingSummary")]
-        public IActionResult CapitalGainLoss_TradeListingSummary(string fromDate, string toDate)
+        public IActionResult CapitalGainLoss_TradeListingSummary(GainLossTradeListingSummary model)
         {
             if (ModelState.IsValid)
             {
@@ -271,7 +295,7 @@ namespace TradeWeb.API.Controllers
                     var tokenS = GetToken();
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.GetINVPLTradeListing(userId, fromDate, toDate);
+                    var getData = _tradeWebRepository.GetINVPLTradeListing(userId, model.FromDate, model.ToDate);
                     if (getData != null)
                     {
                         return Ok(getData);
@@ -291,7 +315,7 @@ namespace TradeWeb.API.Controllers
 
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpGet("CapitalGainLoss_TradeListingDetail", Name = "CapitalGainLoss_TradeListingDetail")]
-        public IActionResult CapitalGainLoss_TradeListingDetail(string fromDate, string toDate, string sccdPostBack)
+        public IActionResult CapitalGainLoss_TradeListingDetail(GainLossTradeListingDetailModel model)
         {
             if (ModelState.IsValid)
             {
@@ -300,7 +324,7 @@ namespace TradeWeb.API.Controllers
                     var tokenS = GetToken();
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.GeTINVPLTradeListingDetails(userId, fromDate, toDate, sccdPostBack);
+                    var getData = _tradeWebRepository.GeTINVPLTradeListingDetails(userId, model.FromDate, model.ToDate, model.ScripCode);
                     if (getData != null)
                     {
                         return Ok(getData);

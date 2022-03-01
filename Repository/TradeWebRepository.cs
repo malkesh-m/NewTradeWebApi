@@ -180,6 +180,8 @@ namespace TradeWeb.API.Repository
         public dynamic Family_TransactionDetailJson(string Client, string Type, string FromDate, string ToDate);
 
         public dynamic DigitalDocument_File(string docType, string date, string srNo);
+
+        public dynamic ProfitLoss_Combined(string userId, string fromDate, string toDate, string exchange, string segment);
     }
 
     public class TradeWebRepository : ITradeWebRepository
@@ -2132,6 +2134,172 @@ namespace TradeWeb.API.Repository
             {
                 throw ex;
             }
+        }
+
+        #endregion
+
+        #region profitLoss combine handler method
+
+        public dynamic ProfitLoss_Cash_CombineSummary(string userId, string fromDate, string toDate)
+        {
+            try
+            {
+                SqlConnection con;
+                using (var db = new DataContext())
+                {
+                    con = new SqlConnection((db.Database.GetDbConnection()).ConnectionString);
+                    con.Open();
+                    ProfitLoss_Cash_Process(userId, fromDate, toDate, con);
+
+                    strsql = " select '1' as Ord, case td_flag When 'Y' Then 1 else 2 end Flag,ss_Lname ScripName,sum(td_bqty) Buy, convert(decimal(15,2),sum(td_bqty*td_rate)) BuyAmount ,  case when SUM(td_bqty) <> 0 then convert(decimal(15,2),sum(td_bqty*td_rate)/sum(td_bqty)) else 0 end BuyRate,  sum(td_sqty) Sell , convert(decimal(15,2),sum(td_sqty*td_rate)) SellAmount ,  case when SUM(td_sqty) <> 0 then convert(decimal(15,2),sum(td_sqty*td_rate)/sum(td_sqty)) else 0 end SellRate, ";
+                    strsql += " convert(decimal(15,2), sum( case When td_flag <> 'X' Then ((td_sqty-td_bqty) *td_rate) else 0 end)) Realised,  ";
+                    strsql += " convert(decimal(15,2), sum( case When td_flag = 'X' Then (td_bqty-td_sqty)* ((Case Left(td_stlmnt,1) when 'N' then ss_NSERate else ss_BSERate end) - td_rate) else 0 end)) UnRealised,  ";
+                    strsql += " convert(decimal(15,2), sum( case When td_flag = 'X' Then ((td_bqty-td_sqty)) else 0 end)) Net,  convert(decimal(15,2), sum( case When td_flag = 'X' Then ((td_sqty-td_bqty) * (Case Left(td_stlmnt,1) when 'N' then ss_NSERate else ss_BSERate end) ) else 0 end))  NetAmount,  ";
+                    strsql += " case When sum( case when td_flag = 'X'  Then (td_bqty-td_sqty) else 0 end) <> 0 then abs(convert(decimal(15,2),sum(Case When td_flag = 'X' Then (td_sqty-td_bqty)*(Case Left(td_stlmnt,1) when 'N' then ss_NSERate else ss_BSERate end) else 0 end )/sum(td_bqty-td_sqty))) else 0 end NetRate, ";
+                    strsql += " isnull(td_desc,'') TrdDlv,td_scripcd Scrip ";
+                    strsql += " from ##VX,securities with(nolock) where td_scripcd=ss_cd ";
+                    strsql += " Group by ss_Lname,case td_flag When 'Y' Then 1 else 2 end ,td_desc,td_scripcd ";
+                    strsql += " Union all ";
+                    strsql += " select '2' Ord,'','Charges' ic_desc,0,0,0,0,0,0,convert(decimal(15,2),sum(ic_amount)) * (-1),0,0,0,0 amt ,'','' from ##invcharges";
+                    strsql += " where ic_amount > 0";
+                    strsql += " order by Ord,ss_Lname,flag desc";
+                    var ds = objUtility.OpenDataSetTmp(strsql, con);
+                    if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                    {
+                        //var data =
+                        return ds.Tables[0];
+                        //return JsonConvert.SerializeObject(data, Formatting.Indented);
+                    }
+                    return new List<string>();
+                }
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        public dynamic ProfitLoss_FO_CombineSummary(string userId, string exchange, string segment, string fromDate, string toDate)
+        {
+            try
+            {
+                SqlConnection con;
+                using (var db = new DataContext())
+                {
+                    con = new SqlConnection((db.Database.GetDbConnection()).ConnectionString);
+                    con.Open();
+                    ProfitLoss_FO_Process(userId, exchange, segment, fromDate, toDate, con);
+
+                    strsql = " select Convert(char(12), sm_seriesid) SeriesID,sm_symbol Symbol,sm_desc SeriesName , ";
+                    strsql += " sum(case fi_balfield when 'O' then fi_bqty - fi_sqty else 0 end) BF,";
+                    strsql += " sum(case fi_type when 'N' then case fi_controlflag when 2 then fi_bqty else 0 end else 0 end) Buy,";
+                    strsql += " sum(case fi_type when 'N' then case fi_controlflag when 2 then fi_sqty else 0 end else 0 end) Sell,";
+                    strsql += " sum(case fi_type when 'N' then case fi_controlflag when 3 then abs(fi_bqty) else 0 end else 0 end) Exer,";
+                    strsql += " sum(case fi_type when 'N' then case fi_controlflag when 4 then abs(fi_sqty) else 0 end else 0 end) Assign,";
+                    strsql += " sum(case when sm_expirydt <= '" + toDate + "' then 0 else case fi_balfield when 'N' then  0 else (fi_bqty)*case fi_controlflag when 3 then -1 else 1 end  - (fi_sqty)*case fi_controlflag when 4 then -1 else 1 end end end) Out,";
+                    strsql += " sum(case fi_type when 'R' then  fi_sqty - fi_bqty else 0 end) Closing,";
+                    strsql += " convert(decimal(15,2), sum(fi_mtm)) MTM,";
+                    strsql += " convert(decimal(15,2),sum(case fi_type when 'N' then case fi_controlflag when 2 then fi_bvalue else 0 end else 0 end)) BuyValue,";
+                    strsql += " convert(decimal(15,2),sum(case fi_type when 'N' then case fi_controlflag when 2 then fi_svalue else 0 end else 0 end)) SellValue,";
+                    strsql += " convert(decimal(15,2),case when (sum(case fi_type when 'N' then case fi_controlflag when 2 then fi_bqty else 0 end else 0 end) >0) then ((sum(fi_bvalue)/sum(fi_bqty))/ fi_multiplier) else 0 end) BuyRate, ";
+                    strsql += " convert(decimal(15,2),case when (sum(case fi_type when 'N' then case fi_controlflag when 2 then fi_sqty else 0 end else 0 end) >0) then ((sum(fi_svalue) /sum(fi_sqty ))/ fi_multiplier) else 0 end) SellRate";
+                    strsql += " ,convert(decimal(15,2),case when (sum(case when sm_expirydt <= '" + toDate + "' then 0 else case fi_balfield when 'N' then  0 else (fi_bqty)*case fi_controlflag when 3 then -1 else 1 end  - (fi_sqty)*case fi_controlflag when 4 then -1 else 1 end end end) >0 and fi_multiplier > 0) then ((sum(fi_netvalue) /sum(case when sm_expirydt <= '" + toDate + "' then 0 else case fi_balfield when 'N' then  0 else (fi_bqty)*case fi_controlflag when 3 then -1 else 1 end  - (fi_sqty)*case fi_controlflag when 4 then -1 else 1 end end end)) / fi_multiplier) else 0 end) OutRate, ";
+                    strsql += " case sm_prodtype when 'IF' then 1 when 'CF' then 1 when 'TF' then 2 when 'RF' then 2 when 'EF' then 2 when 'IO' then 3 else 4 end ListOrder ";
+                    strsql += " from ##tmpfinvestorrep   a,Client_master with (nolock) ,Series_master with (nolock)";
+                    strsql += " where fi_clientcd = cm_cd and fi_exchange = sm_exchange ";
+                    strsql += " and fi_segment = sm_segment ";
+                    strsql += " and fi_seriesid = sm_seriesid ";
+                    strsql += " group by fi_clientcd,fi_seriesid,cm_name,sm_seriesid,sm_prodtype,sm_symbol,sm_sname,sm_desc,fi_multiplier";
+                    strsql += "  Union all ";
+                    strsql += "select '','',bc_desc,0,0,0,0,0,0,0,convert(decimal(15,2),sum(bc_amount*(-1)))  chrg,0,0,0,0,0,'5' from ##tmpFinvcharges";
+                    strsql += " group by bc_desc ";
+                    strsql += " Having sum(bc_amount*(-1)) <> 0 ";
+                    strsql += " order by listorder,sm_symbol";
+
+                    var ds = objUtility.OpenDataSetTmp(strsql, con);
+                    if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                    {
+                        //var data =
+                        return ds.Tables[0];
+                        //return JsonConvert.SerializeObject(data, Formatting.Indented);
+                    }
+                    return new List<string>();
+                }
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        public dynamic ProfitLoss_Commodity_CombineSummary(string userId, string exchange, string fromDate, string toDate)
+        {
+            try
+            {
+
+                string StrCommexConn = "";
+                StrCommexConn = objUtility.GetCommexConnectionNew(_configuration["Commex"]);
+
+                SqlConnection con;
+                using (var db = new DataContext())
+                {
+                    con = new SqlConnection((db.Database.GetDbConnection()).ConnectionString);
+                    con.Open();
+                    ProfitLoss_Commodity_Process(userId, exchange, fromDate, toDate, con);
+
+                    strsql = " select Convert(char(12), sm_seriesid) SeriesID,sm_symbol Symbol,sm_desc SeriesName , ";
+                    strsql += " sum(case fi_balfield when 'O' then fi_bqty - fi_sqty else 0 end) BF,";
+                    strsql += " sum(case fi_type when 'N' then case fi_controlflag when 2 then fi_bqty else 0 end else 0 end) Buy,";
+                    strsql += " sum(case fi_type when 'N' then case fi_controlflag when 2 then fi_sqty else 0 end else 0 end) Sell,";
+                    strsql += " sum(case fi_type when 'N' then case fi_controlflag when 3 then abs(fi_bqty) else 0 end else 0 end) Exer,";
+                    strsql += " sum(case fi_type when 'N' then case fi_controlflag when 4 then abs(fi_sqty) else 0 end else 0 end) Assign,";
+                    strsql += " sum(case when sm_expirydt <= '" + toDate + "' then 0 else case fi_balfield when 'N' then  0 else (fi_bqty)*case fi_controlflag when 3 then -1 else 1 end  - (fi_sqty)*case fi_controlflag when 4 then -1 else 1 end end end) Out,";
+                    strsql += " sum(case fi_type when 'R' then  fi_sqty - fi_bqty else 0 end) Closing,";
+                    strsql += " convert(decimal(15,2), sum(fi_mtm)) MTM,";
+                    strsql += " convert(decimal(15,2),sum(case fi_type when 'N' then case fi_controlflag when 2 then fi_bvalue else 0 end else 0 end)) BuyValue,";
+                    strsql += " convert(decimal(15,2),sum(case fi_type when 'N' then case fi_controlflag when 2 then fi_svalue else 0 end else 0 end)) SellValue,";
+                    strsql += " convert(decimal(15,2),case when (sum(case fi_type when 'N' then case fi_controlflag when 2 then fi_bqty else 0 end else 0 end) >0) then ((sum(fi_bvalue)/sum(fi_bqty))/ fi_multiplier) else 0 end) BuyRate, ";
+                    strsql += " convert(decimal(15,2),case when (sum(case fi_type when 'N' then case fi_controlflag when 2 then fi_sqty else 0 end else 0 end) >0) then ((sum(fi_svalue) /sum(fi_sqty ))/ fi_multiplier) else 0 end) SellRate";
+                    strsql += " ,convert(decimal(15,2),case when (sum(case when sm_expirydt <= '" + toDate + "' then 0 else case fi_balfield when 'N' then  0 else (fi_bqty)*case fi_controlflag when 3 then -1 else 1 end  - (fi_sqty)*case fi_controlflag when 4 then -1 else 1 end end end) >0 and fi_multiplier > 0) then ((sum(fi_netvalue) /sum(case when sm_expirydt <= '" + toDate + "' then 0 else case fi_balfield when 'N' then  0 else (fi_bqty)*case fi_controlflag when 3 then -1 else 1 end  - (fi_sqty)*case fi_controlflag when 4 then -1 else 1 end end end)) / fi_multiplier) else 0 end) OutRate, ";
+                    strsql += " case sm_prodtype when 'IF' then 1 when 'CF' then 1 when 'TF' then 2 when 'RF' then 2 when 'EF' then 2 when 'IO' then 3 else 4 end ListOrder ";
+                    strsql += " from ##tmpfinvestorrep a," + StrCommexConn + ".Client_master with (nolock) ," + StrCommexConn + ".Series_master with (nolock)";
+                    strsql += " where fi_clientcd = cm_cd and fi_exchange = sm_exchange ";
+                    strsql += " and fi_seriesid = sm_seriesid ";
+                    strsql += " group by fi_clientcd,fi_seriesid,cm_name,sm_seriesid,sm_prodtype,sm_symbol,sm_sname,sm_desc,fi_multiplier";
+                    strsql += "  Union all ";
+                    strsql += "select '','',bc_desc,0,0,0,0,0,0,0,convert(decimal(15,2),sum(bc_amount*(-1)))  chrg,0,0,0,0,0,'5' from ##tmpFinvcharges";
+                    strsql += " group by bc_desc ";
+                    strsql += " Having sum(bc_amount*(-1)) <> 0 ";
+                    strsql += " order by listorder,sm_symbol";
+
+                    var ds = objUtility.OpenDataSetTmp(strsql, con);
+                    if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                    {
+                        //var data =
+                        return ds.Tables[0];
+                        //return JsonConvert.SerializeObject(data, Formatting.Indented);
+                    }
+                    return new List<string>();
+                }
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+
+        public dynamic ProfitLoss_Combined(string userId, string fromDate, string toDate, string exchange, string segment)
+        {
+            ProfitLossCombinedModel result = new ProfitLossCombinedModel(); 
+
+            result.CashSummary = ProfitLoss_Cash_CombineSummary(userId, fromDate, toDate);
+
+            result.FoSummary = ProfitLoss_FO_CombineSummary(userId, exchange, segment, fromDate, toDate);
+
+            result.CommoditySummary = ProfitLoss_Commodity_CombineSummary(userId, exchange, fromDate, toDate);
+
+            return JsonConvert.SerializeObject(result , Formatting.Indented);
         }
 
         #endregion
