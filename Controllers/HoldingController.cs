@@ -8,6 +8,7 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using TradeWeb.API.Entity;
+using TradeWeb.API.Models;
 using TradeWeb.API.Repository;
 
 namespace TradeWeb.API.Controllers
@@ -201,8 +202,8 @@ namespace TradeWeb.API.Controllers
 
         // insert unpledge request
         [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("AddUnPledgeRequest", Name = "AddUnPledgeRequest")]
-        public IActionResult AddUnPledgeRequest(string unPledge, string scripcd, string reqQty)
+        [HttpPost("Holding_Post_UnPledgeRequest", Name = "Holding_Post_UnPledgeRequest")]
+        public IActionResult Holding_Post_UnPledgeRequest(UnPledgeRequestModel model)
         {
             if (ModelState.IsValid)
             {
@@ -211,7 +212,7 @@ namespace TradeWeb.API.Controllers
                     var tokenS = GetToken();
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.AddUnPledgeRequest(userId, unPledge, scripcd, reqQty);
+                    var getData = _tradeWebRepository.AddUnPledgeRequest(userId, model.unPledge, model.Securities_Code, model.Request_Qty);
                     if (getData != null)
                     {
                         return Ok(getData);
