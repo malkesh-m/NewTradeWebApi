@@ -323,8 +323,8 @@ namespace TradeWeb.API.Controllers
 
         // insert unpledge request
         [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpPost("Holding_Post_UnPledgeRequest", Name = "Holding_Post_UnPledgeRequest")]
-        public IActionResult Holding_Post_UnPledgeRequest(UnPledgeRequestModel model)
+        [HttpPost("Request_Post_UnPledgeRequest", Name = "Request_Post_UnPledgeRequest")]
+        public IActionResult Request_Post_UnPledgeRequest(UnPledgeRequestModel model)
         {
             if (ModelState.IsValid)
             {
@@ -353,8 +353,8 @@ namespace TradeWeb.API.Controllers
 
         // insert unpledge request
         [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpPost("Holding_Post_UnRePledgeRequest", Name = "Holding_Post_UnRePledgeRequest")]
-        public IActionResult Holding_Post_UnRePledgeRequest(UnPledgeRequestModel model)
+        [HttpPost("Request_Post_UnRePledgeRequest", Name = "Request_Post_UnRePledgeRequest")]
+        public IActionResult Request_Post_UnRePledgeRequest(UnPledgeRequestModel model)
         {
             if (ModelState.IsValid)
             {
