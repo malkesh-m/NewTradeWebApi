@@ -200,36 +200,6 @@ namespace TradeWeb.API.Controllers
             return BadRequest();
         }
 
-        // insert unpledge request
-        [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpPost("Holding_Post_UnPledgeRequest", Name = "Holding_Post_UnPledgeRequest")]
-        public IActionResult Holding_Post_UnPledgeRequest(UnPledgeRequestModel model)
-        {
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    var tokenS = GetToken();
-                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
-
-                    var getData = _tradeWebRepository.AddUnPledgeRequest(userId, model.unPledge, model.Securities_Code, model.Request_Qty);
-                    if (getData != null)
-                    {
-                        return Ok(getData);
-                    }
-                    else
-                    {
-                        return NotFound("records not found");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    return BadRequest(ex.Message.ToString());
-                }
-            }
-            return BadRequest();
-        }
-
         private JwtSecurityToken GetToken()
         {
             var handler = new JwtSecurityTokenHandler();
