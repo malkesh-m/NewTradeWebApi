@@ -353,8 +353,8 @@ namespace TradeWeb.API.Controllers
 
         // insert unpledge request
         [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpPost("Holding_Post_Un_Re_PledgeRequest", Name = "Holding_Post_Un_Re_PledgeRequest")]
-        public IActionResult Holding_Post_Un_Re_PledgeRequest(UnPledgeRequestModel model)
+        [HttpPost("Holding_Post_UnRePledgeRequest", Name = "Holding_Post_UnRePledgeRequest")]
+        public IActionResult Holding_Post_UnRePledgeRequest(UnPledgeRequestModel model)
         {
             if (ModelState.IsValid)
             {
