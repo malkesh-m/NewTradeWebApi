@@ -2140,6 +2140,19 @@ namespace TradeWeb.API.Repository
 
         #region profitLoss combine handler method
 
+        public dynamic ProfitLoss_Combined(string userId, string fromDate, string toDate, string exchange, string segment)
+        {
+            ProfitLossCombinedModel result = new ProfitLossCombinedModel();
+
+            result.CashSummary = ProfitLoss_Cash_CombineSummary(userId, fromDate, toDate);
+
+            result.FoSummary = ProfitLoss_FO_CombineSummary(userId, exchange, segment, fromDate, toDate);
+
+            result.CommoditySummary = ProfitLoss_Commodity_CombineSummary(userId, exchange, fromDate, toDate);
+
+            return JsonConvert.SerializeObject(result, Formatting.Indented);
+        }
+
         public dynamic ProfitLoss_Cash_CombineSummary(string userId, string fromDate, string toDate)
         {
             try
@@ -2288,19 +2301,824 @@ namespace TradeWeb.API.Repository
             }
         }
 
-
-        public dynamic ProfitLoss_Combined(string userId, string fromDate, string toDate, string exchange, string segment)
+        private void ProfitLoss_Cash_CombineProcess(string userId, string fromDate, string toDate, SqlConnection con)
         {
-            ProfitLossCombinedModel result = new ProfitLossCombinedModel(); 
+            string StrTRXIndex = "";
+            if (Convert.ToInt16(objUtility.fnFireQueryTradeWeb("sysobjects a, sysindexes b", "COUNT(0)", "a.id = b.id and a.name = 'Trx' and b.name", "idx_Trx_Clientcd", true)) == 1)
+            { StrTRXIndex = "index(idx_trx_clientcd),"; }
+            string Fromdt = fromDate.ToString();
+            string Todt = toDate.ToString();
+            DataSet ObjDataSet = new DataSet();
 
-            result.CashSummary = ProfitLoss_Cash_CombineSummary(userId, fromDate, toDate);
+            strsql = "if OBJECT_ID('tempdb..##VX') is not null Drop Table ##VX";
+            objUtility.ExecuteSQLTmp(strsql, con);
 
-            result.FoSummary = ProfitLoss_FO_CombineSummary(userId, exchange, segment, fromDate, toDate);
+            strsql = " CREATE TABLE [##VX] (";
+            strsql += " [td_companycode] [char] (1) NOT NULL ,";
+            strsql += " [td_stlmnt] [char] (9) NOT NULL ,";
+            strsql += " [td_clientcd] [char] (8) NOT NULL ,";
+            strsql += " [td_scripcd] [char] (6) NOT NULL ,";
+            strsql += " [td_dt] [char] (8) NOT NULL ,";
+            strsql += " [td_srno] [numeric](18, 0) IDENTITY(1,1) NOT NULL ,";
+            strsql += " [td_bsflag] [char] (1) NOT NULL ,";
+            strsql += " [td_bqty] [numeric](18, 0) NOT NULL ,";
+            strsql += " [td_sqty] [numeric](18, 0) NOT NULL ,";
+            strsql += " [td_rate] [money] NOT NULL ,";
+            strsql += " [td_marketrate] [money] NOT NULL ,";
+            strsql += " [td_flag] [VarChar](1) Not null, ";
+            strsql += " [td_scripnm] [VarChar](12) Not null, ";
+            strsql += " [td_desc] [VarChar](15) null ";
+            strsql += " PRIMARY KEY CLUSTERED (td_srno))";
+            objUtility.ExecuteSQLTmp(strsql, con);
 
-            result.CommoditySummary = ProfitLoss_Commodity_CombineSummary(userId, exchange, fromDate, toDate);
+            strsql = "if OBJECT_ID('tempdb..##invcharges') is not null Drop Table ##invcharges";
+            objUtility.ExecuteSQLTmp(strsql, con);
 
-            return JsonConvert.SerializeObject(result , Formatting.Indented);
+            strsql = " CREATE TABLE [##invcharges] (";
+            strsql += " [ic_stlmnt] [char] (9) NOT NULL ,";
+            strsql += " [ic_clientcd] [char] (8) NOT NULL ,";
+            strsql += " [ic_desc] [char] (20) NOT NULL ,";
+            strsql += " [ic_amount] money";
+            strsql += " ) ON [PRIMARY]";
+            objUtility.ExecuteSQLTmp(strsql, con);
+
+            strsql = " CREATE index #idx_invcharges_clientcd on ##invcharges (ic_clientcd) ";
+            objUtility.ExecuteSQLTmp(strsql, con);
+
+            strsql = "insert into ##VX SELECT ";
+            strsql += " td_companycode ,td_stlmnt ,td_clientcd ,td_scripcd,";
+            strsql += " td_dt , td_bsflag , sum(td_bqty) ,sum(td_sqty) ,sum(td_rate*(td_bqty+td_sqty)), sum(td_marketrate*(td_bqty+td_sqty)),'Y' td_flag,ss_name,''";
+            strsql += " FROM Trx with(" + StrTRXIndex + "nolock) , securities with(nolock) where td_dt between '" + Fromdt + "' and '" + Todt + "'";
+            strsql += " and td_cfflag = 'N' and td_clientcd = '" + userId + "' and td_Scripcd = ss_cd";
+            strsql += " group by td_companycode ,td_stlmnt ,td_clientcd ,td_scripcd, td_dt , td_bsflag,ss_name ";
+            objUtility.ExecuteSQLTmp(strsql, con);
+
+            strsql = "insert into ##invcharges";
+            strsql += " select sh_stlmnt,sh_clientcd,left(sh_desc,12),sh_amount ";
+            strsql += " from Specialcharges with (nolock),Settlements with (nolock) ";
+            strsql += " Where sh_stlmnt = se_stlmnt and se_endt between '" + Fromdt + "' and '" + Todt + "' and sh_clientcd =('" + userId + "')";
+            objUtility.ExecuteSQLTmp(strsql, con);
+
+            strsql = "insert into ##invcharges";
+            strsql += " select sh_stlmnt,sh_clientcd,left('Service Tax',12),sh_servicetax ";
+            strsql += " from Specialcharges with (nolock),Settlements with (nolock) where sh_stlmnt = se_stlmnt";
+            strsql += " and sh_servicetaxyn = 'Y' and se_endt between '" + Fromdt + "' and '" + Todt + "' ";
+            strsql += " and sh_clientcd ='" + userId + "' ";
+            objUtility.ExecuteSQLTmp(strsql, con);
+
+            strsql = "Insert into  ##invcharges";
+            strsql += " select bc_stlmnt,bc_clientcd,left(cg_desc,12),";
+            strsql += " bc_amount from Cbilled_charges with (nolock) ,Charges_master with (nolock) ,Settlements with (nolock)";
+            strsql += " Where bc_companycode = cg_companycode And Left(bc_stlmnt, 1) = cg_exchange";
+            strsql += " and bc_chargecode = cg_cd and bc_stlmnt = se_stlmnt ";
+            strsql += " and se_endt between '" + Fromdt + "' and '" + Todt + "' ";
+            strsql += " and bc_clientcd ='" + userId + "' ";
+            objUtility.ExecuteSQLTmp(strsql, con);
+
+            strsql = "update ##VX set td_rate = Case when (td_bqty+td_sqty) > 0 then td_rate/(td_bqty+td_sqty) else 0 end , td_marketrate= Case When (td_bqty+td_sqty) > 0 then td_marketrate/(td_bqty+td_sqty) else 0 end ";
+            objUtility.ExecuteSQLTmp(strsql, con);
+
+            strsql = "Create ";
+            strsql += " INDEX [VX_clientscripstlmnt] ON [dbo].[##VX]";
+            strsql += " ([td_clientcd], [td_scripcd],[td_dt],[td_stlmnt])";
+            objUtility.ExecuteSQLTmp(strsql, con);
+
+            strsql = "update a set a.td_flag = 'N' from ##VX a";
+            strsql += " where a.td_clientcd + a.td_scripcd + a.td_stlmnt";
+            strsql += " in(select b.td_clientcd + b.td_scripcd + b.td_stlmnt";
+            strsql += " from ##VX b where a.td_clientcd = b.td_clientcd";
+            strsql += " and a.td_scripcd = b.td_scripcd";
+            strsql += " and a.td_stlmnt = b.td_stlmnt";
+            strsql += " group by td_clientcd,td_scripcd,td_stlmnt";
+            strsql += " having sum(td_bqty) = 0 or sum(td_sqty) = 0)";
+            objUtility.ExecuteSQLTmp(strsql, con);
+
+            strsql = "SELECT td_Stlmnt,td_clientcd , td_scripcd,cm_name,td_scripnm,";
+            strsql += " sum(td_bqty) td_bqty ,sum(td_sqty) td_sqty, sum(td_bqty-td_sqty) net";
+            strsql += " FROM ##VX,Client_master with (nolock) ";
+            strsql += " where td_clientcd = cm_cd and td_flag = 'Y'";
+            strsql += " group by td_stlmnt,td_clientcd,cm_name,td_scripcd,td_scripnm";
+            strsql += " having sum(td_bqty - td_sqty) <> 0";
+            strsql += " ORDER BY td_clientcd , td_scripcd  ";
+
+            ObjDataSet = objUtility.OpenDataSetTmp(strsql, con);
+            if (ObjDataSet.Tables[0].Rows.Count > 0)
+            {
+                string strclient = string.Empty;
+                string strscrip = string.Empty;
+                string strstlmnt = string.Empty;
+                string strDelSide = string.Empty;
+                long lngDelQty = 0;
+                long lngLoop = 0;
+                long lngCurSerial = 0;
+                long lngBalqty = 0;
+                foreach (DataRow objdatarow in ObjDataSet.Tables[0].Rows)
+                {
+                    strclient = (string)objdatarow["td_Clientcd"];
+                    strscrip = (string)objdatarow["td_scripcd"];
+                    strstlmnt = (string)objdatarow["td_stlmnt"];
+                    if (long.Parse(objdatarow["Net"].ToString()) > 0)
+                    {
+                        strDelSide = "B";
+                    }
+                    else
+                    {
+                        strDelSide = "S";
+                    }
+                    lngDelQty = System.Math.Abs(long.Parse(objdatarow["Net"].ToString()));
+                    strsql = "select * from ##VX where td_clientcd = '" + strclient + "' and td_scripcd = '" + strscrip + "'";
+                    strsql += " and td_stlmnt = '" + strstlmnt + "'";
+                    strsql += " and td_bsflag = '" + strDelSide + "' order by td_dt desc,td_stlmnt desc";
+                    //SqlDataAdapter ObjAdapter1 = new SqlDataAdapter(strsql, con);
+                    DataSet ObjDataSet1 = new DataSet();
+                    //ObjAdapter1.Fill(ObjDataSet1);
+                    ObjDataSet1 = objUtility.OpenDataSetTmp(strsql, con);
+                    if (ObjDataSet1.Tables[0].Rows.Count > 0)
+                    {
+                        foreach (DataRow objdatarow1 in ObjDataSet1.Tables[0].Rows)
+                        {
+                            lngLoop += 1;
+                            lngCurSerial = long.Parse(objdatarow1["td_SrNo"].ToString());
+                            if (long.Parse(objdatarow1["td_bqty"].ToString()) + long.Parse(objdatarow1["td_sqty"].ToString()) > lngDelQty)
+                            {
+                                lngBalqty = long.Parse(objdatarow1["td_bqty"].ToString()) + long.Parse(objdatarow1["td_sqty"].ToString()) - lngDelQty;
+                                strsql = " insert into ##VX select td_companycode ,td_stlmnt,td_clientcd , td_scripcd, td_dt, td_bsflag,";
+                                if (strDelSide == "B")
+                                {
+                                    strsql += lngBalqty + ", td_sqty";
+                                }
+                                else
+                                {
+                                    strsql += " td_bqty ," + lngBalqty;
+                                }
+                                strsql += ", td_rate, td_marketrate,td_flag,td_scripnm,'' from ##VX where td_srno =" + lngCurSerial;
+                                objUtility.ExecuteSQLTmp(strsql, con);
+
+                                strsql = "update ##VX set td_flag = 'N' ";
+                                if (strDelSide == "B")
+                                {
+                                    strsql += ",td_bqty = ";
+                                }
+                                else
+                                {
+                                    strsql += ",td_sqty = ";
+                                }
+                                strsql += +lngDelQty + " where td_srno = " + lngCurSerial;
+                                objUtility.ExecuteSQLTmp(strsql, con);
+                                lngDelQty = 0;
+                            }
+                            else
+                            {
+                                strsql = "update ##VX set td_flag = 'N' where td_srno = " + lngCurSerial;
+                                objUtility.ExecuteSQLTmp(strsql, con);
+                                lngDelQty = lngDelQty - (long.Parse(objdatarow1["td_bqty"].ToString()) + long.Parse(objdatarow1["td_Sqty"].ToString()));
+                            }
+
+                            if (lngDelQty <= 0)
+                            { break; }
+                        }
+                    }
+                }
+            }
+            ObjDataSet.Dispose();
+
+            strsql = "SELECT td_clientcd , td_scripcd,cm_name,td_scripnm,";
+            strsql += " sum(td_bqty) td_bqty ,sum(td_sqty) td_sqty, sum(td_bqty-td_sqty) net";
+            strsql += " FROM ##VX,Client_master with (nolock) ";
+            strsql += " where td_clientcd = cm_cd ";
+            strsql += " group by td_clientcd,cm_name,td_scripcd,td_scripnm";
+            strsql += " having sum(td_bqty - td_sqty) <> 0";
+            strsql += " ORDER BY td_clientcd , td_scripcd  ";
+
+            DataSet ObjDataSet2 = new DataSet();
+            ObjDataSet2 = objUtility.OpenDataSetTmp(strsql, con);
+
+            if (ObjDataSet2.Tables[0].Rows.Count > 0)
+            {
+                string strclient = string.Empty;
+                string strscrip = string.Empty;
+                string strstlmnt = string.Empty;
+                string strDelSide = string.Empty;
+                long lngDelQty = 0;
+                long lngLoop = 0;
+                long lngCurSerial = 0;
+                long lngBalqty = 0;
+                foreach (DataRow objdatarow in ObjDataSet2.Tables[0].Rows)
+                {
+                    strclient = (string)objdatarow["td_Clientcd"];
+                    strscrip = (string)objdatarow["td_scripcd"];
+                    if (long.Parse(objdatarow["Net"].ToString()) > 0)
+                    {
+                        strDelSide = "B";
+                    }
+                    else
+                    {
+                        strDelSide = "S";
+                    }
+                    lngDelQty = System.Math.Abs(long.Parse(objdatarow["Net"].ToString()));
+                    strsql = "select * from ##VX where td_clientcd = '" + strclient + "' and td_scripcd = '" + strscrip + "'";
+                    strsql += " and td_bsflag = '" + strDelSide + "' and td_flag = 'N' order by td_dt desc,td_stlmnt desc";
+                    //SqlDataAdapter ObjAdapter3 = new SqlDataAdapter(strsql, con);
+                    DataSet ObjDataSet1 = new DataSet();
+                    //ObjAdapter3.Fill(ObjDataSet1);
+                    ObjDataSet1 = objUtility.OpenDataSetTmp(strsql, con);
+                    if (ObjDataSet1.Tables[0].Rows.Count > 0)
+                    {
+                        foreach (DataRow objdatarow1 in ObjDataSet1.Tables[0].Rows)
+                        {
+                            lngLoop += 1;
+                            lngCurSerial = long.Parse(objdatarow1["td_SrNo"].ToString());
+                            if (long.Parse(objdatarow1["td_bqty"].ToString()) + long.Parse(objdatarow1["td_sqty"].ToString()) > lngDelQty)
+                            {
+                                lngBalqty = long.Parse(objdatarow1["td_bqty"].ToString()) + long.Parse(objdatarow1["td_sqty"].ToString()) - lngDelQty;
+                                strsql = " insert into ##VX select td_companycode ,td_stlmnt,td_clientcd , td_scripcd, td_dt, td_bsflag,";
+                                if (strDelSide == "B")
+                                {
+                                    strsql += lngBalqty + ", td_sqty";
+                                }
+                                else
+                                {
+                                    strsql += " td_bqty ," + lngBalqty;
+                                }
+                                strsql += ", td_rate, td_marketrate,td_flag,td_scripnm,'' from ##VX where td_srno =" + lngCurSerial;
+                                objUtility.ExecuteSQLTmp(strsql, con);
+
+                                strsql = "update ##VX set td_flag = 'X' ";
+                                if (strDelSide == "B")
+                                {
+                                    strsql += ",td_bqty = ";
+                                }
+                                else
+                                {
+                                    strsql += ",td_sqty = ";
+                                }
+                                strsql += +lngDelQty + " where td_srno = " + lngCurSerial;
+                                objUtility.ExecuteSQLTmp(strsql, con);
+                                lngDelQty = 0;
+                            }
+                            else
+                            {
+                                strsql = "update ##VX set td_flag = 'X' where td_srno = " + lngCurSerial;
+                                objUtility.ExecuteSQLTmp(strsql, con);
+                                lngDelQty = lngDelQty - (long.Parse(objdatarow1["td_bqty"].ToString()) + long.Parse(objdatarow1["td_Sqty"].ToString()));
+                            }
+                            if (lngDelQty <= 0)
+                            { break; }
+                        }
+                    }
+                }
+            }
+
+            strsql = "update ##VX set td_desc = CAse td_flag when 'Y' then 'Square off' else 'Delivery' end ";
+            objUtility.ExecuteSQLTmp(strsql, con);
+
         }
+
+        private void ProfitLoss_Commodity_CombineProcess(string userId, string exchange, string fromDate, string toDate, SqlConnection con)
+        {
+
+            DataSet ObjDatasetH;
+
+            string strFirstDate = string.Empty;
+            string strLastDate = string.Empty;
+            string Fromdt = fromDate;
+            string Todt = toDate;
+
+            DateTime strBillstDt;
+            DateTime strBillenDt;
+            string strdate = string.Empty;
+
+            strsql = "if OBJECT_ID('tempdb..##finvdates') is not null Drop Table ##finvdates";
+            objUtility.ExecuteSQLTmp(strsql, con);
+
+            strsql = "CREATE TABLE [##finvdates] (";
+            strsql += "[bd_dt] [char] (8) NOT NULL ";
+            strsql += ")";
+            objUtility.ExecuteSQLTmp(strsql, con);
+
+            strBillstDt = objUtility.stod(fromDate.ToString());
+            strBillenDt = objUtility.stod(toDate.ToString());
+
+            while (strBillstDt <= strBillenDt)
+            {
+                strdate = objUtility.dtos(strBillstDt.ToString());
+                strsql = "select count(*) cnt from Fholiday_master with (nolock) where ";
+                strsql += " and hm_dt = '" + strdate + "'";
+                ObjDatasetH = new DataSet();
+                ObjDatasetH = objUtility.OpenDataSetTmp(strsql, con);
+                if (Convert.ToInt64(ObjDatasetH.Tables[0].Rows[0]["cnt"]) == 0)
+                {
+                    objUtility.ExecuteSQLTmp("insert into ##finvdates values('" + strdate + "')", con);
+                }
+                strBillstDt = strBillstDt.AddDays(1);
+            }
+
+            strsql = "if OBJECT_ID('tempdb..##tmpFinvcharges') is not null Drop Table ##tmpFinvcharges";
+            objUtility.ExecuteSQLTmp(strsql, con);
+
+            strsql = "CREATE TABLE [##tmpFinvcharges] (";
+            strsql += "[bc_dt] [char] (8) NOT NULL,";
+            strsql += "[bc_clientcd] [char] (8) NOT NULL,";
+            strsql += "[bc_desc] [char] (40) NOT NULL,";
+            strsql += "[bc_amount] [money] NOT NULL,";
+            strsql += "[bc_billno] [numeric] NOT NULL";
+            strsql += ")";
+            objUtility.ExecuteSQLTmp(strsql, con);
+
+            strsql = "if OBJECT_ID('tempdb..##tmpfinvestorrep') is not null Drop Table ##tmpfinvestorrep";
+            objUtility.ExecuteSQLTmp(strsql, con);
+
+            strsql = "Create table ##tmpfinvestorrep  (";
+            strsql += " fi_dt char(8) not null,";
+            strsql += " fi_clientcd char(8) not null,";
+            strsql += " fi_exchange char(1) not null,";
+            strsql += " fi_seriesid numeric not null,";
+            strsql += " fi_bqty numeric not null,";
+            strsql += " fi_bvalue money not null,";
+            strsql += " fi_sqty numeric not null,";
+            strsql += " fi_svalue money not null,";
+            strsql += " fi_netqty numeric not null,";
+            strsql += " fi_netvalue money not null,";
+            strsql += " fi_rate money not null,";
+            strsql += " fi_closeprice money not null,";
+            strsql += " fi_mtm money not null,";
+            strsql += " fi_listorder numeric not null,";
+            strsql += " fi_controlflag numeric not null,";
+            strsql += " fi_prodtype char(2) not null,";
+            strsql += " fi_type char(1) not null,";
+            strsql += " fi_balfield char(1) not null,";
+            strsql += " fi_multiplier money,";
+            strsql += " fi_segment char(1) not null)";
+            objUtility.ExecuteSQLTmp(strsql, con);
+
+            strsql = "select isnull(min(bd_dt),'" + Fromdt + "'),isNull(max(bd_dt),'') from ##finvdates ";
+            ObjDatasetH = new DataSet();
+
+            ObjDatasetH = objUtility.OpenDataSetTmp(strsql, con);
+            strFirstDate = ObjDatasetH.Tables[0].Rows[0][0].ToString();
+            strLastDate = ObjDatasetH.Tables[0].Rows[0][1].ToString();
+
+            string StrCommexConn = "";
+            StrCommexConn = objUtility.GetCommexConnection();
+            string StrComTradesIndex = string.Empty;
+
+            if (Convert.ToInt16(objUtility.fnFireQueryTradeWeb(StrCommexConn + ".sysobjects a, " + StrCommexConn + ".sysindexes b", "COUNT(0)", "a.id = b.id and a.name = 'trades' and b.name", "idx_trades_clientcd", true)) == 1)
+            { StrComTradesIndex = "index(idx_trades_clientcd),"; }
+
+            //Futures opening
+            strsql = "Insert into ##tmpfinvestorrep  ";
+            strsql += " Select '" + strFirstDate + "',td_clientcd,td_exchange,";
+            strsql += " td_seriesid,case sign(sum(td_bqty - td_sqty)) when 1 then abs(sum(td_bqty - td_sqty)) else 0 end  td_bqty,0,";
+            strsql += " case sign(sum(td_bqty - td_sqty)) when 1 then 0 else abs(sum(td_bqty - td_sqty)) end td_sqty,0,0,0,0,0 td_closeprice,0,";
+            strsql += " case sm_prodtype when 'IF' then 1 when 'CF' then 1 when 'TF' then 2 when 'RF' then 2 when 'EF' then 2 when 'IO' then 3 else 4 end td_sortlist,";
+            strsql += " 1 td_controlflag,sm_prodtype,'N','O',sm_multiplier,'X'";
+            strsql += " From " + StrCommexConn + ".Trades with (" + StrComTradesIndex + "nolock)," + StrCommexConn + ".Series_master with (nolock)," + StrCommexConn + ".Client_master with (nolock)";
+            strsql += " Where td_clientcd = cm_cd and td_exchange = sm_exchange And td_seriesid = sm_seriesid";
+            strsql += " and td_clientcd = '" + userId + "'";
+            strsql += " and sm_expirydt >= '" + strFirstDate + "' and  td_dt < '" + strFirstDate + "'";
+            strsql += " and sm_prodtype in('IF','EF','CF','RF','TF')";
+            strsql += " and cm_type <> 'C'";
+            strsql += " group by td_exchange,td_clientcd,td_seriesid,sm_prodtype,sm_multiplier";
+            strsql += " having sum(td_bqty - td_sqty) <> 0";
+            objUtility.ExecuteSQLTmp(strsql, con); ;
+
+            //Opening for Options
+            strsql = "insert into ##tmpfinvestorrep  ";
+            strsql += " select '" + strFirstDate + "',td_clientcd,td_exchange,";
+            strsql += " td_seriesid, sum(case sale when 0 then buy else 0 end) td_bqty,";
+            strsql += " 0,";
+            strsql += " sum(case sale when 0 then 0 else sale end) td_sqty,0,";
+            strsql += " 0,0,sum((buy+sale)*td_rate) / sum((buy+sale)),0 td_closeprice,0,";
+            strsql += " case sm_prodtype when 'IF' then 1 when 'CF' then 1 when 'TF' then 2 when 'RF' then 2 when 'EF' then 2 when 'IO' then 3 else 4 end td_sortlist,";
+            strsql += " 1 td_controlflag,sm_prodtype,'N','O',sm_multiplier,'X'";
+            strsql += " From " + StrCommexConn + ".vwFoutstandingpos  ";
+            strsql += " Where sm_expirydt >= '" + Fromdt + "' and  td_dt < '" + Fromdt + "'";
+            strsql += " and td_clientcd = '" + userId + "'";
+            strsql += " and sm_prodtype in('IO','EO','CO')";
+            strsql += " and cm_type <> 'C'";
+            strsql += " group by td_exchange,td_clientcd,td_seriesid,sm_prodtype,sm_multiplier";
+            strsql += " having sum(sale - buy) <> 0 ";
+            objUtility.ExecuteSQLTmp(strsql, con); ;
+
+            //Futures/Options running
+            strsql = "insert into ##tmpfinvestorrep  ";
+            strsql += " select td_dt,td_clientcd,td_exchange,";
+            strsql += " td_seriesid,td_bqty,0,td_sqty,0,0,0,";
+            strsql += " td_rate,0.0000 td_closeprice,0 mtm,";
+            strsql += " case sm_prodtype when 'IF' then 1 when 'CF' then 1 when 'TF' then 2 when 'RF' then 2 when 'EF' then 2 when 'IO' then 3 else 4 end td_sortlist,";
+            strsql += " 2,sm_prodtype,'N','Y',sm_multiplier,'X'";
+            strsql += " From " + StrCommexConn + ".Trades with (" + StrComTradesIndex + "nolock) , " + StrCommexConn + ".Series_master with (nolock)," + StrCommexConn + ".Client_master with (nolock) ";
+            strsql += " Where td_clientcd = cm_cd and td_exchange = sm_exchange and td_seriesid = sm_seriesid";
+            strsql += " and td_clientcd = '" + userId + "'";
+            strsql += " and sm_expirydt >= '" + strFirstDate + "' and td_dt between '" + strFirstDate + "' and '" + strLastDate + "'";
+            objUtility.ExecuteSQLTmp(strsql, con); ;
+
+            //Exercise/Assignments
+            strsql = "insert into ##tmpfinvestorrep  ";
+            strsql += " select ex_dt,ex_clientcd,ex_exchange,";
+            strsql += " ex_seriesid,ex_eqty,0,ex_aqty,0,0,0,";
+            strsql += " ex_diffbrokrate,ex_settlerate,0,";
+            strsql += " case sm_prodtype when 'IF' then 1 when 'CF' then 1 when 'TF' then 2  when 'RF' then 2 when 'EF' then 2 when 'IO' then 3 else 4 end + 5 td_sortlist,";
+            strsql += " case ex_eaflag when 'E' then 3 else 4 end td_controlflag,sm_prodtype,'N','Y',sm_multiplier,'X'";
+            strsql += " From " + StrCommexConn + ".Exercise with (nolock), " + StrCommexConn + ".Series_master with (nolock)," + StrCommexConn + ".Client_master with (nolock)";
+            strsql += " Where ex_clientcd = cm_cd and ex_exchange = sm_exchange And ex_seriesid = sm_seriesid";
+            strsql += " and ex_clientcd = '" + userId + "'";
+            strsql += " and sm_expirydt >= '" + strFirstDate + "' and  ex_dt between '" + strFirstDate + "' and '" + strLastDate + "'";
+            objUtility.ExecuteSQLTmp(strsql, con); ;
+
+            //Reverse Future Outstanding
+            strsql = "insert into ##tmpfinvestorrep  ";
+            strsql += " select '" + strLastDate + "',fi_clientcd,fi_exchange,";
+            strsql += " fi_seriesid,case sign(sum(case fi_controlflag when 1 then case fi_dt when '" + strFirstDate + "' then fi_bqty - fi_sqty else 0 end when 2 then fi_bqty - fi_sqty else fi_sqty - fi_bqty end)) when -1 then abs(sum(case fi_controlflag when 1 then case fi_dt when '" + strFirstDate + "' then fi_bqty - fi_sqty else 0 end when 2 then fi_bqty - fi_sqty else fi_sqty - fi_bqty end)) else 0 end td_bqty,";
+            strsql += " 0,";
+            strsql += " case sign(sum(case fi_controlflag when 1 then case fi_dt when '" + strFirstDate + "' then fi_bqty - fi_sqty else 0 end when 2 then fi_bqty - fi_sqty else fi_sqty - fi_bqty end)) when 1 then abs(sum(case fi_controlflag when 1 then case fi_dt when '" + strFirstDate + "' then fi_bqty - fi_sqty else 0 end when 2 then fi_bqty - fi_sqty else fi_sqty - fi_bqty end)) else 0 end td_sqty,0,";
+            strsql += " 0,0,0,0 td_closeprice,0,";
+            strsql += " case fi_prodtype when 'IF' then 1 when 'CF' then 1 when 'TF' then 2 when 'RF' then 2 when 'EF' then 2 when 'IO' then 3 else 4 end + 6 td_sortlist,";
+            strsql += " 5 td_controlflag,fi_prodtype,'R','N',sm_multiplier,'X'";
+            strsql += " From ##tmpfinvestorrep  ," + StrCommexConn + ".Series_master with (nolock)";
+            strsql += " Where fi_exchange = sm_exchange and sm_seriesid = fi_seriesid and fi_prodtype in('IF','EF','CF','RF','TF') ";
+            strsql += " and sm_expirydt <= '" + Todt + "'";
+            strsql += " group by fi_exchange,fi_clientcd,fi_seriesid,fi_prodtype,sm_multiplier";
+            strsql += " having sum(case fi_controlflag when 1 then case fi_dt when '" + strFirstDate + "' then fi_bqty - fi_sqty else 0 end when 2 then fi_bqty - fi_sqty else fi_sqty - fi_bqty end) <> 0";
+            objUtility.ExecuteSQLTmp(strsql, con); ;
+
+            //Update Last Market Price for Options
+            strsql = "update ##tmpfinvestorrep   set fi_rate = case fi_type when 'R' then ms_lastprice else fi_rate end,fi_closeprice = ms_lastprice from ##tmpfinvestorrep  ,Market_summary with (nolock)";
+            strsql += " where ms_seriesid = fi_seriesid ";
+            strsql += " and ms_exchange = fi_exchange ";
+            strsql += " and ms_dt = (select max(ms_dt) from " + StrCommexConn + ".Market_summary with (nolock) where ms_exchange = fi_exchange ";
+            strsql += " and ms_seriesid = fi_seriesid and ms_lastprice <> 0 and ms_dt <= '" + Todt + "' )";
+            strsql += " and fi_prodtype in('IO','EO','CO')";
+            objUtility.ExecuteSQLTmp(strsql, con); ;
+
+            //Update Previous close and today's close prices
+            strsql = "update ##tmpfinvestorrep   set fi_closeprice =  isNull((select ms_lastprice From " + StrCommexConn + ".Market_summary with (nolock) ";
+            strsql += " Where ms_seriesid = fi_seriesid ";
+            strsql += " and ms_dt = (select Max(ms_dt) from " + StrCommexConn + ".Market_Summary with (nolock) ";
+            strsql += " Where ms_seriesid = fi_seriesid ";
+            strsql += " and ms_dt <='" + Todt + "')),0) ";
+            strsql += " where fi_controlflag in('1','2') and fi_prodtype in('IF','EF','CF','RF','TF') ";
+            objUtility.ExecuteSQLTmp(strsql, con); ;
+
+            //Update close Price If Expiry Trade is Not Generated.
+            strsql = "update ##tmpfinvestorrep   set fi_rate =  ms_lastprice  , fi_closeprice = ms_lastprice ";
+            strsql += " from ##tmpfinvestorrep  ," + StrCommexConn + ".Market_summary with (nolock) , " + StrCommexConn + ".Series_master with (nolock) ";
+            strsql += " where sm_seriesid = fi_seriesid ";
+            strsql += " and sm_exchange = ms_exchange and sm_seriesid = ms_seriesid  and sm_expirydt = ms_dt ";
+            strsql += " and ms_dt < '" + Todt + "'";
+            strsql += " and fi_prodtype in('IF','EF','CF','RF','TF') and fi_type = 'R' ";
+            objUtility.ExecuteSQLTmp(strsql, con); ;
+
+            strsql = "update ##tmpfinvestorrep   set fi_rate = ms_prcloseprice from ##tmpfinvestorrep  ," + StrCommexConn + ".Market_summary with (nolock) ";
+            strsql += " where ms_seriesid = fi_seriesid and fi_controlflag = 1";
+            strsql += " and ms_dt = fi_dt";
+            strsql += " and fi_prodtype in('IF','EF','CF','RF','TF')";
+            objUtility.ExecuteSQLTmp(strsql, con); ;
+
+            //End of updation of close prices
+            //Service tax here for Trades
+            strsql = "insert into ##tmpFinvcharges select td_dt,td_clientcd,'SERVICE TAX',round(sum(td_servicetax),2),0 from " + StrCommexConn + ".Trades with (" + StrComTradesIndex + "nolock) ,##finvdates," + StrCommexConn + ".Client_master with (nolock)," + StrCommexConn + ".Series_master with (nolock)";
+            strsql += " where td_clientcd = cm_cd and td_dt = bd_dt";
+            strsql += " and td_exchange = sm_exchange ";
+            strsql += " and td_seriesid = sm_seriesid";
+            strsql += " and td_clientcd = '" + userId + "'";
+            strsql += " group by td_dt,td_clientcd having sum(td_servicetax) <> 0";
+            objUtility.ExecuteSQLTmp(strsql, con); ;
+
+            //Service tax here for Exercise
+            strsql = "insert into ##tmpFinvcharges select ex_dt,ex_clientcd,'SERVICE TAX',round(sum(ex_servicetax),2),0 from " + StrCommexConn + ".Exercise with (nolock),##finvdates," + StrCommexConn + ".Client_master with (nolock)," + StrCommexConn + ".Series_master with (nolock) ";
+            strsql += " where ex_clientcd = cm_cd and ex_dt = bd_dt";
+            strsql += " and ex_exchange = sm_exchange ";
+            strsql += " and ex_seriesid = sm_seriesid";
+            strsql += " and ex_clientcd = '" + userId + "'";
+            strsql += " group by ex_dt,ex_clientcd having sum(ex_servicetax) <> 0";
+            objUtility.ExecuteSQLTmp(strsql, con); ;
+
+            //Charges here
+            //-----------from specialcharges start
+            strsql = "insert into ##tmpFinvcharges select fc_dt,fc_clientcd,fc_desc,round(sum(fc_amount),2),0 from " + StrCommexConn + ".Fspecialcharges with (nolock),##finvdates," + StrCommexConn + ".Client_master with (nolock) ";
+            strsql += " where fc_clientcd = cm_cd and fc_dt = bd_dt";
+            strsql += " and fc_clientcd = '" + userId + "'";
+            strsql += " and fc_desc not like '%{New%' and fc_desc not like '%{Old%'";
+            strsql += " and fc_chargecode not in ('EMR') ";
+            strsql += " group by fc_dt,fc_clientcd,fc_desc having round(sum(fc_amount),2) <> 0";
+            objUtility.ExecuteSQLTmp(strsql, con); ;
+
+            strsql = "insert into ##tmpFinvcharges select fc_dt,fc_clientcd,'SERVICE TAX',round(sum(fc_servicetax),2),0 from " + StrCommexConn + ".Fspecialcharges with (nolock) ,##finvdates," + StrCommexConn + ".Client_master with (nolock) ";
+            strsql += " where fc_clientcd = cm_cd and fc_dt = bd_dt";
+            strsql += " and fc_clientcd = '" + userId + "'";
+            strsql += " group by fc_dt,fc_clientcd,fc_desc having round(sum(fc_servicetax),2) <> 0";
+            objUtility.ExecuteSQLTmp(strsql, con); ;
+
+            //-----------from specialcharges end        
+            strsql = "update ##tmpfinvestorrep  set fi_bvalue = fi_bqty*fi_rate*fi_multiplier,fi_svalue = fi_sqty*fi_rate*fi_multiplier,";
+            strsql += "fi_netqty = fi_bqty - fi_sqty,fi_netvalue = (fi_bqty - fi_sqty)*fi_rate*fi_multiplier";
+            strsql += " where fi_controlflag not in(3,4)";
+            objUtility.ExecuteSQLTmp(strsql, con); ;
+
+            strsql = "update ##tmpfinvestorrep  set fi_bvalue = fi_bqty*fi_rate*fi_multiplier,fi_svalue = fi_sqty*fi_rate*fi_multiplier,";
+            strsql += "fi_netqty = fi_sqty - fi_bqty,fi_netvalue = (fi_bqty + fi_sqty)*fi_rate*fi_multiplier";
+            strsql += " where fi_controlflag in(3,4)";
+            objUtility.ExecuteSQLTmp(strsql, con); ;
+
+            strsql = "update ##tmpfinvestorrep  set fi_mtm = round((((fi_sqty - fi_bqty)*fi_rate*fi_multiplier) - ((fi_sqty - fi_bqty)*fi_closeprice*fi_multiplier)),4)";
+            strsql += " where fi_prodtype in('IF','EF','CF','RF','TF')";
+            objUtility.ExecuteSQLTmp(strsql, con); ;
+
+            strsql = "update ##tmpfinvestorrep  set fi_mtm = round(((case fi_controlflag when 3  then (fi_bqty + fi_sqty) when 4 then (fi_bqty + fi_sqty) else (fi_bqty - fi_sqty)*(-1) end) *fi_rate*fi_multiplier),4)";
+            strsql += " where fi_prodtype in('IO','EO','CO')";
+            objUtility.ExecuteSQLTmp(strsql, con); ;
+
+            strsql = "update ##tmpfinvestorrep  set fi_netvalue = 0 where fi_type = 'R'";
+            objUtility.ExecuteSQLTmp(strsql, con); ;
+
+            strsql = "update ##tmpfinvestorrep  ";
+            strsql += " set fi_netvalue = (fi_bqty - fi_sqty)*";
+            strsql += " case sm_callput when 'C' then fi_closeprice - fi_rate else fi_rate - fi_closeprice end*fi_multiplier";
+            strsql += " from ##tmpfinvestorrep ,Series_master";
+            strsql += " where fi_exchange = sm_exchange and fi_segment = sm_segment and fi_seriesid = sm_seriesid ";
+            strsql += " and fi_type = 'R'";
+            strsql += " and (fi_bqty - fi_sqty) < 0";
+            objUtility.ExecuteSQLTmp(strsql, con); ;
+
+            strsql = "update ##tmpfinvestorrep  ";
+            strsql += " set fi_netvalue = (fi_bqty - fi_sqty)*";
+            strsql += " case sm_callput when 'C' then fi_rate - fi_closeprice else fi_closeprice - fi_rate end*fi_multiplier";
+            strsql += " from ##tmpfinvestorrep ,Series_master";
+            strsql += " where fi_exchange = sm_exchange and fi_segment = sm_segment and fi_seriesid = sm_seriesid ";
+            strsql += " and fi_type = 'R'";
+            strsql += " and (fi_bqty - fi_sqty) > 0";
+            objUtility.ExecuteSQLTmp(strsql, con); ;
+
+            strsql = "update ##tmpfinvestorrep  set fi_mtm = fi_netvalue *(-1) where fi_type = 'R'";
+            objUtility.ExecuteSQLTmp(strsql, con); ;
+
+            //DataSet abc = new DataSet();
+            //strsql = "select * from ##tmpfinvestorrep";
+            //abc = objUtility.OpenDataSetTmp(strsql, con);
+            //var a = JsonConvert.SerializeObject(abc.Tables[0]);
+        }
+
+        private void ProfitLoss_FO_CombineProcess(string userId, string exchange, string segment, string fromDate, string toDate, SqlConnection con)
+        {
+            DataSet ObjDatasetH;
+            string Fromdt = fromDate;
+            string Todt = toDate;
+            string StrTradesIndex = "";
+            if (Convert.ToInt16(objUtility.fnFireQueryTradeWeb("sysobjects a, sysindexes b", "COUNT(0)", "a.id = b.id and a.name = 'trades' and b.name", "idx_trades_clientcd", true)) == 1)
+            { StrTradesIndex = "index(idx_trades_clientcd),"; }
+
+            string strFirstDate = string.Empty;
+            string strLastDate = string.Empty;
+
+            DateTime strBillstDt;
+            DateTime strBillenDt;
+            string strdate = string.Empty;
+
+            strsql = "if OBJECT_ID('tempdb..##finvdates') is not null Drop Table ##finvdates";
+            objUtility.ExecuteSQLTmp(strsql, con);
+
+            strsql = "CREATE TABLE [##finvdates] (";
+            strsql += "[bd_dt] [char] (8) NOT NULL ";
+            strsql += ")";
+            objUtility.ExecuteSQLTmp(strsql, con);
+
+            strBillstDt = objUtility.stod(fromDate.ToString());
+            strBillenDt = objUtility.stod(toDate.ToString());
+
+            while (strBillstDt <= strBillenDt)
+            {
+                strdate = objUtility.dtos(strBillstDt.ToString());
+                strsql = "select count(*) cnt from Fholiday_master with (nolock) where ";
+                strsql += " hm_exchange = '" + exchange + "'";
+                strsql += " and hm_segment ='" + segment + "'";
+                strsql += " and hm_dt = '" + strdate + "'";
+                ObjDatasetH = new DataSet();
+                ObjDatasetH = objUtility.OpenDataSetTmp(strsql, con);
+                if (Convert.ToInt64(ObjDatasetH.Tables[0].Rows[0]["cnt"]) == 0)
+                {
+                    objUtility.ExecuteSQLTmp("insert into ##finvdates values('" + strdate + "')", con);
+                }
+                strBillstDt = strBillstDt.AddDays(1);
+            }
+
+            strsql = "if OBJECT_ID('tempdb..##tmpFinvcharges') is not null Drop Table ##tmpFinvcharges";
+            objUtility.ExecuteSQLTmp(strsql, con);
+
+            strsql = "CREATE TABLE [##tmpFinvcharges] (";
+            strsql += "[bc_dt] [char] (8) NOT NULL,";
+            strsql += "[bc_clientcd] [char] (8) NOT NULL,";
+            strsql += "[bc_desc] [char] (40) NOT NULL,";
+            strsql += "[bc_amount] [money] NOT NULL,";
+            strsql += "[bc_billno] [numeric] NOT NULL";
+            strsql += ")";
+            objUtility.ExecuteSQLTmp(strsql, con);
+
+            strsql = "if OBJECT_ID('tempdb..##tmpfinvestorrep') is not null Drop Table ##tmpfinvestorrep";
+            objUtility.ExecuteSQLTmp(strsql, con);
+
+            strsql = "Create table ##tmpfinvestorrep  (";
+            strsql += " fi_dt char(8) not null,";
+            strsql += " fi_clientcd char(8) not null,";
+            strsql += " fi_exchange char(1) not null,";
+            strsql += " fi_seriesid numeric not null,";
+            strsql += " fi_bqty numeric not null,";
+            strsql += " fi_bvalue money not null,";
+            strsql += " fi_sqty numeric not null,";
+            strsql += " fi_svalue money not null,";
+            strsql += " fi_netqty numeric not null,";
+            strsql += " fi_netvalue money not null,";
+            strsql += " fi_rate money not null,";
+            strsql += " fi_closeprice money not null,";
+            strsql += " fi_mtm money not null,";
+            strsql += " fi_listorder numeric not null,";
+            strsql += " fi_controlflag numeric not null,";
+            strsql += " fi_prodtype char(2) not null,";
+            strsql += " fi_type char(1) not null,";
+            strsql += " fi_balfield char(1) not null,";
+            strsql += " fi_multiplier money,";
+            strsql += " fi_segment char(1) not null)";
+            objUtility.ExecuteSQLTmp(strsql, con);
+
+            strsql = "select isnull(min(bd_dt),'" + Fromdt + "'),isNull(max(bd_dt),'') from ##finvdates ";
+            ObjDatasetH = new DataSet();
+
+            ObjDatasetH = objUtility.OpenDataSetTmp(strsql, con);
+            strFirstDate = ObjDatasetH.Tables[0].Rows[0][0].ToString();
+            strLastDate = ObjDatasetH.Tables[0].Rows[0][1].ToString();
+
+            //Futures opening       
+            strsql = "Insert into ##tmpfinvestorrep ";
+            strsql += " Select '" + strFirstDate + "',td_clientcd,td_exchange,";
+            strsql += " td_seriesid,case sign(sum(td_bqty - td_sqty)) when 1 then abs(sum(td_bqty - td_sqty)) else 0 end  td_bqty,";
+            strsql += " 0,";
+            strsql += " case sign(sum(td_bqty - td_sqty)) when 1 then 0 else abs(sum(td_bqty - td_sqty)) end td_sqty,0,";
+            strsql += " 0,0,0,0 td_closeprice,0,";
+            strsql += " case sm_prodtype when 'IF' then 1 when 'CF' then 1 when 'TF' then 2 when 'RF' then 2 when 'EF' then 2 when 'IO' then 3 else 4 end td_sortlist,";
+            strsql += " 1 td_controlflag,sm_prodtype,'N','O',sm_multiplier,td_segment";
+            strsql += " From Trades with(" + StrTradesIndex + "nolock),Series_master,Client_master";
+            strsql += " Where td_clientcd = cm_cd and td_exchange = sm_exchange and td_segment = sm_segment And td_seriesid = sm_seriesid";
+            strsql += " and sm_expirydt >= '" + strFirstDate + "' and  td_dt < '" + strFirstDate + "'";
+            strsql += " and td_exchange = '" + exchange + "' and td_segment = '" + segment + "' and sm_prodtype in('IF','EF','CF','RF','TF')";
+            strsql += " and td_clientcd = '" + userId + "'";
+            strsql += " and cm_type <> 'C'";
+            strsql += " group by td_exchange,td_clientcd,td_seriesid,sm_prodtype,sm_multiplier,td_segment";
+            strsql += " having sum(td_bqty - td_sqty) <> 0";
+            objUtility.ExecuteSQLTmp(strsql, con);
+
+            //Opening for Options
+            strsql = "insert into ##tmpfinvestorrep ";
+            strsql += " select '" + strFirstDate + "',td_clientcd,td_exchange,";
+            strsql += " td_seriesid, sum(case sale when 0 then buy else 0 end) td_bqty,";
+            strsql += " 0,";
+            strsql += " sum(case sale when 0 then 0 else sale end) td_sqty,0,";
+            strsql += " 0,0,0,0 td_closeprice,0,";
+            strsql += " case sm_prodtype when 'IF' then 1 when 'CF' then 1 when 'TF' then 2 when 'RF' then 2 when 'EF' then 2 when 'IO' then 3 else 4 end td_sortlist,";
+            strsql += " 1 td_controlflag,sm_prodtype,'N','O',sm_multiplier,td_segment";
+            strsql += " From vwFoutstandingpos  ";
+            strsql += " Where sm_expirydt >= '" + Fromdt + "' and  td_dt < '" + Fromdt + "'";
+            strsql += " and td_clientcd = '" + userId + "'";
+            strsql += " and td_exchange = '" + exchange + "' and td_segment = '" + segment + "' and sm_prodtype in('IO','EO','CO')";
+            strsql += " and cm_type <> 'C'";
+            strsql += " group by td_exchange,td_clientcd,td_seriesid,sm_prodtype,sm_multiplier,td_segment";
+            strsql += " having sum(sale - buy) <> 0 ";
+            objUtility.ExecuteSQLTmp(strsql, con);
+
+            //Futures/Options running
+            strsql = "insert into ##tmpfinvestorrep ";
+            strsql += " select td_dt,td_clientcd,td_exchange,";
+            strsql += " td_seriesid,td_bqty,0,td_sqty,0,0,0,";
+            strsql += " td_rate,0.0000 td_closeprice,0 mtm,";
+            strsql += " case sm_prodtype when 'IF' then 1 when 'CF' then 1 when 'TF' then 2 when 'RF' then 2 when 'EF' then 2 when 'IO' then 3 else 4 end td_sortlist,";
+            strsql += " 2,sm_prodtype,'N','Y',sm_multiplier,td_segment";
+            strsql += " From Trades with(index(idx_trades_dt_clientcd)) , Series_master,Client_master";
+            strsql += " Where td_clientcd = cm_cd and td_exchange = sm_exchange and td_segment = sm_segment and td_seriesid = sm_seriesid";
+            strsql += " and td_exchange = '" + exchange + "' and td_segment = '" + segment + "'";
+            strsql += " and sm_expirydt >= '" + strFirstDate + "' and td_dt between '" + strFirstDate + "' and '" + strLastDate + "'";
+            strsql += " and td_clientcd = '" + userId + "'";
+            objUtility.ExecuteSQLTmp(strsql, con);
+
+            //Exercise/Assignments
+            strsql = "insert into ##tmpfinvestorrep ";
+            strsql += " select ex_dt,ex_clientcd,ex_exchange,";
+            strsql += " ex_seriesid,ex_eqty,0,ex_aqty,0,0,0,";
+            strsql += " ex_diffbrokrate,ex_settlerate,0,";
+            strsql += " case sm_prodtype when 'IF' then 1 when 'CF' then 1 when 'TF' then 2  when 'RF' then 2 when 'EF' then 2 when 'IO' then 3 else 4 end + 5 td_sortlist,";
+            strsql += " case ex_eaflag when 'E' then 3 else 4 end td_controlflag,sm_prodtype,'N','Y',sm_multiplier,ex_segment";
+            strsql += " From Exercise, Series_master,Client_master";
+            strsql += " Where ex_clientcd = cm_cd and ex_exchange = sm_exchange and ex_segment = sm_segment And ex_seriesid = sm_seriesid";
+            strsql += " and ex_exchange = '" + exchange + "' and ex_segment ='" + segment + "'";
+            strsql += " and sm_expirydt >= '" + strFirstDate + "' and  ex_dt between '" + strFirstDate + "' and '" + strLastDate + "'";
+            strsql += " and ex_clientcd = '" + userId + "'";
+            objUtility.ExecuteSQLTmp(strsql, con);
+
+            //Reverse Future Outstanding
+            strsql = "insert into ##tmpfinvestorrep ";
+            strsql += " select '" + strLastDate + "',fi_clientcd,fi_exchange,";
+            strsql += " fi_seriesid,case sign(sum(case fi_controlflag when 1 then case fi_dt when '" + strFirstDate + "' then fi_bqty - fi_sqty else 0 end when 2 then fi_bqty - fi_sqty else fi_sqty - fi_bqty end)) when -1 then abs(sum(case fi_controlflag when 1 then case fi_dt when '" + strFirstDate + "' then fi_bqty - fi_sqty else 0 end when 2 then fi_bqty - fi_sqty else fi_sqty - fi_bqty end)) else 0 end td_bqty,";
+            strsql += " 0,";
+            strsql += " case sign(sum(case fi_controlflag when 1 then case fi_dt when '" + strFirstDate + "' then fi_bqty - fi_sqty else 0 end when 2 then fi_bqty - fi_sqty else fi_sqty - fi_bqty end)) when 1 then abs(sum(case fi_controlflag when 1 then case fi_dt when '" + strFirstDate + "' then fi_bqty - fi_sqty else 0 end when 2 then fi_bqty - fi_sqty else fi_sqty - fi_bqty end)) else 0 end td_sqty,0,";
+            strsql += " 0,0,0,0 td_closeprice,0,";
+            strsql += " case fi_prodtype when 'IF' then 1 when 'CF' then 1 when 'TF' then 2 when 'RF' then 2 when 'EF' then 2 when 'IO' then 3 else 4 end + 6 td_sortlist,";
+            strsql += " 5 td_controlflag,fi_prodtype,'R','N',sm_multiplier,fi_segment";
+            strsql += " From ##tmpfinvestorrep ,Series_master";
+            strsql += " Where fi_exchange = sm_exchange and fi_segment = sm_segment and sm_seriesid = fi_seriesid and fi_prodtype in('IF','EF','CF','RF','TF') ";
+            strsql += " and sm_expirydt <= '" + strLastDate + "'";
+            strsql += " group by fi_exchange,fi_clientcd,fi_seriesid,fi_prodtype,sm_multiplier,fi_segment";
+            strsql += " having sum(case fi_controlflag when 1 then case fi_dt when '" + strFirstDate + "' then fi_bqty - fi_sqty else 0 end when 2 then fi_bqty - fi_sqty else fi_sqty - fi_bqty end) <> 0";
+            objUtility.ExecuteSQLTmp(strsql, con);
+
+            //Update Last Market Price for Options
+            strsql = "update ##tmpfinvestorrep  set fi_rate = case fi_type when 'R' then ms_lastprice else fi_rate end,fi_closeprice = ms_lastprice from ##tmpfinvestorrep ,Market_summary";
+            strsql += " where ms_seriesid = fi_seriesid ";
+            strsql += " and ms_exchange = fi_exchange and ms_segment = fi_segment ";
+            strsql += " and ms_dt = (select max(ms_dt) from Market_summary where ms_exchange = fi_exchange and ms_segment = fi_segment ";
+            strsql += " and ms_seriesid = fi_seriesid and ms_lastprice <> 0 and ms_dt <= '" + strLastDate + "' )";
+            strsql += " and fi_prodtype in('IO','EO','CO')";
+            objUtility.ExecuteSQLTmp(strsql, con);
+
+            //Update Previous close and today's close prices
+            strsql = "update ##tmpfinvestorrep  set fi_closeprice =  isNull((select ms_lastprice From Market_summary ";
+            strsql += " Where ms_exchange = '" + exchange + "' and ms_segment ='" + segment + "' and ms_seriesid = fi_seriesid ";
+            strsql += " and ms_dt = (select Max(ms_dt) From Market_Summary ";
+            strsql += " Where ms_exchange = '" + exchange + "' and ms_segment ='" + segment + "' and ms_seriesid = fi_seriesid ";
+            strsql += " and ms_dt <='" + strLastDate + "')),0) ";
+            strsql += " where fi_controlflag in('1','2') and fi_prodtype in('IF','EF','CF','RF','TF') ";
+            objUtility.ExecuteSQLTmp(strsql, con);
+
+            //Update close Price If Expiry Trade is Not Generated.
+            strsql = "update ##tmpfinvestorrep  set fi_rate =  ms_lastprice  , fi_closeprice = ms_lastprice ";
+            strsql += " from ##tmpfinvestorrep ,Market_summary , Series_master ";
+            strsql += " where sm_Exchange= '" + exchange + "' and sm_segment = '" + segment + "' and sm_seriesid = fi_seriesid ";
+            strsql += " and sm_exchange = ms_exchange and sm_segment = ms_segment and sm_seriesid = ms_seriesid  and sm_expirydt = ms_dt ";
+            strsql += " and ms_dt < '" + strLastDate + "'";
+            strsql += " and fi_prodtype in('IF','EF','CF','RF','TF') and fi_type = 'R' ";
+            objUtility.ExecuteSQLTmp(strsql, con);
+
+            strsql = "update ##tmpfinvestorrep  set fi_rate = ms_prcloseprice from ##tmpfinvestorrep ,Market_summary";
+            strsql += " where ms_seriesid = fi_seriesid and fi_controlflag = 1";
+            strsql += " and ms_exchange = '" + exchange + "' and ms_segment ='" + segment + "'";
+            strsql += " and ms_dt = fi_dt";
+            strsql += " and fi_prodtype in('IF','EF','CF','RF','TF')";
+            objUtility.ExecuteSQLTmp(strsql, con);
+            //End of updation of close prices
+
+            //Service tax here for Trades
+            strsql = "insert into ##tmpFinvcharges select td_dt,td_clientcd,'SERVICE TAX',round(sum(td_servicetax),2),0 from Trades with(index(idx_trades_dt_clientcd)) ,##finvdates,Client_master,Series_master";
+            strsql += " where td_clientcd = cm_cd and td_dt = bd_dt";
+            strsql += " and td_exchange = sm_exchange and td_segment = sm_segment ";
+            strsql += " and td_seriesid = sm_seriesid";
+            strsql += " and td_exchange = '" + exchange + "' and td_segment = '" + segment + "'";
+            strsql += " group by td_dt,td_clientcd having sum(td_servicetax) <> 0";
+            objUtility.ExecuteSQLTmp(strsql, con);
+
+            //Service tax here for Exercise
+            strsql = "insert into ##tmpFinvcharges select ex_dt,ex_clientcd,'SERVICE TAX',round(sum(ex_servicetax),2),0 from Exercise,##finvdates,Client_master,Series_master";
+            strsql += " where ex_clientcd = cm_cd and ex_dt = bd_dt";
+            strsql += " and ex_exchange = sm_exchange and ex_segment = sm_segment ";
+            strsql += " and ex_seriesid = sm_seriesid";
+            strsql += " and ex_exchange = '" + exchange + "' and ex_segment ='" + segment + "'";
+            strsql += " group by ex_dt,ex_clientcd having sum(ex_servicetax) <> 0";
+            objUtility.ExecuteSQLTmp(strsql, con);
+
+            //Charges here
+            //-----------from specialcharges start;
+            strsql = "insert into ##tmpFinvcharges select fc_dt,fc_clientcd,fc_desc,round(sum(fc_amount),2),0 from Fspecialcharges,##finvdates,Client_master";
+            strsql += " where  fc_clientcd = cm_cd and fc_dt = bd_dt";
+            strsql += " and fc_clientcd = '" + userId + "'";
+            strsql += " and fc_desc not like '%{New%' and fc_exchange='" + exchange + "' and fc_segment='" + segment + "' and fc_desc not like '%{Old%'";
+            strsql += " and fc_chargecode not in ('EMR') ";
+            strsql += " group by fc_dt,fc_clientcd,fc_desc having round(sum(fc_amount),2) <> 0";
+            objUtility.ExecuteSQLTmp(strsql, con);
+
+            strsql = "insert into ##tmpFinvcharges select fc_dt,fc_clientcd,'SERVICE TAX',round(sum(fc_servicetax),2),0 from Fspecialcharges,##finvdates,Client_master";
+            strsql += " where fc_exchange='" + exchange + "' and fc_segment='" + segment + "' and fc_clientcd = cm_cd and fc_dt = bd_dt";
+            strsql += " and fc_clientcd = '" + userId + "'";
+            strsql += " group by fc_dt,fc_clientcd,fc_desc having round(sum(fc_servicetax),2) <> 0";
+            objUtility.ExecuteSQLTmp(strsql, con);
+            //-----------from specialcharges end
+
+            //---------------Update values for MTM and Premium
+            strsql = "update ##tmpfinvestorrep  set fi_bvalue = fi_bqty*fi_rate*fi_multiplier,fi_svalue = fi_sqty*fi_rate*fi_multiplier,";
+            strsql += "fi_netqty = fi_bqty - fi_sqty,fi_netvalue = (fi_bqty - fi_sqty)*fi_rate*fi_multiplier";
+            strsql += " where fi_controlflag not in(3,4)";
+            objUtility.ExecuteSQLTmp(strsql, con);
+
+            strsql = "update ##tmpfinvestorrep  set fi_bvalue = fi_bqty*fi_rate*fi_multiplier,fi_svalue = fi_sqty*fi_rate*fi_multiplier,";
+            strsql += "fi_netqty = fi_sqty - fi_bqty,fi_netvalue = (fi_bqty + fi_sqty)*fi_rate*fi_multiplier";
+            strsql += " where fi_controlflag in(3,4)";
+            objUtility.ExecuteSQLTmp(strsql, con);
+
+            strsql = "update ##tmpfinvestorrep  set fi_mtm = round((((fi_sqty - fi_bqty)*fi_rate*fi_multiplier) - ((fi_sqty - fi_bqty)*fi_closeprice*fi_multiplier)),4)";
+            strsql += " where fi_prodtype in('IF','EF','CF','RF','TF')";
+            objUtility.ExecuteSQLTmp(strsql, con);
+
+
+            strsql = "update ##tmpfinvestorrep  set fi_mtm = round(((case fi_controlflag when 3  then (fi_bqty + fi_sqty) when 4 then (fi_bqty + fi_sqty) else (fi_bqty - fi_sqty)*(-1) end) *fi_rate*fi_multiplier),4)";
+            strsql += " where fi_prodtype in('IO','EO','CO')";
+            objUtility.ExecuteSQLTmp(strsql, con);
+        }
+
 
         #endregion
 

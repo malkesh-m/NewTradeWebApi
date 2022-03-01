@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -45,9 +46,27 @@ namespace TradeWeb.API.Models
 
     public class GainLossTradeInsertModel
     {
+        [Required(ErrorMessage ="Please enter date")]
         public string Date { get; set; }
+        [Required(ErrorMessage ="Please enter settelment")]
         public string Settelment { get; set; }
-
+        [Required]
+        public string Flag { get; set; }
+        [Required]
+        public string Type { get; set; }
+        [Required]
+        public double Quantity { get; set; }
+        [Required]
+        public double NetRate { get; set; }
+        [Required]
+        public double ServiceTax { get; set; }
+        [Required]
+        public double STT { get; set; }
+        [Required]
+        public double OtherCharge1 { get; set; }
+        [Required]
+        public double OtherCharge2 { get; set; }
+        [Required]
         public string ScripCode { get; set; }
     }
 }
