@@ -7436,13 +7436,6 @@ namespace TradeWeb.API.Repository
                 if (!jsondata.Contains("No Record Found") && jsondata != "")
                 {
                     ds = objUtility.ConvertJsonToDatatable(jsondata, strdecimalcol);
-                    ds.Tables[0].Columns.Remove("ClientCode");
-                    ds.Tables[0].Columns["DivDate"].SetOrdinal(0);
-                    ds.Tables[0].Columns["ScripCode"].SetOrdinal(1);
-                    ds.Tables[0].Columns["ScripName"].SetOrdinal(2);
-                    ds.Tables[0].Columns["Qty"].SetOrdinal(3);
-                    ds.Tables[0].Columns["Rate"].SetOrdinal(4);
-                    ds.Tables[0].Columns["Amount"].SetOrdinal(5);
                 }
                 else
                 {
@@ -7451,8 +7444,22 @@ namespace TradeWeb.API.Repository
 
                 if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
                 {
-                    var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
-                    return json;
+                    List<GainLossDivedendResponse> gainLossDivedends = new List<GainLossDivedendResponse>();
+
+                    for (int i = 0; i < ds.Tables[0].Rows.Count; i++)
+                    {
+                        gainLossDivedends.Add(new GainLossDivedendResponse
+                        {
+                            DivDate = objUtility.dtos(ds.Tables[0].Rows[i]["DivDate"].ToString().Trim()),
+                            ScripCode = ds.Tables[0].Rows[i]["ScripCode"].ToString(),
+                            ScripName = ds.Tables[0].Rows[i]["ScripName"].ToString(),
+                            Qty = Convert.ToDouble(ds.Tables[0].Rows[i]["Qty"]),
+                            Rate = Convert.ToDouble(ds.Tables[0].Rows[i]["Rate"]),
+                            Amount = Convert.ToDouble(ds.Tables[0].Rows[i]["Amount"]),
+                        });
+                    }
+
+                    return gainLossDivedends;
                 }
                 return new List<string>();
             }
@@ -7537,8 +7544,32 @@ namespace TradeWeb.API.Repository
 
                 if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
                 {
-                    var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
-                    return json;
+                    List<GainLossActualPLSummaryResponse> gainLossActualPLSummaries = new List<GainLossActualPLSummaryResponse>();
+
+                    for (int i = 0; i < ds.Tables[0].Rows.Count; i++)
+                    {
+                        gainLossActualPLSummaries.Add(new GainLossActualPLSummaryResponse
+                        {
+                            ScripCode = ds.Tables[0].Rows[i]["Tmp_Scripcd"].ToString(),
+                            ScripName = ds.Tables[0].Rows[i]["ss_lname"].ToString(),
+                            ISIN = ds.Tables[0].Rows[i]["Tmp_ISIN"].ToString(),
+                            BQty = Convert.ToDouble(ds.Tables[0].Rows[i]["BQty"]),
+                            BAmount = Convert.ToDouble(ds.Tables[0].Rows[i]["BAmount"]),
+                            SQty = Convert.ToDouble(ds.Tables[0].Rows[i]["SQty"]),
+                            SAmount = Convert.ToDouble(ds.Tables[0].Rows[i]["SAmount"]),
+                            NetQty = Convert.ToDouble(ds.Tables[0].Rows[i]["NetQty"]),
+                            StockAtCost = Convert.ToDouble(ds.Tables[0].Rows[i]["StockAtCost"]),
+                            Trading = Convert.ToDouble(ds.Tables[0].Rows[i]["Trading"]),
+                            ShortTerm = Convert.ToDouble(ds.Tables[0].Rows[i]["ShortTerm"]),
+                            LongTerm = Convert.ToDouble(ds.Tables[0].Rows[i]["LongTerm"]),
+                            MarketRate = Convert.ToDouble(ds.Tables[0].Rows[i]["MarketRate"]),
+                            StockAtMkt = Convert.ToDouble(ds.Tables[0].Rows[i]["StockAtMkt"]),
+                            UnRealGain = Convert.ToDouble(ds.Tables[0].Rows[i]["UnRealGain"]),
+                            STT = Convert.ToDouble(ds.Tables[0].Rows[i]["STT"]),
+                        });
+                    }
+
+                    return gainLossActualPLSummaries;
                 }
                 return new List<string>();
             }
@@ -7575,8 +7606,26 @@ namespace TradeWeb.API.Repository
 
             if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
             {
-                var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
-                return json;
+                List<GainLossTradeListingSummaryResponse> gainLossTradeListingSummaries = new List<GainLossTradeListingSummaryResponse>();
+
+                for (int i = 0; i < ds.Tables[0].Rows.Count; i++)
+                {
+                    gainLossTradeListingSummaries.Add(new GainLossTradeListingSummaryResponse
+                    {
+                        ScripCode = ds.Tables[0].Rows[i]["td_scripcd"].ToString(),
+                        ScripName = ds.Tables[0].Rows[i]["ScripName"].ToString(),
+                        BuyQuantity = Convert.ToDouble(ds.Tables[0].Rows[i]["Bqty"]),
+                        BuyRate = Convert.ToDouble(ds.Tables[0].Rows[i]["BRate"]),
+                        BuyAmount = Convert.ToDouble(ds.Tables[0].Rows[i]["BAmt"]),
+                        SellQuantity = Convert.ToDouble(ds.Tables[0].Rows[i]["sqty"]),
+                        SellRate = Convert.ToDouble(ds.Tables[0].Rows[i]["SRate"]),
+                        SellAmount = Convert.ToDouble(ds.Tables[0].Rows[i]["SAmt"]),
+                        NetQuantity = Convert.ToDouble(ds.Tables[0].Rows[i]["NetQty"]),
+                        NetAmount = Convert.ToDouble(ds.Tables[0].Rows[i]["NAmt"]),
+                    });
+                }
+
+                return gainLossTradeListingSummaries;
             }
             return new List<string>();
         }
@@ -7647,8 +7696,37 @@ namespace TradeWeb.API.Repository
                 }
                 if (ObjDataSetDetail?.Tables?.Count > 0 && ObjDataSetDetail?.Tables[0]?.Rows?.Count > 0)
                 {
-                    var json = JsonConvert.SerializeObject(ObjDataSetDetail.Tables[0], Formatting.Indented);
-                    return json;
+                    List<GainLossActualPLDetailResponse> gainLossActualPLDetails = new List<GainLossActualPLDetailResponse>();
+
+                    for (int i = 0; i < ObjDataSetDetail.Tables[0].Rows.Count; i++)
+                    {
+                        gainLossActualPLDetails.Add(new GainLossActualPLDetailResponse
+                        {
+                            ScripCode = ObjDataSetDetail.Tables[0].Rows[i]["TMp_Scripcd"].ToString(),
+                            ScripName = ObjDataSetDetail.Tables[0].Rows[i]["ss_lname"].ToString(),
+                            ISIN = ObjDataSetDetail.Tables[0].Rows[i]["Tmp_ISIN"].ToString(),
+                            SellDate = objUtility.dtos(ObjDataSetDetail.Tables[0].Rows[i]["Tmp_SDt"].ToString().Trim()),
+                            SellRate = Convert.ToDouble(ObjDataSetDetail.Tables[0].Rows[i]["Tmp_SRate"]),
+                            Qty = Convert.ToDouble(ObjDataSetDetail.Tables[0].Rows[i]["Tmp_Qty"]),
+                            BuyDate = objUtility.dtos(ObjDataSetDetail.Tables[0].Rows[i]["Tmp_BDt"].ToString().Trim()),
+                            BuyRate = Convert.ToDouble(ObjDataSetDetail.Tables[0].Rows[i]["Tmp_BRate"]),
+                            StockAtCost = Convert.ToDouble(ObjDataSetDetail.Tables[0].Rows[i]["StockAtCost"]),
+                            StockAtMkt = Convert.ToDouble(ObjDataSetDetail.Tables[0].Rows[i]["StockAtMkt"]),
+                            Trading = Convert.ToDouble(ObjDataSetDetail.Tables[0].Rows[i]["Trading"]),
+                            LongTerm = Convert.ToDouble(ObjDataSetDetail.Tables[0].Rows[i]["LongTerm"]),
+                            ShortTerm = Convert.ToDouble(ObjDataSetDetail.Tables[0].Rows[i]["ShortTerm"]),
+                            UnRealGain = Convert.ToDouble(ObjDataSetDetail.Tables[0].Rows[i]["UnRealGain"]),
+                            Type = ObjDataSetDetail.Tables[0].Rows[i]["Type"].ToString(),
+                            Days = Convert.ToDouble(ObjDataSetDetail.Tables[0].Rows[i]["days"]),
+                            Rate = Convert.ToDouble(ObjDataSetDetail.Tables[0].Rows[i]["Rate"]),
+                            QtrSlab = ObjDataSetDetail.Tables[0].Rows[i]["QtrSlab"].ToString(),
+                            STT = Convert.ToDouble(ObjDataSetDetail.Tables[0].Rows[i]["STT"]),
+                            LTCG = ObjDataSetDetail.Tables[0].Rows[i]["Tmp_LTCG"].ToString(),
+                            Rate112A = ObjDataSetDetail.Tables[0].Rows[i]["Tmp_112ARate"].ToString(),
+                        });
+                    }
+
+                    return gainLossActualPLDetails;
                 }
                 return new List<string>();
             }
@@ -7665,7 +7743,6 @@ namespace TradeWeb.API.Repository
                 string strurl = objUtility.GetWebParameter("TNetInvplUrl");
                 string jsondata = string.Empty;
                 DataSet ObjDataSet = new DataSet();
-                // ObjInvpl.Timeout = 300000;
                 if (strurl != "" || strurl != null)
                 {
                     if (objUtility.WebRequestTest(strurl) == false)
@@ -7673,7 +7750,6 @@ namespace TradeWeb.API.Repository
                         return "Service not available at the moment try after some time.";
                     }
                 }
-                //ObjInvpl.Url = strurl;
                 if (objUtility.stod(Convert.ToString(fromDate)) > objUtility.stod(fromDate))
                 { jsondata = nVPLSoapClient.TradeListingDetailAsync(userId, fromDate, toDate, sccdPostBack).Result; }
                 else
@@ -7691,6 +7767,9 @@ namespace TradeWeb.API.Repository
 
                 if (ObjDataSet?.Tables?.Count > 0 && ObjDataSet?.Tables[0]?.Rows?.Count > 0)
                 {
+
+
+
                     var json = JsonConvert.SerializeObject(ObjDataSet.Tables[0], Formatting.Indented);
                     return json;
                 }
