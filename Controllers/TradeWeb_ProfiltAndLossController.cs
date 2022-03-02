@@ -227,7 +227,7 @@ namespace TradeWeb.API.Controllers
 
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpGet("CapitalGainLoss_ActualPLSummary", Name = "CapitalGainLoss_ActualPLSummary")]
-        public IActionResult CapitalGainLoss_ActualPLSummary(string fromDate, string toDate, Boolean chkJobing, Boolean chkDelivery, Boolean chkIgnore112A, string type)
+        public IActionResult CapitalGainLoss_ActualPLSummary(string fromDate, string toDate, Boolean jobing, Boolean delivery, Boolean ignore112A, string type)
         {
             if (ModelState.IsValid)
             {
@@ -236,7 +236,7 @@ namespace TradeWeb.API.Controllers
                     var tokenS = GetToken();
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.GetINVPLGainLoss(userId, fromDate, toDate, chkJobing, chkDelivery, chkIgnore112A, type);
+                    var getData = _tradeWebRepository.GetINVPLGainLoss(userId, fromDate, toDate, jobing, delivery, ignore112A, type);
                     if (getData != null)
                     {
                         return Ok(getData);
