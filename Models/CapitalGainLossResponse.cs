@@ -73,4 +73,21 @@ namespace TradeWeb.API.Models
         public double NetQuantity { get; set; }
         public double NetAmount { get; set; }
     }
+
+    public class GainLossTradeListingDetailResponse
+    {
+        public string SrNo { get; set; }
+        public string Settelment { get; set; }
+        public string TrxFlag { get; set; }
+        public string TrdType { get; set; }
+        public string Date { get; set; }
+        public string BsFlag { get; set; }
+        public double Quantity { get; set; }
+        public double Rate { get; set; }
+        public double Value { get; set; }
+        public double ServiceTax { get; set; }
+        public double STT { get; set; }
+        public double OtherCharge1 { get; set; }
+        public double OtherCharge2 { get; set; }
+    }
 }

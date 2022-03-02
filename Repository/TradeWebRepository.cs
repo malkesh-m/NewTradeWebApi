@@ -7768,10 +7768,30 @@ namespace TradeWeb.API.Repository
                 if (ObjDataSet?.Tables?.Count > 0 && ObjDataSet?.Tables[0]?.Rows?.Count > 0)
                 {
 
+                    List<GainLossTradeListingDetailResponse> gainLossTradeListingDetails = new List<GainLossTradeListingDetailResponse>();
 
+                    for (int i = 0; i < ObjDataSet.Tables[0].Rows.Count; i++)
+                    {
 
-                    var json = JsonConvert.SerializeObject(ObjDataSet.Tables[0], Formatting.Indented);
-                    return json;
+                        gainLossTradeListingDetails.Add(new GainLossTradeListingDetailResponse
+                        {
+                            SrNo = ObjDataSet.Tables[0].Rows[i]["td_srno"].ToString(),
+                            Settelment = ObjDataSet.Tables[0].Rows[i]["td_stlmnt"].ToString(),
+                            TrxFlag = ObjDataSet.Tables[0].Rows[i]["td_TRXFlag"].ToString(),
+                            TrdType = ObjDataSet.Tables[0].Rows[i]["td_TRDType"].ToString(),
+                            Date = objUtility.dtos(ObjDataSet.Tables[0].Rows[i]["td_dt"].ToString().Trim()),
+                            BsFlag = ObjDataSet.Tables[0].Rows[i]["td_bsflag"].ToString(),
+                            Quantity = Convert.ToDouble(ObjDataSet.Tables[0].Rows[i]["Qty"]),
+                            Rate = Convert.ToDouble(ObjDataSet.Tables[0].Rows[i]["td_Rate"]),
+                            Value = Convert.ToDouble(ObjDataSet.Tables[0].Rows[i]["Value"]),
+                            ServiceTax = Convert.ToDouble(ObjDataSet.Tables[0].Rows[i]["td_ServiceTax"]),
+                            STT = Convert.ToDouble(ObjDataSet.Tables[0].Rows[i]["td_STT"]),
+                            OtherCharge1 = Convert.ToDouble(ObjDataSet.Tables[0].Rows[i]["td_OtherChrgs1"]),
+                            OtherCharge2 = Convert.ToDouble(ObjDataSet.Tables[0].Rows[i]["td_OtherChrgs2"]),
+                        });
+                    }
+
+                    return gainLossTradeListingDetails;
                 }
                 return new List<string>();
             }
