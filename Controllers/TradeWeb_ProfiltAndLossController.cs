@@ -64,7 +64,7 @@ namespace TradeWeb.API.Controllers
 
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpGet("ProfitLoss_Cash_Detail", Name = "ProfitLoss_Cash_Detail")]
-        public IActionResult ProfitLoss_Cash_Detail([FromQuery] string fromDate, string toDate, string scripcd)
+        public IActionResult ProfitLoss_Cash_Detail([FromQuery] string fromDate, string toDate, string scripCode)
         {
             if (ModelState.IsValid)
             {
@@ -73,7 +73,7 @@ namespace TradeWeb.API.Controllers
                     var tokenS = GetToken();
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.ProfitLoss_Cash_Detail(userId, fromDate, toDate, scripcd);
+                    var getData = _tradeWebRepository.ProfitLoss_Cash_Detail(userId, fromDate, toDate, scripCode);
                     if (getData != null)
                     {
                         return Ok(getData);

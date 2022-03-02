@@ -298,7 +298,7 @@ namespace TradeWeb.API.Controllers
                     var tokenS = GetToken();
                     var userName = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.Ledger_Detail(userName, model, model.fromDate, model.toDate);
+                    var getData = _tradeWebRepository.Ledger_Detail(userName, model, model.FromDate, model.ToDate);
                     if (getData != null)
                     {
                         return Ok(getData);

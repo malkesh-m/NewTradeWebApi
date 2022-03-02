@@ -31,7 +31,7 @@ namespace TradeWeb.API.Controllers
         // get confirmation main data
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpGet("Confirmation", Name = "Confirmation")]
-        public IActionResult Confirmation([FromQuery] int type, string dt)
+        public IActionResult Confirmation([FromQuery] int type, string date)
         {
             if (ModelState.IsValid)
             {
@@ -40,7 +40,7 @@ namespace TradeWeb.API.Controllers
                     var tokenS = GetToken();
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.Confirmation(userId, type, dt);
+                    var getData = _tradeWebRepository.Confirmation(userId, type, date);
                     if (getData != null)
                     {
                         return Ok(getData);
@@ -60,7 +60,7 @@ namespace TradeWeb.API.Controllers
         
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpGet("Transaction_Detail", Name = "Transaction_Detail")]
-        public IActionResult Transaction_Detail([FromQuery] string exch, string seg, int type, string fromdate, string todate, string scripcode)
+        public IActionResult Transaction_Detail([FromQuery] string exch, string seg, int type, string fromdate, string todate, string scripCode)
         {
             if (ModelState.IsValid)
             {
@@ -69,7 +69,7 @@ namespace TradeWeb.API.Controllers
                     var tokenS = GetToken();
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.Transaction_Detail(userId, exch, seg, type, fromdate, todate, scripcode);
+                    var getData = _tradeWebRepository.Transaction_Detail(userId, exch, seg, type, fromdate, todate, scripCode);
                     if (getData != null)
                     {
                         return Ok(getData);
@@ -164,7 +164,7 @@ namespace TradeWeb.API.Controllers
 
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpGet("Transaction_AGTS", Name = "Transaction_AGTS")]
-        public IActionResult Transaction_AGTS([FromQuery] string seg, string fromDate, string toDate)
+        public IActionResult Transaction_AGTS([FromQuery] string segment, string fromDate, string toDate)
         {
             if (ModelState.IsValid)
             {
@@ -174,7 +174,7 @@ namespace TradeWeb.API.Controllers
                     var companyCode = tokenS.Claims.First(claim => claim.Type == "companyCode").Value;
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.Transaction_AGTS(userId, seg, fromDate, toDate);
+                    var getData = _tradeWebRepository.Transaction_AGTS(userId, segment, fromDate, toDate);
 
                     if (getData != null)
                     {

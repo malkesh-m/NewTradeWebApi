@@ -7,16 +7,16 @@ namespace TradeWeb.API.Models
 {
     public class LedgerDetailsModel
     {
-        public string fromDate { get; set; }
-        public string toDate { get; set; }
+        public string FromDate { get; set; }
+        public string ToDate { get; set; }
 
-        public List<SegmentModel> type_exchseg { get; set; }
+        public List<SegmentModel> type_ExchSeg { get; set; }
     }
 
     public class SegmentModel
     {
         public string type { get; set; }
 
-        public List<string> exchseg { get; set; }
+        public List<string> exchSeg { get; set; }
     }
 }

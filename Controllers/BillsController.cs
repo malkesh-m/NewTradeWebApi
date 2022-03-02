@@ -57,13 +57,13 @@ namespace TradeWeb.API.Controllers
         // get settelment type for dropdown settlement
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpGet("Bills_cash_settTypes_list", Name = "Bills_cash_settTypes_list")]
-        public IActionResult Bills_cash_settTypes_list([FromQuery] string exch)
+        public IActionResult Bills_cash_settTypes_list([FromQuery] string exchange)
         {
             if (ModelState.IsValid)
             {
                 try
                 {
-                    var getData = _tradeWebRepository.Bills_cash_settTypes_list(exch);
+                    var getData = _tradeWebRepository.Bills_cash_settTypes_list(exchange);
                     if (getData != null)
                     {
                         return Ok(getData);
@@ -107,7 +107,7 @@ namespace TradeWeb.API.Controllers
         // get bill main data
 
         [HttpGet("Bills_cash_stlmnt", Name = "Bills_cash_stlmnt")]
-        public IActionResult Bills_cash_stlmnt([FromQuery] string stlmnt)
+        public IActionResult Bills_cash_stlmnt([FromQuery] string settelment)
         {
             if (ModelState.IsValid)
             {
@@ -115,8 +115,8 @@ namespace TradeWeb.API.Controllers
                 {
                     var tokenS = GetToken();
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
-                    string dt = objUtility.fnFireQuery("settlements", "se_stdt", "se_stlmnt", stlmnt, true);
-                    var getData = _tradeWebRepository.Bill_data(userId, stlmnt.Substring(0, 1) + 'C', stlmnt.Substring(1, 1), dt);
+                    string dt = objUtility.fnFireQuery("settlements", "se_stdt", "se_stlmnt", settelment, true);
+                    var getData = _tradeWebRepository.Bill_data(userId, settelment.Substring(0, 1) + 'C', settelment.Substring(1, 1), dt);
                     if (getData != null)
                     {
                         return Ok(getData);
@@ -136,7 +136,7 @@ namespace TradeWeb.API.Controllers
 
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpGet("Bills_cash_settType", Name = "Bills_cash_settType")]
-        public IActionResult Bills_cash_settType([FromQuery] string exch_settType, string dt)
+        public IActionResult Bills_cash_settType([FromQuery] string exch_settType, string date)
         {
             if (ModelState.IsValid)
             {
@@ -145,7 +145,7 @@ namespace TradeWeb.API.Controllers
                     var tokenS = GetToken();
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.Bill_data(userId, exch_settType.Substring(0, 1) + 'C', exch_settType.Substring(1, 1), dt);
+                    var getData = _tradeWebRepository.Bill_data(userId, exch_settType.Substring(0, 1) + 'C', exch_settType.Substring(1, 1), date);
                     if (getData != null)
                     {
                         return Ok(getData);
@@ -166,7 +166,7 @@ namespace TradeWeb.API.Controllers
         // get bill main data
         //[Authorize(AuthenticationSchemes = "Bearer")]
         [HttpGet("Bills_FO", Name = "Bills_FO")]
-        public IActionResult Bills_FO([FromQuery] string exch, string seg, string dt)
+        public IActionResult Bills_FO([FromQuery] string exch, string seg, string date)
         {
             if (ModelState.IsValid)
             {
@@ -175,7 +175,7 @@ namespace TradeWeb.API.Controllers
                     var tokenS = GetToken();
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.Bill_data(userId, exch + seg, "", dt);
+                    var getData = _tradeWebRepository.Bill_data(userId, exch + seg, "", date);
                     if (getData != null)
                     {
                         return Ok(getData);
@@ -194,7 +194,7 @@ namespace TradeWeb.API.Controllers
         }
 
         [HttpGet("Bills_Commodity", Name = "Bills_Commodity")]
-        public IActionResult Bills_Commodity([FromQuery] string exch, string dt)
+        public IActionResult Bills_Commodity([FromQuery] string exch, string date)
         {
             if (ModelState.IsValid)
             {
@@ -203,7 +203,7 @@ namespace TradeWeb.API.Controllers
                     var tokenS = GetToken();
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.Bill_data(userId, exch + "X", "", dt);
+                    var getData = _tradeWebRepository.Bill_data(userId, exch + "X", "", date);
                     if (getData != null)
                     {
                         return Ok(getData);
