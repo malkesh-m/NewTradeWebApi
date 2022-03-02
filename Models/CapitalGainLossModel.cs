@@ -52,11 +52,11 @@ namespace TradeWeb.API.Models
         public string Settelment { get; set; }
         [Required]
         public string Flag { get; set; }
-        [Required]
+        [Required(ErrorMessage = "Please enter Type")]
         public string Type { get; set; }
-        [Required]
+        [Required(ErrorMessage ="Please enter Quantity")]
         public double Quantity { get; set; }
-        [Required]
+        [Required(ErrorMessage = "Please enter Rate")]
         public double NetRate { get; set; }
         [Required]
         public double ServiceTax { get; set; }

@@ -198,7 +198,7 @@ namespace TradeWeb.API.Controllers
 
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpGet("CapitalGainLoss_Dividend", Name = "CapitalGainLoss_Dividend")]
-        public IActionResult CapitalGainLoss_Dividend(GainLossDividendModel model)
+        public IActionResult CapitalGainLoss_Dividend(string fromDate, string toDate)
         {
             if (ModelState.IsValid)
             {
@@ -207,7 +207,7 @@ namespace TradeWeb.API.Controllers
                     var tokenS = GetToken();
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.GetINVPLDivListing(userId, model.FromDate, model.ToDate);
+                    var getData = _tradeWebRepository.GetINVPLDivListing(userId, fromDate, toDate);
                     if (getData != null)
                     {
                         return Ok(getData);
@@ -227,7 +227,7 @@ namespace TradeWeb.API.Controllers
 
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpGet("CapitalGainLoss_ActualPLSummary", Name = "CapitalGainLoss_ActualPLSummary")]
-        public IActionResult CapitalGainLoss_ActualPLSummary(GainLossActualPLSummaryModel model)
+        public IActionResult CapitalGainLoss_ActualPLSummary(string fromDate, string toDate, Boolean chkJobing, Boolean chkDelivery, Boolean chkIgnore112A, string type)
         {
             if (ModelState.IsValid)
             {
@@ -236,7 +236,7 @@ namespace TradeWeb.API.Controllers
                     var tokenS = GetToken();
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.GetINVPLGainLoss(userId, model.FromDate, model.ToDate, model.ChkJobing, model.ChkDelivery, model.ChkIgnore112A, model.Type);
+                    var getData = _tradeWebRepository.GetINVPLGainLoss(userId, fromDate, toDate, chkJobing, chkDelivery, chkIgnore112A, type);
                     if (getData != null)
                     {
                         return Ok(getData);
@@ -256,7 +256,7 @@ namespace TradeWeb.API.Controllers
 
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpGet("CapitalGainLoss_ActualPLDetail", Name = "CapitalGainLoss_ActualPLDetail")]
-        public IActionResult CapitalGainLoss_ActualPLDetail(GainLossActualPLDetailModel model)
+        public IActionResult CapitalGainLoss_ActualPLDetail(string fromDate, string toDate, string type, string ignore112A, string scripCode)
         {
             if (ModelState.IsValid)
             {
@@ -265,7 +265,7 @@ namespace TradeWeb.API.Controllers
                     var tokenS = GetToken();
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.GetINVPLGainLossDetails(userId, model.FromDate, model.ToDate, model.Type, model.Ignore112A, model.ScripCode);
+                    var getData = _tradeWebRepository.GetINVPLGainLossDetails(userId, fromDate, toDate, type, ignore112A, scripCode);
                     if (getData != null)
                     {
                         return Ok(getData);
@@ -286,7 +286,7 @@ namespace TradeWeb.API.Controllers
 
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpGet("CapitalGainLoss_TradeListingSummary", Name = "CapitalGainLoss_TradeListingSummary")]
-        public IActionResult CapitalGainLoss_TradeListingSummary(GainLossTradeListingSummary model)
+        public IActionResult CapitalGainLoss_TradeListingSummary( string fromDate, string toDate)
         {
             if (ModelState.IsValid)
             {
@@ -295,7 +295,7 @@ namespace TradeWeb.API.Controllers
                     var tokenS = GetToken();
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.GetINVPLTradeListing(userId, model.FromDate, model.ToDate);
+                    var getData = _tradeWebRepository.GetINVPLTradeListing(userId, fromDate, toDate);
                     if (getData != null)
                     {
                         return Ok(getData);
@@ -315,7 +315,7 @@ namespace TradeWeb.API.Controllers
 
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpGet("CapitalGainLoss_TradeListingDetail", Name = "CapitalGainLoss_TradeListingDetail")]
-        public IActionResult CapitalGainLoss_TradeListingDetail(GainLossTradeListingDetailModel model)
+        public IActionResult CapitalGainLoss_TradeListingDetail(string fromDate, string toDate, string scripCode)
         {
             if (ModelState.IsValid)
             {
@@ -324,7 +324,7 @@ namespace TradeWeb.API.Controllers
                     var tokenS = GetToken();
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.GeTINVPLTradeListingDetails(userId, model.FromDate, model.ToDate, model.ScripCode);
+                    var getData = _tradeWebRepository.GeTINVPLTradeListingDetails(userId, fromDate, toDate, scripCode);
                     if (getData != null)
                     {
                         return Ok(getData);
@@ -343,8 +343,8 @@ namespace TradeWeb.API.Controllers
         }
 
         [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("CapitalGainLoss_TradeInsert", Name = "CapitalGainLoss_TradeInsert")]
-        public IActionResult CapitalGainLoss_TradeInsert(string date, string settelment, string bsFlag, string tradeType, double quantity, double netRate, double serviceTax, double STT, double otherCharge1, double otherCharge2, string sccdPostBack)
+        [HttpPost("CapitalGainLoss_TradeInsert", Name = "CapitalGainLoss_TradeInsert")]
+        public IActionResult CapitalGainLoss_TradeInsert(GainLossTradeInsertModel model)
         {
             if (ModelState.IsValid)
             {
@@ -353,7 +353,7 @@ namespace TradeWeb.API.Controllers
                     var tokenS = GetToken();
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.GetINVPLTradeListingSave(userId, date, settelment, bsFlag, tradeType, quantity, netRate, serviceTax, STT, otherCharge1, otherCharge2, sccdPostBack);
+                    var getData = _tradeWebRepository.GetINVPLTradeListingSave(userId, model.Date, model.Settelment, model.Flag, model.Type, model.Quantity, model.NetRate, model.ServiceTax, model.STT, model.OtherCharge1, model.OtherCharge2, model.ScripCode);
                     if (getData != null)
                     {
                         return Ok(getData);
