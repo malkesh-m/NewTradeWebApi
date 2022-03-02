@@ -7436,6 +7436,13 @@ namespace TradeWeb.API.Repository
                 if (!jsondata.Contains("No Record Found") && jsondata != "")
                 {
                     ds = objUtility.ConvertJsonToDatatable(jsondata, strdecimalcol);
+                    ds.Tables[0].Columns.Remove("ClientCode");
+                    ds.Tables[0].Columns["DivDate"].SetOrdinal(0);
+                    ds.Tables[0].Columns["ScripCode"].SetOrdinal(1);
+                    ds.Tables[0].Columns["ScripName"].SetOrdinal(2);
+                    ds.Tables[0].Columns["Qty"].SetOrdinal(3);
+                    ds.Tables[0].Columns["Rate"].SetOrdinal(4);
+                    ds.Tables[0].Columns["Amount"].SetOrdinal(5);
                 }
                 else
                 {

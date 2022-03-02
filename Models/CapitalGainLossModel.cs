@@ -48,12 +48,8 @@ namespace TradeWeb.API.Models
     {
         [Required(ErrorMessage ="Please enter date")]
         public string Date { get; set; }
-        [Required(ErrorMessage ="Please enter settelment")]
-        public string Settelment { get; set; }
         [Required]
-        public string Flag { get; set; }
-        [Required(ErrorMessage = "Please enter Type")]
-        public string Type { get; set; }
+        public string ScripCode { get; set; }
         [Required(ErrorMessage ="Please enter Quantity")]
         public double Quantity { get; set; }
         [Required(ErrorMessage = "Please enter Rate")]
@@ -66,7 +62,11 @@ namespace TradeWeb.API.Models
         public double OtherCharge1 { get; set; }
         [Required]
         public double OtherCharge2 { get; set; }
+        [Required(ErrorMessage ="Please enter settelment")]
+        public string Settelment { get; set; }
         [Required]
-        public string ScripCode { get; set; }
+        public string Flag { get; set; }
+        [Required(ErrorMessage = "Please enter Type")]
+        public string Type { get; set; }
     }
 }
