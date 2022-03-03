@@ -174,7 +174,7 @@ namespace TradeWeb.API.Controllers
         // TODO : Get Family List
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpGet("Family_Add", Name = "Family_Add")]
-        public IActionResult Family_Add(string UCC_Code, string password)
+        public IActionResult Family_Add(string uccCode, string password)
         {
             if (ModelState.IsValid)
             {
@@ -183,7 +183,7 @@ namespace TradeWeb.API.Controllers
                     var tokenS = GetToken();
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.Family_Add(userId, password, UCC_Code);
+                    var getData = _tradeWebRepository.Family_Add(userId, password, uccCode);
                     if (getData != null)
                     {
                         return Ok(getData);
@@ -204,7 +204,7 @@ namespace TradeWeb.API.Controllers
         // TODO : Get Family List
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpGet("Family_Remove", Name = "Family_Remove")]
-        public IActionResult Family_Remove(string UCC_Code)
+        public IActionResult Family_Remove(string uccCode)
         {
             if (ModelState.IsValid)
             {
@@ -213,7 +213,7 @@ namespace TradeWeb.API.Controllers
                     var tokenS = GetToken();
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.Family_Remove(UCC_Code);
+                    var getData = _tradeWebRepository.Family_Remove(uccCode);
                     if (getData != null)
                     {
                         return Ok(getData);
@@ -234,13 +234,13 @@ namespace TradeWeb.API.Controllers
         // TODO : Get Family List
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpPost("Family_Balance", Name = "Family_Balance")]
-        public IActionResult Family_Balance(List<string> UCC_Codes)
+        public IActionResult Family_Balance(List<string> uccCode)
         {
             if (ModelState.IsValid)
             {
                 try
                 {
-                    var getData = _tradeWebRepository.Family_Balance(UCC_Codes);
+                    var getData = _tradeWebRepository.Family_Balance(uccCode);
                     if (getData != null)
                     {
                         return Ok(getData);
@@ -261,7 +261,7 @@ namespace TradeWeb.API.Controllers
         // TODO : Get Family List
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpPost("Family_RetainedStoke", Name = "Family_RetainedStoke")]
-        public IActionResult Family_RetainedStoke(List<string> UCC_Codes)
+        public IActionResult Family_RetainedStoke(List<string> uccCode)
         {
             if (ModelState.IsValid)
             {
@@ -270,7 +270,7 @@ namespace TradeWeb.API.Controllers
                     //var tokenS = GetToken();
                     //var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.Family_RetainedStoke(UCC_Codes);
+                    var getData = _tradeWebRepository.Family_RetainedStoke(uccCode);
                     if (getData != null)
                     {
                         return Ok(getData);
@@ -291,13 +291,13 @@ namespace TradeWeb.API.Controllers
         // TODO : Get Family List
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpPost("Family_Holding", Name = "Family_Holding")]
-        public IActionResult Family_Holding(List<string> UCC_Codes)
+        public IActionResult Family_Holding(List<string> uccCode)
         {
             if (ModelState.IsValid)
             {
                 try
                 {
-                    var getData = _tradeWebRepository.Family_Holding(UCC_Codes);
+                    var getData = _tradeWebRepository.Family_Holding(uccCode);
                     if (getData != null)
                     {
                         return Ok(getData);
@@ -318,13 +318,13 @@ namespace TradeWeb.API.Controllers
         // TODO : Get Family List
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpPost("Family_Position", Name = "Family_Position")]
-        public IActionResult Family_Position(List<string> UCC_Codes)
+        public IActionResult Family_Position(List<string> uccCode)
         {
             if (ModelState.IsValid)
             {
                 try
                 {
-                    var getData = _tradeWebRepository.Family_Position(UCC_Codes);
+                    var getData = _tradeWebRepository.Family_Position(uccCode);
                     if (getData != null)
                     {
                         return Ok(getData);
@@ -397,13 +397,13 @@ namespace TradeWeb.API.Controllers
 
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpPost("Family_RetainedStokeJson", Name = "Family_RetainedStokeJson")]
-        public IActionResult Family_RetainedStokeJson(List<string> UCC_Codes)
+        public IActionResult Family_RetainedStokeJson(List<string> uccCode)
         {
             if (ModelState.IsValid)
             {
                 try
                 {
-                    var getData = _tradeWebRepository.Family_RetainedStokeJson(UCC_Codes);
+                    var getData = _tradeWebRepository.Family_RetainedStokeJson(uccCode);
                     if (getData != null)
                     {
                         return Ok(getData);
@@ -423,13 +423,13 @@ namespace TradeWeb.API.Controllers
 
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpPost("Family_HoldingJson", Name = "Family_HoldingJson")]
-        public IActionResult Family_HoldingJson(List<string> UCC_Codes)
+        public IActionResult Family_HoldingJson(List<string> uccCode)
         {
             if (ModelState.IsValid)
             {
                 try
                 {
-                    var getData = _tradeWebRepository.Family_HoldingJson(UCC_Codes);
+                    var getData = _tradeWebRepository.Family_HoldingJson(uccCode);
                     if (getData != null)
                     {
                         return Ok(getData);

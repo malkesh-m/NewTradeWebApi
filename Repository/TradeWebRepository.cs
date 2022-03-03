@@ -9588,7 +9588,7 @@ namespace TradeWeb.API.Repository
         {
             try
             {
-                string strSql = "select upper(case when CF_CD=CF_FamilyCd then 'MAIN' else '' end) MainCd,upper(cf_cd) cf_cd ,cm_name";
+                string strSql = "select upper(case when CF_CD=CF_FamilyCd then 'MAIN' else '' end) MainCd,upper(cf_cd) UccCode ,cm_name Name";
                 strSql += " from Client_Family,Client_master where cm_cd=CF_CD and CF_FamilyCd='" + userId + "'  order by MainCd desc ";
 
                 var ds = CommonRepository.FillDataset(strSql);
