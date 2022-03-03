@@ -37,7 +37,7 @@ namespace TradeWeb.API.Repository
 
         public dynamic GetUserDetais(string userId);
 
-        public dynamic Transaction_Summary(string userId, string type, string FromDate, string ToDate);
+        public dynamic Transaction_Summary(string userId,string tradeType, string type, string FromDate, string ToDate);
 
         public dynamic Transaction_Accounts(string userId, string type, string fromDate, string toDate);
 
@@ -351,17 +351,25 @@ namespace TradeWeb.API.Repository
 
         #region Transaction Handler methods
         //TODO : For getting Transaction data
-        public dynamic Transaction_Summary(string userId, string type, string FromDate, string ToDate)
+        public dynamic Transaction_Summary(string userId, string tradeType, string type, string FromDate, string ToDate)
         {
             string strsql;
-            if (type.ToUpper() == "2")
+            if (tradeType == "1")
             {
-                strsql = Transaction_Trade_Datewise(userId, FromDate, ToDate);
+                if (type == "2")
+                {
+                    strsql = Transaction_Trade_Datewise(userId, FromDate, ToDate);
+                }
+                else
+                {
+                    strsql = Transaction_Trade_Itemwise(userId, FromDate, ToDate);
+                }
             }
             else
             {
-                strsql = Transaction_Trade_Itemwise(userId, FromDate, ToDate);
+                strsql = BindGridDPHolding(userId, tradeType, type, FromDate, ToDate);
             }
+
 
             try
             {
@@ -392,7 +400,7 @@ namespace TradeWeb.API.Repository
                 strsql = " select '" + type + "' Type,ld_documentno DocumentNo, ltrim(rtrim(convert(char,convert(datetime,ld_dt),103))) Date , ld_Particular Particular, ld_Chequeno Chequeno,";
                 strsql = strsql + "convert(decimal(15,2),case ld_documenttype When 'R' Then (-1) else 1 end*ld_amount)  Amount from ledger with (nolock)";
                 strsql = strsql + "where ld_documenttype=";
-                if (type.ToLower() == "receipts")
+                if (type.ToLower() == "1")
                 {
                     strsql = strsql + "'R'";
                 }
@@ -879,23 +887,23 @@ namespace TradeWeb.API.Repository
 
         }
 
-        private void BindGridDPHolding(string cm_cd, string Trade_Type, String Select_Type, string FromDate, string ToDate)
+        private string BindGridDPHolding(string cm_cd, string Trade_Type, String Select_Type, string FromDate, string ToDate)
         {
-            if (Trade_Type == "Trades" || Trade_Type == "Deliveries")
+            string strSql = "";
+            if (Select_Type == "1")
             {
-                if (Select_Type == "0")
-                {
-                    ShowItemWiseDPHolding(cm_cd, Trade_Type, Select_Type, FromDate, ToDate);
-                }
-                else
-                {
-                    ShowDateWiseDPHolding(cm_cd, Trade_Type, Select_Type, FromDate, ToDate);
-                }
+                strSql = ShowItemWiseDPHolding(cm_cd, Trade_Type, Select_Type, FromDate, ToDate);
             }
+            else
+            {
+                strSql = ShowDateWiseDPHolding(cm_cd, Trade_Type, Select_Type, FromDate, ToDate);
+            }
+            return strSql;
         }
 
-        private void ShowItemWiseDPHolding(string cm_cd, string Trade_Type, string Select_Type, string FromDate, string ToDate)
+        private string ShowItemWiseDPHolding(string cm_cd, string Trade_Type, string Select_Type, string FromDate, string ToDate)
         {
+            string strSql = "";
             if (_configuration["IsTradeWeb"] == "O") //liveDB
             {
                 if (_configuration["Estro"] != "" && _configuration["Cross"] != "")
@@ -905,21 +913,23 @@ namespace TradeWeb.API.Repository
                     dt = objUtility.OpenDataSet(strsql);
                     strConnecton = dt.Tables[0].Rows[0][0].ToString().Trim();
                     if (Strings.Left(strConnecton, 2) == "IN")
-                    { GetEstroItemWiseDPHolding(cm_cd, FromDate, ToDate); }
-                    else { GetCrossItemWiseDPHolding(cm_cd, FromDate, ToDate); }
+                    { strSql = GetEstroItemWiseDPHolding(cm_cd, FromDate, ToDate); }
+                    else { strSql = GetCrossItemWiseDPHolding(cm_cd, FromDate, ToDate); }
                 }
                 else
                 {
                     if (_configuration["Estro"] != "")
-                        GetEstroItemWiseDPHolding(cm_cd, FromDate, ToDate);
+                        strSql = GetEstroItemWiseDPHolding(cm_cd, FromDate, ToDate);
                     if (_configuration["Cross"] != "")
-                        GetCrossItemWiseDPHolding(cm_cd, FromDate, ToDate);
+                        strSql = GetCrossItemWiseDPHolding(cm_cd, FromDate, ToDate);
                 }
             }
+            return strSql;
         }
 
-        private void ShowDateWiseDPHolding(string cm_cd, string Trade_Type, string Select_Type, string FromDate, string ToDate)
+        private string ShowDateWiseDPHolding(string cm_cd, string Trade_Type, string Select_Type, string FromDate, string ToDate)
         {
+            string strSql = "";
             DataSet dt = new DataSet();
             string strConnecton = string.Empty;
             if (_configuration["IsTradeWeb"] == "O") //liveDB
@@ -930,34 +940,34 @@ namespace TradeWeb.API.Repository
                 if (_configuration["Estro"] != "" && _configuration["Cross"] != "")
                 {
                     if (Strings.Left(strConnecton, 2) == "IN")
-                    { GetEstroDateWiseDPHolding(cm_cd, FromDate, ToDate); }
+                    { strSql = GetEstroDateWiseDPHolding(cm_cd, FromDate, ToDate); }
                     else
-                    { GetCrossDateWiseDPHolding(cm_cd, FromDate, ToDate); }
+                    { strSql = GetCrossDateWiseDPHolding(cm_cd, FromDate, ToDate); }
 
                 }
                 else
                 {
                     if (_configuration["Estro"] != "")
-                        GetEstroDateWiseDPHolding(cm_cd, FromDate, ToDate);
+                        strSql = GetEstroDateWiseDPHolding(cm_cd, FromDate, ToDate);
                     if (_configuration["Cross"] != "")
-                        GetCrossDateWiseDPHolding(cm_cd, FromDate, ToDate);
+                        strSql = GetCrossDateWiseDPHolding(cm_cd, FromDate, ToDate);
                 }
             }
             else //tradeweb  
             {
-                strsql = "  select convert (char,convert(datetime,td_trxdate),103) td_trxdate,td_reference, sc_isinname , td_isin_code as ISINCode, ";
-                strsql += "da_name + '  [ '+ td_dpid+td_ac_code +' ]' as DPID,";
-                strsql += "Case td_debit_credit  when 'D' then cast((td_qty)as decimal(15,0)) else 0 end  'Debit', ";
-                strsql += "Case td_debit_credit  when 'C' then cast((td_qty)as decimal(15,0)) else 0 end  'Credit',";
-                strsql += "bt_description as acdesc ,td_isin_code, isnull((select sum(case td_debit_credit when 'C' then td_qty else td_qty * (-1) end) ";
-                strsql += "From trxweb with (nolock) Where td_ac_code = a.td_ac_code and td_dpid = a.td_dpid and td_isin_code = a.td_isin_code ";
-                strsql += "and  td_ac_type = a.td_ac_type   and td_trxdate <    '" + FromDate + "'),0) 'holding',td_ac_code from trxweb a with (nolock) ,";
-                strsql += "Security with (nolock),Client_master with (nolock),Beneficiary_type with (nolock),DematAct with(nolock) ";
-                strsql += "where td_isin_code = sc_isincode  And td_ac_type = bt_code  and td_trxdate between  '" + FromDate + "' and '" + ToDate + "'";
-                strsql += "and td_dpid+td_ac_code =  da_actno and da_clientcd = cm_cd and cm_cd = '" + cm_cd + "'  ";
-                strsql += "Order By DPID,convert(datetime,td_trxdate) ,sc_company_name, sc_isinname, td_isin_code, td_ac_type,td_debit_credit ";
+                strSql = "  select convert (char,convert(datetime,td_trxdate),103) td_trxdate,td_reference, sc_isinname , td_isin_code as ISINCode, ";
+                strSql += "da_name + '  [ '+ td_dpid+td_ac_code +' ]' as DPID,";
+                strSql += "Case td_debit_credit  when 'D' then cast((td_qty)as decimal(15,0)) else 0 end  'Debit', ";
+                strSql += "Case td_debit_credit  when 'C' then cast((td_qty)as decimal(15,0)) else 0 end  'Credit',";
+                strSql += "bt_description as acdesc ,td_isin_code, isnull((select sum(case td_debit_credit when 'C' then td_qty else td_qty * (-1) end) ";
+                strSql += "From trxweb with (nolock) Where td_ac_code = a.td_ac_code and td_dpid = a.td_dpid and td_isin_code = a.td_isin_code ";
+                strSql += "and  td_ac_type = a.td_ac_type   and td_trxdate <    '" + FromDate + "'),0) 'holding',td_ac_code from trxweb a with (nolock) ,";
+                strSql += "Security with (nolock),Client_master with (nolock),Beneficiary_type with (nolock),DematAct with(nolock) ";
+                strSql += "where td_isin_code = sc_isincode  And td_ac_type = bt_code  and td_trxdate between  '" + FromDate + "' and '" + ToDate + "'";
+                strSql += "and td_dpid+td_ac_code =  da_actno and da_clientcd = cm_cd and cm_cd = '" + cm_cd + "'  ";
+                strSql += "Order By DPID,convert(datetime,td_trxdate) ,sc_company_name, sc_isinname, td_isin_code, td_ac_type,td_debit_credit ";
             }
-            return;
+            return strSql;
         }
 
 
@@ -1012,91 +1022,103 @@ namespace TradeWeb.API.Repository
 
         }
 
-        private void GetEstroDateWiseDPHolding(string cm_cd, string FromDate, string ToDate)
+        private string GetEstroDateWiseDPHolding(string cm_cd, string FromDate, string ToDate)
         {
+            string strSql = "";
             char[] ArrSeparators = new char[1];
             ArrSeparators[0] = '/';
             string[] ArrEstro = _configuration["Estro"].Split(ArrSeparators);
-            strsql = "select convert (char,convert(datetime,td_trxdate),103) td_trxdate,td_reference, sc_company_name as 'sc_isinname' , td_isin_code as ISINCode, ";
-            strsql += "da_name + '  [ ' + td_ac_code + ' ]' as DPID,";
-            strsql += "Case td_debit_credit  when 'D' then cast((td_qty)as decimal(15,0)) else 0 end  'Debit', ";
-            strsql += "Case td_debit_credit  when 'C' then cast((td_qty)as decimal(15,0)) else 0 end  'Credit',";
-            strsql += "bt_description as acdesc ,td_isin_code, isnull((select sum(case td_debit_credit when 'C' then td_qty else td_qty * (-1) end) ";
-            strsql += "From " + ArrEstro[0].Trim() + "." + ArrEstro[1].Trim() + "." + ArrEstro[2].Trim() + ".TrxDetail with (nolock) Where td_ac_code = a.td_ac_code and td_isin_code = a.td_isin_code ";
-            strsql += "and  td_ac_type = a.td_ac_type   and td_trxdate <    '" + FromDate + "'),0) 'holding',td_ac_code from " + ArrEstro[0].Trim() + "." + ArrEstro[1].Trim() + "." + ArrEstro[2].Trim() + ".TrxDetail a with (nolock) ,";
-            strsql += " DematAct with(nolock) , " + ArrEstro[0].Trim() + "." + ArrEstro[1].Trim() + "." + ArrEstro[2].Trim() + ".Security   with (nolock),Client_master with (nolock), " + ArrEstro[0].Trim() + "." + ArrEstro[1].Trim() + "." + ArrEstro[2].Trim() + ".Beneficiary_type  with (nolock),";
-            strsql += " " + ArrEstro[0].Trim() + "." + ArrEstro[1].Trim() + "." + ArrEstro[2].Trim() + ".sysParameter   with (nolock)";
-            strsql += "where td_isin_code = sc_isincode  And td_ac_type = bt_code  and td_trxdate between  '" + FromDate + "' and '" + ToDate + "'";
-            strsql += "and td_ac_code = da_actno and da_clientcd = cm_cd and da_DPId = sp_sysValue  and sp_parmcd = 'DPID'     and cm_cd = '" + cm_cd + "'  ";
-            strsql += "Order By DPID,convert(datetime,td_trxdate) ,sc_company_name,td_isin_code, td_ac_type,td_debit_credit ";
+            strSql = "select convert (char,convert(datetime,td_trxdate),103) td_trxdate,td_reference, sc_company_name as 'sc_isinname' , td_isin_code as ISINCode, ";
+            strSql += "da_name + '  [ ' + td_ac_code + ' ]' as DPID,";
+            strSql += "Case td_debit_credit  when 'D' then cast((td_qty)as decimal(15,0)) else 0 end  'Debit', ";
+            strSql += "Case td_debit_credit  when 'C' then cast((td_qty)as decimal(15,0)) else 0 end  'Credit',";
+            strSql += "bt_description as acdesc ,td_isin_code, isnull((select sum(case td_debit_credit when 'C' then td_qty else td_qty * (-1) end) ";
+            strSql += "From " + ArrEstro[0].Trim() + "." + ArrEstro[1].Trim() + "." + ArrEstro[2].Trim() + ".TrxDetail with (nolock) Where td_ac_code = a.td_ac_code and td_isin_code = a.td_isin_code ";
+            strSql += "and  td_ac_type = a.td_ac_type   and td_trxdate <    '" + FromDate + "'),0) 'holding',td_ac_code from " + ArrEstro[0].Trim() + "." + ArrEstro[1].Trim() + "." + ArrEstro[2].Trim() + ".TrxDetail a with (nolock) ,";
+            strSql += " DematAct with(nolock) , " + ArrEstro[0].Trim() + "." + ArrEstro[1].Trim() + "." + ArrEstro[2].Trim() + ".Security   with (nolock),Client_master with (nolock), " + ArrEstro[0].Trim() + "." + ArrEstro[1].Trim() + "." + ArrEstro[2].Trim() + ".Beneficiary_type  with (nolock),";
+            strSql += " " + ArrEstro[0].Trim() + "." + ArrEstro[1].Trim() + "." + ArrEstro[2].Trim() + ".sysParameter   with (nolock)";
+            strSql += "where td_isin_code = sc_isincode  And td_ac_type = bt_code  and td_trxdate between  '" + FromDate + "' and '" + ToDate + "'";
+            strSql += "and td_ac_code = da_actno and da_clientcd = cm_cd and da_DPId = sp_sysValue  and sp_parmcd = 'DPID'     and cm_cd = '" + cm_cd + "'  ";
+            strSql += "Order By DPID,convert(datetime,td_trxdate) ,sc_company_name,td_isin_code, td_ac_type,td_debit_credit ";
+            
+            return strSql;
         }
 
-        private void GetEstroItemWiseDPHolding(string cm_cd, string FromDate, string ToDate)
+        private string GetEstroItemWiseDPHolding(string cm_cd, string FromDate, string ToDate)
         {
+            string strSql = "";
             char[] ArrSeparators = new char[1];
             ArrSeparators[0] = '/';
             string[] ArrEstro = _configuration["Estro"].Split(ArrSeparators);
-            strsql = " select convert (char,convert(datetime,td_trxdate),103) td_trxdate,td_reference, sc_company_name + '   [ ' + td_isin_code + ' ]' ISINCode,";
-            strsql += " da_name + '  [ '+td_ac_code +' ]' as DPID,cm_cd, td_ac_code,da_name, isnull((select sum(case td_debit_credit when 'C' then td_qty else td_qty * (-1) end) From";
-            strsql += " " + ArrEstro[0].Trim() + "." + ArrEstro[1].Trim() + "." + ArrEstro[2].Trim() + ".TrxDetail with (nolock)";
-            strsql += " Where td_ac_code = a.td_ac_code  and td_isin_code = a.td_isin_code  ";
-            strsql += " and  td_ac_type = a.td_ac_type   and td_trxdate <  '" + FromDate + "'),0) 'holding',";
-            strsql += " case Rtrim(td_settlement) when '' Then '' else ' / '+ td_settlement End 'td_text',";
-            strsql += " Case td_debit_credit  when 'D' then cast((td_qty)as decimal(15,0)) else 0 end  'Debit', ";
-            strsql += " Case td_debit_credit  when 'C' then cast((td_qty)as decimal(15,0)) else 0 end  'Credit',";
-            strsql += " '0' 'Balance',td_qty,td_ac_type,bt_description as acdesc ,td_isin_code,";
-            strsql += " td_ac_code,cm_name 'Boid',  td_narration,td_description,td_beneficiery,td_settlement ,td_debit_credit,td_counterdp,td_market_type ,td_booking_type,td_clear_corpn,td_countercmbpid ,mt_description from " + ArrEstro[0].Trim() + "." + ArrEstro[1].Trim() + "." + ArrEstro[2].Trim() + ".TrxDetail a with (nolock) ,";
-            strsql += " " + ArrEstro[0].Trim() + "." + ArrEstro[1].Trim() + "." + ArrEstro[2].Trim() + ".Security with (nolock),Client_master with (nolock), ";
-            strsql += " " + ArrEstro[0].Trim() + "." + ArrEstro[1].Trim() + "." + ArrEstro[2].Trim() + ".Beneficiary_type  with (nolock),DematAct with(nolock) ,";
-            strsql += " " + ArrEstro[0].Trim() + "." + ArrEstro[1].Trim() + "." + ArrEstro[2].Trim() + ".sysParameter   with (nolock), ";
-            strsql += " " + ArrEstro[0].Trim() + "." + ArrEstro[1].Trim() + "." + ArrEstro[2].Trim() + ".market_type   with (nolock)";
-            strsql += " where td_isin_code = sc_isincode  And td_ac_type = bt_code and (td_market_type = mt_code and ltrim(rtrim(isnull(td_clear_corpn,''))) = ltrim(rtrim(mt_ccid)))";
-            strsql += " and td_trxdate between  '" + FromDate + "' and '" + ToDate + "'";
-            strsql += " and td_ac_code =  da_actno and da_clientcd = cm_cd and da_DPId = sp_sysValue  and sp_parmcd = 'DPID'";
-            strsql += " and cm_cd = '" + cm_cd + "'  ";
-            strsql += " Order By cm_cd ,da_name, sc_company_name, td_isin_code, td_ac_type,convert(datetime,td_trxdate) ,td_debit_credit ";
+            strSql = " select convert (char,convert(datetime,td_trxdate),103) td_trxdate,td_reference, sc_company_name + '   [ ' + td_isin_code + ' ]' ISINCode,";
+            strSql += " da_name + '  [ '+td_ac_code +' ]' as DPID,cm_cd, td_ac_code,da_name, isnull((select sum(case td_debit_credit when 'C' then td_qty else td_qty * (-1) end) From";
+            strSql += " " + ArrEstro[0].Trim() + "." + ArrEstro[1].Trim() + "." + ArrEstro[2].Trim() + ".TrxDetail with (nolock)";
+            strSql += " Where td_ac_code = a.td_ac_code  and td_isin_code = a.td_isin_code  ";
+            strSql += " and  td_ac_type = a.td_ac_type   and td_trxdate <  '" + FromDate + "'),0) 'holding',";
+            strSql += " case Rtrim(td_settlement) when '' Then '' else ' / '+ td_settlement End 'td_text',";
+            strSql += " Case td_debit_credit  when 'D' then cast((td_qty)as decimal(15,0)) else 0 end  'Debit', ";
+            strSql += " Case td_debit_credit  when 'C' then cast((td_qty)as decimal(15,0)) else 0 end  'Credit',";
+            strSql += " '0' 'Balance',td_qty,td_ac_type,bt_description as acdesc ,td_isin_code,";
+            strSql += " td_ac_code,cm_name 'Boid',  td_narration,td_description,td_beneficiery,td_settlement ,td_debit_credit,td_counterdp,td_market_type ,td_booking_type,td_clear_corpn,td_countercmbpid ,mt_description from " + ArrEstro[0].Trim() + "." + ArrEstro[1].Trim() + "." + ArrEstro[2].Trim() + ".TrxDetail a with (nolock) ,";
+            strSql += " " + ArrEstro[0].Trim() + "." + ArrEstro[1].Trim() + "." + ArrEstro[2].Trim() + ".Security with (nolock),Client_master with (nolock), ";
+            strSql += " " + ArrEstro[0].Trim() + "." + ArrEstro[1].Trim() + "." + ArrEstro[2].Trim() + ".Beneficiary_type  with (nolock),DematAct with(nolock) ,";
+            strSql += " " + ArrEstro[0].Trim() + "." + ArrEstro[1].Trim() + "." + ArrEstro[2].Trim() + ".sysParameter   with (nolock), ";
+            strSql += " " + ArrEstro[0].Trim() + "." + ArrEstro[1].Trim() + "." + ArrEstro[2].Trim() + ".market_type   with (nolock)";
+            strSql += " where td_isin_code = sc_isincode  And td_ac_type = bt_code and (td_market_type = mt_code and ltrim(rtrim(isnull(td_clear_corpn,''))) = ltrim(rtrim(mt_ccid)))";
+            strSql += " and td_trxdate between  '" + FromDate + "' and '" + ToDate + "'";
+            strSql += " and td_ac_code =  da_actno and da_clientcd = cm_cd and da_DPId = sp_sysValue  and sp_parmcd = 'DPID'";
+            strSql += " and cm_cd = '" + cm_cd + "'  ";
+            strSql += " Order By cm_cd ,da_name, sc_company_name, td_isin_code, td_ac_type,convert(datetime,td_trxdate) ,td_debit_credit ";
+
+            return strSql;
         }
 
-        private void GetCrossDateWiseDPHolding(string cm_cd, string FromDate, string ToDate)
+        private string GetCrossDateWiseDPHolding(string cm_cd, string FromDate, string ToDate)
         {
+            string strSql = "";
             char[] ArrSeparators = new char[1];
             ArrSeparators[0] = '/';
             string[] ArrCross = _configuration["Cross"].Split(ArrSeparators);
-            strsql = "    select convert (char,convert(datetime,td_trxdate),103) td_trxdate,td_reference, sc_isinname , td_isin_code as ISINCode, ";
-            strsql += "da_name + '  [ ' + td_ac_code + ' ]' as DPID,";
-            strsql += "Case td_debit_credit  when 'D' then cast((td_qty)as decimal(15,0)) else 0 end  'Debit', ";
-            strsql += "Case td_debit_credit  when 'C' then cast((td_qty)as decimal(15,0)) else 0 end  'Credit',";
-            strsql += "bt_description as acdesc ,td_isin_code, isnull((select sum(case td_debit_credit when 'C' then td_qty else td_qty * (-1) end) ";
-            strsql += "From " + ArrCross[0].Trim() + "." + ArrCross[1].Trim() + "." + ArrCross[2].Trim() + ".TrxDetail with (nolock) Where td_ac_code = a.td_ac_code and td_isin_code = a.td_isin_code ";
-            strsql += "and  td_ac_type = a.td_ac_type   and td_trxdate <    '" + FromDate + "'),0) 'holding',td_ac_code from " + ArrCross[0].Trim() + "." + ArrCross[1].Trim() + "." + ArrCross[2].Trim() + ".TrxDetail a with (nolock) ,";
-            strsql += " " + ArrCross[0].Trim() + "." + ArrCross[1].Trim() + "." + ArrCross[2].Trim() + ".Security   with (nolock),Client_master with (nolock), " + ArrCross[0].Trim() + "." + ArrCross[1].Trim() + "." + ArrCross[2].Trim() + ".Beneficiary_type  with (nolock),DematAct with(nolock) ";
-            strsql += "where td_isin_code = sc_isincode  And td_ac_type = bt_code  and td_trxdate between  '" + FromDate + "' and '" + ToDate + "'";
-            strsql += "and td_ac_code = da_actno and da_clientcd = cm_cd and cm_cd = '" + cm_cd + "'  ";
-            strsql += "Order By DPID,convert(datetime,td_trxdate) ,sc_company_name, sc_isinname, td_isin_code, td_ac_type,td_debit_credit ";
+            strSql = "    select convert (char,convert(datetime,td_trxdate),103) td_trxdate,td_reference, sc_isinname , td_isin_code as ISINCode, ";
+            strSql += "da_name + '  [ ' + td_ac_code + ' ]' as DPID,";
+            strSql += "Case td_debit_credit  when 'D' then cast((td_qty)as decimal(15,0)) else 0 end  'Debit', ";
+            strSql += "Case td_debit_credit  when 'C' then cast((td_qty)as decimal(15,0)) else 0 end  'Credit',";
+            strSql += "bt_description as acdesc ,td_isin_code, isnull((select sum(case td_debit_credit when 'C' then td_qty else td_qty * (-1) end) ";
+            strSql += "From " + ArrCross[0].Trim() + "." + ArrCross[1].Trim() + "." + ArrCross[2].Trim() + ".TrxDetail with (nolock) Where td_ac_code = a.td_ac_code and td_isin_code = a.td_isin_code ";
+            strSql += "and  td_ac_type = a.td_ac_type   and td_trxdate <    '" + FromDate + "'),0) 'holding',td_ac_code from " + ArrCross[0].Trim() + "." + ArrCross[1].Trim() + "." + ArrCross[2].Trim() + ".TrxDetail a with (nolock) ,";
+            strSql += " " + ArrCross[0].Trim() + "." + ArrCross[1].Trim() + "." + ArrCross[2].Trim() + ".Security   with (nolock),Client_master with (nolock), " + ArrCross[0].Trim() + "." + ArrCross[1].Trim() + "." + ArrCross[2].Trim() + ".Beneficiary_type  with (nolock),DematAct with(nolock) ";
+            strSql += "where td_isin_code = sc_isincode  And td_ac_type = bt_code  and td_trxdate between  '" + FromDate + "' and '" + ToDate + "'";
+            strSql += "and td_ac_code = da_actno and da_clientcd = cm_cd and cm_cd = '" + cm_cd + "'  ";
+            strSql += "Order By DPID,convert(datetime,td_trxdate) ,sc_company_name, sc_isinname, td_isin_code, td_ac_type,td_debit_credit ";
+
+            return strSql;
         }
 
-        private void GetCrossItemWiseDPHolding(string cm_cd, string FromDate, string ToDate)
+        private string GetCrossItemWiseDPHolding(string cm_cd, string FromDate, string ToDate)
         {
+            string strSql = "";
             char[] ArrSeparators = new char[1];
             ArrSeparators[0] = '/';
             string[] ArrCross = _configuration["Cross"].Split(ArrSeparators);
             DataSet dt = new DataSet();
-            strsql = " select convert (char,convert(datetime,td_trxdate),103) td_trxdate,td_reference, sc_isinname + '   [ ' + td_isin_code + ' ]' ISINCode,";
-            strsql += " da_name + '  [ '+td_ac_code +' ]' as DPID,cm_cd, td_ac_code,da_name,";
-            strsql += " isnull((select sum(case td_debit_credit when 'C' then td_qty else td_qty * (-1) end) From " + ArrCross[0].Trim() + "." + ArrCross[1].Trim() + "." + ArrCross[2].Trim() + ".TrxDetail with (nolock)";
-            strsql += " Where td_ac_code = a.td_ac_code  and td_isin_code = a.td_isin_code  ";
-            strsql += " and  td_ac_type = a.td_ac_type   and td_trxdate <  '" + FromDate + "'),0) 'holding',";
-            strsql += "  ''  'td_text',";
-            strsql += " Case td_debit_credit  when 'D' then cast((td_qty)as decimal(15,0)) else 0 end  'Debit', ";
-            strsql += " Case td_debit_credit  when 'C' then cast((td_qty)as decimal(15,0)) else 0 end  'Credit',";
-            strsql += " '0' 'Balance',td_qty,td_ac_type,bt_description as acdesc ,td_isin_code,";
-            strsql += " td_ac_code,cm_name 'Boid', td_narration,td_description,td_beneficiery,td_settlement ,td_debit_credit,td_counterdp ,td_market_type ";
-            strsql += " from " + ArrCross[0].Trim() + "." + ArrCross[1].Trim() + "." + ArrCross[2].Trim() + ".TrxDetail a with (nolock) ," + ArrCross[0].Trim() + "." + ArrCross[1].Trim() + "." + ArrCross[2].Trim() + ".Security with (nolock),Client_master with (nolock), " + ArrCross[0].Trim() + "." + ArrCross[1].Trim() + "." + ArrCross[2].Trim() + ".Beneficiary_type  with (nolock),DematAct with(nolock)";
-            strsql += " where td_isin_code = sc_isincode  And td_ac_type = bt_code ";
-            strsql += " and td_trxdate between  '" + FromDate + "' and '" + ToDate + "'";
-            strsql += " and td_ac_code =  da_actno and da_clientcd = cm_cd";
-            strsql += " and cm_cd = '" + cm_cd + "'  ";
-            strsql += " Order By cm_cd ,da_name,sc_company_name, sc_isinname, td_isin_code, td_ac_type,convert(datetime,td_trxdate) ,td_debit_credit ";
+            strSql = " select convert (char,convert(datetime,td_trxdate),103) td_trxdate,td_reference, sc_isinname + '   [ ' + td_isin_code + ' ]' ISINCode,";
+            strSql += " da_name + '  [ '+td_ac_code +' ]' as DPID,cm_cd, td_ac_code,da_name,";
+            strSql += " isnull((select sum(case td_debit_credit when 'C' then td_qty else td_qty * (-1) end) From " + ArrCross[0].Trim() + "." + ArrCross[1].Trim() + "." + ArrCross[2].Trim() + ".TrxDetail with (nolock)";
+            strSql += " Where td_ac_code = a.td_ac_code  and td_isin_code = a.td_isin_code  ";
+            strSql += " and  td_ac_type = a.td_ac_type   and td_trxdate <  '" + FromDate + "'),0) 'holding',";
+            strSql += "  ''  'td_text',";
+            strSql += " Case td_debit_credit  when 'D' then cast((td_qty)as decimal(15,0)) else 0 end  'Debit', ";
+            strSql += " Case td_debit_credit  when 'C' then cast((td_qty)as decimal(15,0)) else 0 end  'Credit',";
+            strSql += " '0' 'Balance',td_qty,td_ac_type,bt_description as acdesc ,td_isin_code,";
+            strSql += " td_ac_code,cm_name 'Boid', td_narration,td_description,td_beneficiery,td_settlement ,td_debit_credit,td_counterdp ,td_market_type ";
+            strSql += " from " + ArrCross[0].Trim() + "." + ArrCross[1].Trim() + "." + ArrCross[2].Trim() + ".TrxDetail a with (nolock) ," + ArrCross[0].Trim() + "." + ArrCross[1].Trim() + "." + ArrCross[2].Trim() + ".Security with (nolock),Client_master with (nolock), " + ArrCross[0].Trim() + "." + ArrCross[1].Trim() + "." + ArrCross[2].Trim() + ".Beneficiary_type  with (nolock),DematAct with(nolock)";
+            strSql += " where td_isin_code = sc_isincode  And td_ac_type = bt_code ";
+            strSql += " and td_trxdate between  '" + FromDate + "' and '" + ToDate + "'";
+            strSql += " and td_ac_code =  da_actno and da_clientcd = cm_cd";
+            strSql += " and cm_cd = '" + cm_cd + "'  ";
+            strSql += " Order By cm_cd ,da_name,sc_company_name, sc_isinname, td_isin_code, td_ac_type,convert(datetime,td_trxdate) ,td_debit_credit ";
+
+            return strSql;
         }
         #endregion
 
@@ -8218,7 +8240,7 @@ namespace TradeWeb.API.Repository
             string strHostAdd = Dns.GetHostName();
 
             objUtility.ExecuteSQL("delete from SharesRequest where Rq_Clientcd='" + userId + "' and Rq_Satus1='P'");
-            
+
             strsql = "insert into SharesRequest values ( ";
 
             strsql += " '" + userId + "','" + scripCode + "','" + Conversion.Val(Quantity) + "','" + strHostAdd + "',";

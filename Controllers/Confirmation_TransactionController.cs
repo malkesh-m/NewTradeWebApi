@@ -99,7 +99,7 @@ namespace TradeWeb.API.Controllers
         // TODO : For getting Transaction main form data
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpGet("Transaction_Summary", Name = "Transaction_Summary")]
-        public IActionResult Transaction_Summary([FromQuery] string type, string fromDate, string toDate)
+        public IActionResult Transaction_Summary([FromQuery] string tradeType, string selectType, string fromDate, string toDate)
         {
             if (ModelState.IsValid)
             {
@@ -109,7 +109,7 @@ namespace TradeWeb.API.Controllers
                     var companyCode = tokenS.Claims.First(claim => claim.Type == "companyCode").Value;
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.Transaction_Summary(userId, type, fromDate, toDate);
+                    var getData = _tradeWebRepository.Transaction_Summary(userId, tradeType, selectType, fromDate, toDate);
 
                     if (getData != null)
                     {
