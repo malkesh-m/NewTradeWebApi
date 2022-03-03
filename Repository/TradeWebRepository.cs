@@ -4713,7 +4713,7 @@ namespace TradeWeb.API.Repository
                         strsql = strsql + " gROUP bY sh_stlmnt,rtrim(sh_desc),BDate,td_stlmnt";
                         strsql = strsql.Replace("=@stlmnt", " like '" + Stlmnt + "%'").Replace("@clcd", "'" + userId + "'");
                     }
-                    strsql = " select Stlmnt,ScripCode,OrderID,TradeID,TradeTime,ScripName,Buy,Sell,MarketRate,Brokerage,BuyValue,SellValue,Ordr,tdDt,NetValue from (" + strsql + ") a ";
+                    strsql = " select Stlmnt as Settelment,ScripCode,OrderID,TradeID,TradeTime,ScripName,Buy,Sell,MarketRate,Brokerage,BuyValue,SellValue,Ordr,tdDt as Date,NetValue from (" + strsql + ") a ";
                     strsql = strsql + " Order by Ordr,ScripName,TradeTime ";
                     ObjDataSet = objUtility.OpenDataSet(strsql);
                     if (ObjDataSet.Tables[0].Rows.Count == 0)
@@ -4734,9 +4734,9 @@ namespace TradeWeb.API.Repository
 
                         for (i = 0; i <= ObjDataSet.Tables[0].Rows.Count - 1; i++)
                         {
-                            if (strstlmnt != string.Empty && strstlmnt != ObjDataSet.Tables[0].Rows[i]["Stlmnt"].ToString().Trim())
+                            if (strstlmnt != string.Empty && strstlmnt != ObjDataSet.Tables[0].Rows[i]["Settelment"].ToString().Trim())
                             {
-                                strstlmnt = ObjDataSet.Tables[0].Rows[i]["Stlmnt"].ToString().Trim();
+                                strstlmnt = ObjDataSet.Tables[0].Rows[i]["Settelment"].ToString().Trim();
                                 DataRow ObjRow1 = ObjDataSet.Tables[0].NewRow();
                                 TotalDiff = Math.Round((decimal)(TotalSval - TotalBval), strparmcd == "Y" ? 0 : 2);
                                 if (TotalBval < TotalSval)
@@ -4761,9 +4761,9 @@ namespace TradeWeb.API.Repository
                             }
                             if (strstlmnt == string.Empty)
                             {
-                                strstlmnt = ObjDataSet.Tables[0].Rows[i]["Stlmnt"].ToString().Trim();
+                                strstlmnt = ObjDataSet.Tables[0].Rows[i]["Settelment"].ToString().Trim();
                             }
-                            if (strstlmnt == ObjDataSet.Tables[0].Rows[i]["Stlmnt"].ToString().Trim())
+                            if (strstlmnt == ObjDataSet.Tables[0].Rows[i]["Settelment"].ToString().Trim())
                             {
                                 TotalBval = TotalBval + (decimal)ObjDataSet.Tables[0].Rows[i]["BuyValue"];
                                 TotalSval = TotalSval + (decimal)ObjDataSet.Tables[0].Rows[i]["SellValue"];

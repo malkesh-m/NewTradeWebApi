@@ -660,7 +660,7 @@ namespace TradeWeb.API.Repository
 
                 DataSet objDataset = new DataSet();
 
-                strinsert = " select tx_dt tddt,tx_seriesid seriesid,tx_desc seriesname,tx_bqty buy,tx_sqty sell,tx_marketrate1 Marketrate, tx_rate Rate,tx_closerate CloseRate,drcr,value,NetValue,tx_sortlist SortOrder,tx_billno BillNo from ( " + strinsert + " ) a ";
+                strinsert = " select tx_dt Date,tx_seriesid SeriesId,tx_desc SeriesName,tx_bqty buy,tx_sqty sell,tx_marketrate1 Marketrate, tx_rate Rate,tx_closerate CloseRate,drcr,value,NetValue,tx_sortlist SortOrder,tx_billno BillNo from ( " + strinsert + " ) a ";
                     strinsert += " order by  dt ,tx_sortlist,sm_symbol,tx_seriesid,tx_desc  , ord ";
                 objDataset = OpenDataSetTmp(strinsert, ObjConnectionTmp);
 
@@ -799,7 +799,7 @@ namespace TradeWeb.API.Repository
                 strsql = strsql + " where tx_clientcd = cm_cd  and tx_controlflag >= 10 and cm_brboffcode <> ''";
                 DataSet objDataset = new DataSet();
 
-                strsql = " select tx_dt tddt,tx_seriesid seriesid,tx_desc seriesname,tx_bqty buy,tx_sqty sell,tx_marketrate Marketrate, tx_rate Rate,tx_closerate CloseRate,drcr,value,NetValue,tx_sortlist SortOrder,tx_billno BillNo from ( " + strsql + " ) a ";
+                strsql = " select tx_dt Date,tx_seriesid SeriesId,tx_desc SeriesName,tx_bqty Buy,tx_sqty Sell,tx_marketrate MarketRate, tx_rate Rate,tx_closerate CloseRate,drcr,value,NetValue,tx_sortlist SortOrder,tx_billno BillNo from ( " + strsql + " ) a ";
                 strsql += " order by  dt ,tx_sortlist,sm_symbol,tx_seriesid,tx_desc  , ord ";
 
                 objDataset = OpenDataSetTmp(strsql, ObjConnectionTmp);
