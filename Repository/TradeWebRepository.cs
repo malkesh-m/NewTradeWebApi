@@ -47,6 +47,8 @@ namespace TradeWeb.API.Repository
 
         public dynamic Ledger_Year();
 
+        public dynamic Ledger_Type();
+
         public dynamic Ledger_Detail(string userId, LedgerDetailsModel model, string fromDate, string toDate);
 
         public dynamic OutStandingPosition(string userId, string AsOnDt);
@@ -1825,6 +1827,20 @@ namespace TradeWeb.API.Repository
             {
                 throw ex;
             }
+        }
+
+        public dynamic Ledger_Type()
+        {
+            List<LedgerTypeResponse> ledgerTypes = new List<LedgerTypeResponse>
+            {
+                new LedgerTypeResponse { Id = 0, Value = "Selected" },
+                new LedgerTypeResponse { Id = 1, Value = "Trading"},
+                new LedgerTypeResponse { Id = 2, Value = "Commodity"},
+                new LedgerTypeResponse { Id = 3, Value = "MTF"},
+                new LedgerTypeResponse { Id = 4, Value = "NBFC"},
+            };
+
+            return ledgerTypes;
         }
         #endregion
 

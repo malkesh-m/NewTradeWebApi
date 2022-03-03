@@ -316,7 +316,32 @@ namespace TradeWeb.API.Controllers
             return BadRequest();
         }
 
-
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpPost("Ledger_Type", Name = "Ledger_Type")]
+        public IActionResult Ledger_Type()
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    
+                    var getData = _tradeWebRepository.Ledger_Type();
+                    if (getData != null)
+                    {
+                        return Ok(getData);
+                    }
+                    else
+                    {
+                        return NotFound("records not found");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(ex.Message.ToString());
+                }
+            }
+            return BadRequest();
+        }
 
         #endregion
 
