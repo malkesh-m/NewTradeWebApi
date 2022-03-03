@@ -4860,8 +4860,8 @@ namespace TradeWeb.API.Repository
                                     strCharges = "Charges";
 
                                     DataRow ObjRow1 = ObjDataSet.Tables[0].NewRow();
-                                    ObjRow1["seriesname"] = "Value Before Adding Charges :";
-                                    ObjRow1["tddt"] = ObjDataSet.Tables[0].Rows[i]["tddt"].ToString().Trim();
+                                    ObjRow1["SeriesName"] = "Value Before Adding Charges :";
+                                    ObjRow1["Date"] = ObjDataSet.Tables[0].Rows[i]["Date"].ToString().Trim();
                                     ObjRow1["NetValue"] = objUtility.mfnFormatCurrency(TotalDrCr, 2);
                                     ObjDataSet.Tables[0].Rows.InsertAt(ObjRow1, i);
                                     i = i + 1;
@@ -4871,7 +4871,7 @@ namespace TradeWeb.API.Repository
                         }
                         DataRow ObjRow2 = ObjDataSet.Tables[0].NewRow();
 
-                        ObjRow2["tddt"] = ObjDataSet.Tables[0].Rows[ObjDataSet.Tables[0].Rows.Count - 1]["tddt"].ToString().Trim();
+                        ObjRow2["Date"] = ObjDataSet.Tables[0].Rows[ObjDataSet.Tables[0].Rows.Count - 1]["Date"].ToString().Trim();
                         ObjRow2["NetValue"] = objUtility.mfnFormatCurrency(TotalDrCr, 2);
                         ObjDataSet.Tables[0].Rows.InsertAt(ObjRow2, ObjDataSet.Tables[0].Rows.Count);
                         ObjDataSet.AcceptChanges();
