@@ -1050,7 +1050,7 @@ namespace TradeWeb.API.Repository
             char[] ArrSeparators = new char[1];
             ArrSeparators[0] = '/';
             string[] ArrEstro = _configuration["Estro"].Split(ArrSeparators);
-            strSql = " select convert (char,convert(datetime,td_trxdate),103) td_trxdate,td_reference, sc_company_name + '   [ ' + td_isin_code + ' ]' ISINCode,";
+            strSql = " select td_trxdate as Date, td_reference, sc_company_name + '   [ ' + td_isin_code + ' ]' ISINCode,";
             strSql += " da_name + '  [ '+td_ac_code +' ]' as DPID,cm_cd, td_ac_code,da_name, isnull((select sum(case td_debit_credit when 'C' then td_qty else td_qty * (-1) end) From";
             strSql += " " + ArrEstro[0].Trim() + "." + ArrEstro[1].Trim() + "." + ArrEstro[2].Trim() + ".TrxDetail with (nolock)";
             strSql += " Where td_ac_code = a.td_ac_code  and td_isin_code = a.td_isin_code  ";
@@ -1079,17 +1079,14 @@ namespace TradeWeb.API.Repository
             char[] ArrSeparators = new char[1];
             ArrSeparators[0] = '/';
             string[] ArrCross = _configuration["Cross"].Split(ArrSeparators);
-            strSql = "    select convert (char,convert(datetime,td_trxdate),103) td_trxdate,td_reference, sc_isinname , td_isin_code as ISINCode, ";
-            strSql += "da_name + '  [ ' + td_ac_code + ' ]' as DPID,";
+            strSql = " select td_trxdate as Date, td_isin_code as ISIN, sc_isinname as SecurityDescription, ";
             strSql += "Case td_debit_credit  when 'D' then cast((td_qty)as decimal(15,0)) else 0 end  'Debit', ";
-            strSql += "Case td_debit_credit  when 'C' then cast((td_qty)as decimal(15,0)) else 0 end  'Credit',";
-            strSql += "bt_description as acdesc ,td_isin_code, isnull((select sum(case td_debit_credit when 'C' then td_qty else td_qty * (-1) end) ";
-            strSql += "From " + ArrCross[0].Trim() + "." + ArrCross[1].Trim() + "." + ArrCross[2].Trim() + ".TrxDetail with (nolock) Where td_ac_code = a.td_ac_code and td_isin_code = a.td_isin_code ";
-            strSql += "and  td_ac_type = a.td_ac_type   and td_trxdate <    '" + FromDate + "'),0) 'holding',td_ac_code from " + ArrCross[0].Trim() + "." + ArrCross[1].Trim() + "." + ArrCross[2].Trim() + ".TrxDetail a with (nolock) ,";
+            strSql += "Case td_debit_credit  when 'C' then cast((td_qty)as decimal(15,0)) else 0 end  'Credit'";
+            strSql += " from " + ArrCross[0].Trim() + "." + ArrCross[1].Trim() + "." + ArrCross[2].Trim() + ".TrxDetail a with (nolock) ,";
             strSql += " " + ArrCross[0].Trim() + "." + ArrCross[1].Trim() + "." + ArrCross[2].Trim() + ".Security   with (nolock),Client_master with (nolock), " + ArrCross[0].Trim() + "." + ArrCross[1].Trim() + "." + ArrCross[2].Trim() + ".Beneficiary_type  with (nolock),DematAct with(nolock) ";
             strSql += "where td_isin_code = sc_isincode  And td_ac_type = bt_code  and td_trxdate between  '" + FromDate + "' and '" + ToDate + "'";
             strSql += "and td_ac_code = da_actno and da_clientcd = cm_cd and cm_cd = '" + cm_cd + "'  ";
-            strSql += "Order By DPID,convert(datetime,td_trxdate) ,sc_company_name, sc_isinname, td_isin_code, td_ac_type,td_debit_credit ";
+            strSql += "Order By convert(datetime,td_trxdate) , sc_isinname, td_isin_code, td_ac_type,td_debit_credit ";
 
             return strSql;
         }
@@ -1101,22 +1098,17 @@ namespace TradeWeb.API.Repository
             ArrSeparators[0] = '/';
             string[] ArrCross = _configuration["Cross"].Split(ArrSeparators);
             DataSet dt = new DataSet();
-            strSql = " select convert (char,convert(datetime,td_trxdate),103) td_trxdate,td_reference, sc_isinname + '   [ ' + td_isin_code + ' ]' ISINCode,";
-            strSql += " da_name + '  [ '+td_ac_code +' ]' as DPID,cm_cd, td_ac_code,da_name,";
-            strSql += " isnull((select sum(case td_debit_credit when 'C' then td_qty else td_qty * (-1) end) From " + ArrCross[0].Trim() + "." + ArrCross[1].Trim() + "." + ArrCross[2].Trim() + ".TrxDetail with (nolock)";
-            strSql += " Where td_ac_code = a.td_ac_code  and td_isin_code = a.td_isin_code  ";
-            strSql += " and  td_ac_type = a.td_ac_type   and td_trxdate <  '" + FromDate + "'),0) 'holding',";
-            strSql += "  ''  'td_text',";
+            strSql = " select td_trxdate as Date,td_reference as TrxNo,";
             strSql += " Case td_debit_credit  when 'D' then cast((td_qty)as decimal(15,0)) else 0 end  'Debit', ";
             strSql += " Case td_debit_credit  when 'C' then cast((td_qty)as decimal(15,0)) else 0 end  'Credit',";
-            strSql += " '0' 'Balance',td_qty,td_ac_type,bt_description as acdesc ,td_isin_code,";
-            strSql += " td_ac_code,cm_name 'Boid', td_narration,td_description,td_beneficiery,td_settlement ,td_debit_credit,td_counterdp ,td_market_type ";
+            strSql += " '0' 'Balance',";
+            strSql += " td_description as Description,td_beneficiery as Beneficiery,td_settlement as Settlment ";
             strSql += " from " + ArrCross[0].Trim() + "." + ArrCross[1].Trim() + "." + ArrCross[2].Trim() + ".TrxDetail a with (nolock) ," + ArrCross[0].Trim() + "." + ArrCross[1].Trim() + "." + ArrCross[2].Trim() + ".Security with (nolock),Client_master with (nolock), " + ArrCross[0].Trim() + "." + ArrCross[1].Trim() + "." + ArrCross[2].Trim() + ".Beneficiary_type  with (nolock),DematAct with(nolock)";
             strSql += " where td_isin_code = sc_isincode  And td_ac_type = bt_code ";
             strSql += " and td_trxdate between  '" + FromDate + "' and '" + ToDate + "'";
             strSql += " and td_ac_code =  da_actno and da_clientcd = cm_cd";
             strSql += " and cm_cd = '" + cm_cd + "'  ";
-            strSql += " Order By cm_cd ,da_name,sc_company_name, sc_isinname, td_isin_code, td_ac_type,convert(datetime,td_trxdate) ,td_debit_credit ";
+            strSql += " Order By cm_cd ,da_name,convert(datetime, td_trxdate) ";
 
             return strSql;
         }
