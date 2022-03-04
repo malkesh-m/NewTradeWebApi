@@ -184,6 +184,8 @@ namespace TradeWeb.API.Repository
         public dynamic DigitalDocument_File(string docType, string date, string srNo);
 
         public dynamic ProfitLoss_Combined(string userId, string fromDate, string toDate, string exchange, string segment);
+
+        public dynamic Transaction_Trade_MF(string userId, string fromDate, string toDate);
     }
 
     public class TradeWebRepository : ITradeWebRepository
@@ -595,11 +597,11 @@ namespace TradeWeb.API.Repository
             return strsql;
         }
 
-        private void Transaction_Trade_MF(string userId, string fromDate, string toDate)
+        public dynamic Transaction_Trade_MF(string userId, string fromDate, string toDate)
         {
             string strSql = "";
 
-            strSql = "select MTd_srno,ltrim(rtrim(convert(char,convert(datetime,MTd_dt),103))) MTd_dt, MTd_ISIN , MTd_Bqty,MTd_Sqty,MTd_Rate,cast(Mtd_MarketRate as decimal(15,4)) Mtd_MarketRate,MTd_Brokerage,MTd_OrderDt,MTd_OrderTime,MTd_TerminalCd,MTd_Billdt,";
+            strSql = "select MTd_srno, MTd_dt, MTd_ISIN , MTd_Bqty,MTd_Sqty,MTd_Rate,cast(Mtd_MarketRate as decimal(15,4)) Mtd_MarketRate,MTd_Brokerage,MTd_OrderDt,MTd_OrderTime,MTd_TerminalCd,MTd_Billdt,";
             strSql += "case When MTd_Exchange = 'B' Then MFS_BSchemeName else MFS_NSchemeName End SchemeName,MTd_OldClientcd,";
             strSql += "case when Mtd_MarketRate=0 then 0 else (mtd_Brokerage*100)/Mtd_MarketRate End Brokper,mtd_broktype,MTd_FolioNumber,MTd_Stlmnt,";
             strSql += "((mtd_bqty+mtd_sqty)*mtd_Brokerage) as Brokerage,cm_name,cm_cd,Mtd_marginyn,cast(((MTd_Sqty-MTd_Bqty) * MTd_Rate) as decimal(15,2)) Value ";
@@ -608,8 +610,27 @@ namespace TradeWeb.API.Repository
             strSql += " and cm_brboffcode = bm_branchcd ";
             strSql += " and cm_groupcd = a.gr_cd and cm_familycd  = fm_cd ";
             strSql += " and MTd_ClientCd = '" + userId + "'";
-            strSql += " order by MTd_dt,MFS_NSchemeName";
-            DataSet dt = new DataSet();
+            
+
+            strSql = "select MTd_dt as Date,MTd_ISIN as ISIN, SchemeName, MTd_Bqty as BoughtQty, MTd_Sqty as SoldQty, MTd_Rate as Rate, Value as Amount  from (" + strSql +") a";
+            strSql += " order by MTd_dt,SchemeName";
+            try
+            {
+                var ds = CommonRepository.FillDataset(strSql);
+                if (ds != null)
+                {
+                    if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                    {
+                        var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
+                        return json;
+                    }
+                }
+                return new List<string>();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
         }
 
         public dynamic Transaction_AGTS(string userId, string seg, string fromDate, string toDate)

@@ -1,0 +1,16 @@
+userId - mg040
+pass - 12345
+==============================
+userId - jp2206
+pass - 34117
+==============================
+Request shared data
+
+userId - bn522
+pass - 12345
+================================
+Transaction mutual fund data 
+
+userId - ACM702
+pass - 12345
+=================================
