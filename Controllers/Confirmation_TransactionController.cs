@@ -129,41 +129,6 @@ namespace TradeWeb.API.Controllers
             return BadRequest();
         }
 
-
-        [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("Transaction_MutualFund", Name = "Transaction_MutualFund")]
-        public IActionResult Transaction_MutualFund([FromQuery] string fromDate, string toDate)
-        {
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    var tokenS = GetToken();
-                    var companyCode = tokenS.Claims.First(claim => claim.Type == "companyCode").Value;
-                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
-
-                    var getData = _tradeWebRepository.Transaction_Trade_MF(userId, fromDate, toDate);
-
-                    if (getData != null)
-                    {
-                        return Ok(getData);
-                    }
-                    else
-                    {
-                        return NotFound("records not found");
-                    }
-
-                }
-                catch (Exception ex)
-                {
-                    return BadRequest(ex.Message.ToString());
-                }
-            }
-            return BadRequest();
-        }
-
-
-
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpGet("Transaction_Accounts", Name = "Transaction_Accounts")]
         public IActionResult Transaction_Accounts([FromQuery] string type, string fromDate, string toDate)

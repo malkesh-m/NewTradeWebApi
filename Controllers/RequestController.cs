@@ -14,45 +14,17 @@ namespace TradeWeb.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class TradeWeb_RequestController : ControllerBase
+    public class RequestController : ControllerBase
     {
         private readonly ITradeWebRepository _tradeWebRepository;
 
-        public TradeWeb_RequestController(ITradeWebRepository tradeWebRepository)
+        public RequestController(ITradeWebRepository tradeWebRepository)
         {
             _tradeWebRepository = tradeWebRepository;
         }
 
         #region Request Api
 
-        /*// update fund request or share requrest
-        [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("UpdateFundAndSharesRequest", Name = "UpdateFundAndSharesRequest")]
-        public IActionResult UpdateFundAndSharesRequest(bool isPostBack)
-        {
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    var getData = _tradeWebRepository.UpdateFundAndSharesRequest(isPostBack);
-                    if (getData != null)
-                    {
-                        return Ok(getData);
-                    }
-                    else
-                    {
-                        return NotFound("records not found");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    return BadRequest(ex.Message.ToString());
-                }
-            }
-            return BadRequest();
-        }*/
-
-        // Radio button shares checked
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpGet("Request_Get_ShareRequest", Name = "Request_Get_ShareRequest")]
         public IActionResult Request_Get_ShareRequest()
@@ -124,7 +96,7 @@ namespace TradeWeb.API.Controllers
                     var tokenS = GetToken();
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.GetRmsRequest(userId);
+                    var getData = _tradeWebRepository.Request_Get_FundRequest(userId);
                     if (getData != null)
                     {
                         return Ok(getData);
@@ -142,67 +114,9 @@ namespace TradeWeb.API.Controllers
             return BadRequest();
         }
 
-        /*//// Execute page request report page load query
-        [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("ExecuteRequestReportPageLoad", Name = "ExecuteRequestReportPageLoad")]
-        public IActionResult ExecuteRequestReportPageLoad(bool isPostBack)
-        {
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    var getData = _tradeWebRepository.ExecuteRequestReportPageLoad(isPostBack);
-                    if (getData != null)
-                    {
-                        return Ok(getData);
-                    }
-                    else
-                    {
-                        return NotFound("records not found");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    return BadRequest(ex.Message.ToString());
-                }
-            }
-            return BadRequest();
-        }*/
-
-        /*//// Insert Request value after button click
-        [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("InsertRequestValues", Name = "InsertRequestValues")]
-        public IActionResult InsertRequestValues([FromQuery] string lstSegment, string request, string fromDate, string toDate)
-        {
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    var tokenS = GetToken();
-                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
-
-                    var getData = _tradeWebRepository.InsertRequestValues(userId, lstSegment, request, fromDate, toDate);
-                    if (getData != null)
-                    {
-                        return Ok(getData);
-                    }
-                    else
-                    {
-                        return NotFound("records not found");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    return BadRequest(ex.Message.ToString());
-                }
-            }
-            return BadRequest();
-        }*/
-
-        //// Insert Fund Request value after button click
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpPost("Request_Post_FundRequest", Name = "Request_Post_FundRequest")]
-        public IActionResult Request_Post_FundRequest(FundRequestModel model)
+        public IActionResult Request_Post_FundRequest(FundRequest_Model model)
         {
             if (ModelState.IsValid)
             {
@@ -211,7 +125,7 @@ namespace TradeWeb.API.Controllers
                     var tokenS = GetToken();
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.InsertFundRequestValue(userId, model.Amount, model.DpId);
+                    var getData = _tradeWebRepository.Request_Post_FundRequest(userId, model.Amount, model.CESCd);
                     if (getData != null)
                     {
                         return Ok(getData);
@@ -242,7 +156,7 @@ namespace TradeWeb.API.Controllers
                     var compCode = tokenS.Claims.First(claim => claim.Type == "companyCode").Value;
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.GetMarginPledgeData(userId, userId.ToUpper(), compCode, dematActNo);
+                    var getData = _tradeWebRepository.Request_Get_PledgeForMargin(userId, dematActNo);
                     if (getData != null)
                     {
                         return Ok(getData);
@@ -260,37 +174,6 @@ namespace TradeWeb.API.Controllers
             return BadRequest();
         }
 
-        /*// TODO : Get margin pledge request
-        [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("GetCurrentPledgeRequest", Name = "GetCurrentPledgeRequest")]
-        public IActionResult GetCurrentPledgeRequest()
-        {
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    var tokenS = GetToken();
-                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
-
-                    var getData = _tradeWebRepository.GetCurrentPledgeRequest(userId.ToUpper());
-                    if (getData != null)
-                    {
-                        return Ok(getData);
-                    }
-                    else
-                    {
-                        return NotFound("records not found");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    return BadRequest(ex.Message.ToString());
-                }
-            }
-            return BadRequest();
-        }*/
-
-        // TODO : Add margin pledge request
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpPost("Request_Post_PledgeForMargin", Name = "Request_Post_PledgeForMargin")]
         public IActionResult Request_Post_PledgeForMargin(PledgeForMarginModel model)
@@ -302,7 +185,7 @@ namespace TradeWeb.API.Controllers
                     var tokenS = GetToken();
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.AddPledgeRequest(userId.ToUpper(), model.DematActNo, model.Securities_Code, model.Request_Qty);
+                    var getData = _tradeWebRepository.Request_Post_PledgeForMargin(userId.ToUpper(), model.DematActNo, model.Securities_Code, model.Request_Qty);
                     if (getData != null)
                     {
                         return Ok(getData);
@@ -333,7 +216,7 @@ namespace TradeWeb.API.Controllers
                     var tokenS = GetToken();
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.Request_Post_UnPledge_UnRepledge(userId, "Pledge", model.Securities_Code, model.Request_Qty);
+                    var getData = _tradeWebRepository.Request_Post_UnPledge_UnRepledge(userId, "Pledge", model.ScripCode, model.Request_Qty);
                     if (getData != null)
                     {
                         return Ok(getData);
@@ -363,7 +246,7 @@ namespace TradeWeb.API.Controllers
                     var tokenS = GetToken();
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.Request_Post_UnPledge_UnRepledge(userId, "Un-Re-Pledge", model.Securities_Code, model.Request_Qty);
+                    var getData = _tradeWebRepository.Request_Post_UnPledge_UnRepledge(userId, "Un-Re-Pledge", model.ScripCode, model.Request_Qty);
                     if (getData != null)
                     {
                         return Ok(getData);
@@ -381,6 +264,34 @@ namespace TradeWeb.API.Controllers
             return BadRequest();
         }
 
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpPost("Request_Post_Report", Name = "Request_Post_Report")]
+        public IActionResult Request_Post_Report(string ExchSeg, string Report, string strFromDt, string strToDt)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var tokenS = GetToken();
+                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
+
+                    var getData = _tradeWebRepository.Request_Post_Report(userId, ExchSeg, Report, strFromDt, strToDt);
+                    if (getData != null)
+                    {
+                        return Ok(getData);
+                    }
+                    else
+                    {
+                        return NotFound("records not found");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(ex.Message.ToString());
+                }
+            }
+            return BadRequest();
+        }
 
         #endregion
 

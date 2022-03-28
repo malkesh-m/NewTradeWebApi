@@ -27,7 +27,7 @@ namespace TradeWeb.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class TradeWebController : Controller
+    public class MainController : Controller
     {
         #region Class level declarations.
         private readonly UserManager<AppUser> _userManager;
@@ -41,7 +41,7 @@ namespace TradeWeb.API.Controllers
         #endregion
 
         #region Constructor
-        public TradeWebController(UserManager<AppUser> userManager, IConfiguration configuration, UtilityCommon objUtility, IHttpContextAccessor httpContextAccessor, SignInManager<AppUser> signInManager, ITradeWebRepository tradeWebRepository, IWebHostEnvironment environment)
+        public MainController(UserManager<AppUser> userManager, IConfiguration configuration, UtilityCommon objUtility, IHttpContextAccessor httpContextAccessor, SignInManager<AppUser> signInManager, ITradeWebRepository tradeWebRepository, IWebHostEnvironment environment)
         {
             _userManager = userManager;
             _configuration = configuration;

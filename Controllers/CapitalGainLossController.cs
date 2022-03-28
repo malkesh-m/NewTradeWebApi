@@ -13,11 +13,12 @@ namespace TradeWeb.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class TradeWeb_CapitalGainLossController : ControllerBase
+    public class CapitalGainLossController : ControllerBase
     {
+
         private readonly ITradeWebRepository _tradeWebRepository;
 
-        public TradeWeb_CapitalGainLossController(ITradeWebRepository tradeWebRepository)
+        public CapitalGainLossController(ITradeWebRepository tradeWebRepository)
         {
             _tradeWebRepository = tradeWebRepository;
         }
@@ -198,6 +199,62 @@ namespace TradeWeb.API.Controllers
             }
             return BadRequest();
         }
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpGet("CapitalGainLoss_NationalDetail", Name = "CapitalGainLoss_NationalDetail")]
+        public IActionResult CapitalGainLoss_NationalDetail(string strDate, string type, string ignore112A, string scripCode)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var tokenS = GetToken();
+                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
+
+                    var getData = _tradeWebRepository.GeTINVPLNationalDetail(userId, strDate, type, ignore112A, scripCode);
+                    if (getData != null)
+                    {
+                        return Ok(getData);
+                    }
+                    else
+                    {
+                        return NotFound("records not found");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(ex.Message.ToString());
+                }
+            }
+            return BadRequest();
+        }
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpGet("CapitalGainLoss_NationalSummary", Name = "CapitalGainLoss_NationalSummary")]
+        public IActionResult CapitalGainLoss_NationalSummary(string strDate, Boolean ignore112A, string type)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var tokenS = GetToken();
+                    var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
+
+                    var getData = _tradeWebRepository.GetINVPLNationalSummary(userId, strDate, ignore112A, type);
+                    if (getData != null)
+                    {
+                        return Ok(getData);
+                    }
+                    else
+                    {
+                        return NotFound("records not found");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(ex.Message.ToString());
+                }
+            }
+            return BadRequest();
+        }
 
         #endregion
 
@@ -206,6 +263,7 @@ namespace TradeWeb.API.Controllers
             var handler = new JwtSecurityTokenHandler();
             string authHeader = Request.Headers["Authorization"];
             authHeader = authHeader.Replace("Bearer ", "");
+            //var jsonToken = handler.ReadToken(authHeader);
             var token = handler.ReadToken(authHeader) as JwtSecurityToken;
             return token;
         }

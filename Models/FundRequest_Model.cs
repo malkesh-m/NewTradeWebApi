@@ -5,9 +5,9 @@ using System.Threading.Tasks;
 
 namespace TradeWeb.API.Models
 {
-    public class UnPledgeRequestModel
+    public class FundRequest_Model
     {
-        public string ScripCode { get; set; }
-        public string Request_Qty { get; set; }
+        public string Amount { get; set; }
+        public string CESCd { get; set; }
     }
 }

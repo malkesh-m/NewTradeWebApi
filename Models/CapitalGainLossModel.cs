@@ -69,4 +69,11 @@ namespace TradeWeb.API.Models
         [Required(ErrorMessage = "Please enter Type")]
         public string Type { get; set; }
     }
+    public class GainLossNationalDetailModel
+    {
+        public string strDate { get; set; }
+        public string Type { get; set; }
+        public string Ignore112A { get; set; }
+        public string ScripCode { get; set; }
+    }
 }

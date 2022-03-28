@@ -90,4 +90,52 @@ namespace TradeWeb.API.Models
         public double OtherCharge1 { get; set; }
         public double OtherCharge2 { get; set; }
     }
+    public class GainLossNationalDetailResponse
+    {
+        public string ScripCode { get; set; }
+        public string ScripName { get; set; }
+        public string ISIN { get; set; }
+        public string SellDate { get; set; }
+        public double SellRate { get; set; }
+        public double Qty { get; set; }
+        public string BuyDate { get; set; }
+        public double BuyRate { get; set; }
+        public double StockAtCost { get; set; }
+        public double StockAtMkt { get; set; }
+        public double AverageRate { get; set; }
+        public double Trading { get; set; }
+        public double LongTerm { get; set; }
+        public double ShortTerm { get; set; }
+        public double UnRealGainShort { get; set; }
+        public double UnRealGainLong { get; set; }
+        public string Type { get; set; }
+        public double Days { get; set; }
+        public string TrxDate { get; set; }
+        public double Rate { get; set; }
+        public double STT { get; set; }
+        public string LTCG { get; set; }
+        public string Rate112A { get; set; }
+    }
+    public class GainLossNationalSummaryResponse
+    {
+        public string ScripCode { get; set; }
+        public string ScripName { get; set; }
+        public string Tmp_Flag { get; set; }
+        public string ISIN { get; set; }
+        public double BQty { get; set; }
+        public double BAmount { get; set; }
+        public double SQty { get; set; }
+        public double SAmount { get; set; }
+        public double NetQty { get; set; }
+        public double StockAtCost { get; set; }
+        public double HoldingRate { get; set; }
+        public double Trading { get; set; }
+        public double ShortTerm { get; set; }
+        public double LongTerm { get; set; }
+        public double MarketRate { get; set; }
+        public double StockAtMkt { get; set; }
+        public double UnRealGainShort { get; set; }
+        public double UnRealGainLong { get; set; }
+        public double STT { get; set; }
+    }
 }

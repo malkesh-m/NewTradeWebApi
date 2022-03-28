@@ -8,36 +8,43 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using TradeWeb.API.Entity;
+using TradeWeb.API.Models;
 using TradeWeb.API.Repository;
 
 namespace TradeWeb.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class TradeWeb_MargingFinanceController : ControllerBase
+    public class ProfiltAndLossController : ControllerBase
     {
         private readonly ITradeWebRepository _tradeWebRepository;
 
-        public TradeWeb_MargingFinanceController(ITradeWebRepository tradeWebRepository)
+        public ProfiltAndLossController(ITradeWebRepository tradeWebRepository)
         {
             _tradeWebRepository = tradeWebRepository;
         }
 
-        #region Marging Finance Api
+        #region ProfitLoss Api
 
-        // Get Trades Data
+        /// <summary>
+        /// Get ProfitLoss Main Data
+        /// </summary>
+        /// <param name="fromDate"></param>
+        /// <param name="toDate"></param>
+        /// <returns></returns>
         [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("GetTradesData", Name = "GetTradesData")]
-        public IActionResult GetTradesData([FromQuery] string fromDate, string toDate, string selectedIndex)
+        [HttpGet("ProfitLoss_Cash_Summary", Name = "ProfitLoss_Cash_Summary")]
+        public IActionResult ProfitLoss_Cash_Summary([FromQuery] string fromDate, string toDate)
         {
             if (ModelState.IsValid)
             {
                 try
                 {
                     var tokenS = GetToken();
+                    var companyCode = tokenS.Claims.First(claim => claim.Type == "companyCode").Value;
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.GetTradesData(userId, fromDate, toDate, selectedIndex);
+                    var getData = _tradeWebRepository.ProfitLoss_Cash_Summary(userId, fromDate, toDate);
                     if (getData != null)
                     {
                         return Ok(getData);
@@ -55,20 +62,18 @@ namespace TradeWeb.API.Controllers
             return BadRequest();
         }
 
-        // get Temp table RmsSummary Data for status module.
         [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("GetTempRMSSummaryData", Name = "GetTempRMSSummaryData")]
-        public IActionResult GetTempRMSSummaryData()
+        [HttpGet("ProfitLoss_Cash_Detail", Name = "ProfitLoss_Cash_Detail")]
+        public IActionResult ProfitLoss_Cash_Detail([FromQuery] string fromDate, string toDate, string scripCode)
         {
             if (ModelState.IsValid)
             {
                 try
                 {
                     var tokenS = GetToken();
-                    var compCode = tokenS.Claims.First(claim => claim.Type == "companyCode").Value;
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.GetTempRMSSummaryData(userId, compCode);
+                    var getData = _tradeWebRepository.ProfitLoss_Cash_Detail(userId, fromDate, toDate, scripCode);
                     if (getData != null)
                     {
                         return Ok(getData);
@@ -86,21 +91,19 @@ namespace TradeWeb.API.Controllers
             return BadRequest();
         }
 
-
-        // Get fund data of status module.
         [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("GetStatusFundData", Name = "GetStatusFundData")]
-        public IActionResult GetStatusFundData()
+        [HttpGet("ProfitLoss_FO_Summary", Name = "ProfitLoss_FO_Summary")]
+        public IActionResult ProfitLoss_FO_Summary([FromQuery] string exchange, string segment, string fromDate, string toDate)
         {
             if (ModelState.IsValid)
             {
                 try
                 {
                     var tokenS = GetToken();
-                    var compCode = tokenS.Claims.First(claim => claim.Type == "companyCode").Value;
+                    var companyCode = tokenS.Claims.First(claim => claim.Type == "companyCode").Value;
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.GetStatusFundData(userId, compCode);
+                    var getData = _tradeWebRepository.ProfitLoss_FO_Summary(userId, exchange, segment, fromDate, toDate);
                     if (getData != null)
                     {
                         return Ok(getData);
@@ -118,21 +121,19 @@ namespace TradeWeb.API.Controllers
             return BadRequest();
         }
 
-
-        // Get collateral data of status module.
         [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("GetStatusCollateralData", Name = "GetStatusCollateralData")]
-        public IActionResult GetStatusCollateralData()
+        [HttpGet("ProfitLoss_Commodity_Summary", Name = "ProfitLoss_Commodity_Summary")]
+        public IActionResult ProfitLoss_Commodity_Summary([FromQuery] string exchange, string fromDate, string toDate)
         {
             if (ModelState.IsValid)
             {
                 try
                 {
                     var tokenS = GetToken();
-                    var compCode = tokenS.Claims.First(claim => claim.Type == "companyCode").Value;
+                    var companyCode = tokenS.Claims.First(claim => claim.Type == "companyCode").Value;
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.GetStatusCollateralData(userId, compCode);
+                    var getData = _tradeWebRepository.ProfitLoss_Commodity_Summary(userId, exchange, fromDate, toDate);
                     if (getData != null)
                     {
                         return Ok(getData);
@@ -150,44 +151,19 @@ namespace TradeWeb.API.Controllers
             return BadRequest();
         }
 
-
         [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("GetprSecurityListRptCommon", Name = "GetprSecurityListRptCommon")]
-        public IActionResult GetprSecurityListRptData(Boolean blnBSE, Boolean blnNSE)
-        {
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    var dataList = _tradeWebRepository.GetprSecurityListRptHandler(blnBSE, blnNSE);
-                    if (dataList != null)
-                    {
-                        return Ok(dataList);
-                    }
-                    return NotFound("records not found");
-                }
-                catch (Exception ex)
-                {
-                    return BadRequest(new { response = ex.Message.ToString() });
-                }
-            }
-            return BadRequest();
-        }
-
-
-        //Get margin trading finance shortfall main grid data
-        [Authorize(AuthenticationSchemes = "Bearer")]
-        [HttpGet("GetFinanceShortFallMainGridData", Name = "GetFinanceShortFallMainGridData")]
-        public IActionResult GetFinanceShortFallMainGridData([FromQuery] int days)
+        [HttpGet("ProfitLoss_Combined", Name = "ProfitLoss_Combined")]
+        public IActionResult ProfitLoss_Combined([FromQuery] string fromDate, string toDate)
         {
             if (ModelState.IsValid)
             {
                 try
                 {
                     var tokenS = GetToken();
+                    var companyCode = tokenS.Claims.First(claim => claim.Type == "companyCode").Value;
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.GetShortFallMainGridData(userId, days);
+                    var getData = _tradeWebRepository.ProfitLoss_Combined(userId, fromDate, toDate);
                     if (getData != null)
                     {
                         return Ok(getData);
@@ -204,15 +180,20 @@ namespace TradeWeb.API.Controllers
             }
             return BadRequest();
         }
+
 
         private JwtSecurityToken GetToken()
         {
             var handler = new JwtSecurityTokenHandler();
             string authHeader = Request.Headers["Authorization"];
             authHeader = authHeader.Replace("Bearer ", "");
+            //var jsonToken = handler.ReadToken(authHeader);
             var token = handler.ReadToken(authHeader) as JwtSecurityToken;
             return token;
         }
+
         #endregion
+
+        
     }
 }

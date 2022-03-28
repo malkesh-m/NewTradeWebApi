@@ -14,7 +14,6 @@ using System.Net;
 using System.Net.Mail;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Web.Helpers;
 using TradeWeb.API.Data;
 using TradeWeb.API.Models;
 using static INVPLService.NVPLSoapClient;
@@ -84,18 +83,11 @@ namespace TradeWeb.API.Repository
 
         public dynamic Transaction_Detail(string userId, string exch, string seg, int type, string fromdate, string todate, string scripcode);
 
+        public dynamic Margin(string userId,string date);
 
-        public dynamic GetMarginMainData(string cm_cd, string strCompanyCode);
+        public dynamic Request_Get_PledgeForMargin(string userId, string dematActNo);
 
-        public dynamic MarginMainData(string cm_cd, string strCompanyCode, string date);
-
-        public dynamic GetDropdownListData(string cm_cd, string strCompanyCode);
-
-        public dynamic GetMarginPledgeData(string cm_cd, string UserId, string strCompanyCode, string CmbDPID_Value);
-
-        public dynamic GetCurrentPledgeRequest(string UserId);
-
-        public dynamic AddPledgeRequest(string UserId, string CmbDPID_Value, string lblScripcd, string txtQty);
+        public dynamic Request_Post_PledgeForMargin(string UserId, string CmbDPID_Value, string lblScripcd, string txtQty);
 
         public dynamic Get_Page_Load_Data(string cm_cd);
 
@@ -118,20 +110,20 @@ namespace TradeWeb.API.Repository
         public dynamic GetINVPLTradeListingDelete(string userId, string srNo);
 
         public dynamic GetINVPLTradeListingSave(string userId, string date, string settelment, string bsFlag, string tradeType, double quantity, double netRate, double serviceTax, double STT, double otherCharge1, double otherCharge2, string sccdPostBack);
+        
+        public dynamic GeTINVPLNationalDetail(string userId, string FromDate, string reportFor, string ignore112A, string scripCd);
 
-        public dynamic UpdateFundAndSharesRequest(bool isPostBack);
+        public dynamic GetINVPLNationalSummary(string userId, string strDate, Boolean ignore112A, string strType);
 
-        public dynamic Request_Get_ShareRequest(string cm_cd);
+        public dynamic Request_Get_ShareRequest(string userId);
 
         public dynamic Request_Post_ShareRequest(string userId, string scripCode, string quantity);
 
-        public dynamic GetRmsRequest(string cm_cd);
+        public dynamic Request_Get_FundRequest(string userId);
 
-        public dynamic ExecuteRequestReportPageLoad(bool isPostBack);
+        public dynamic Request_Post_Report(string userId, string ExchSeg, string Report, string strFromDt, string strToDt);
 
-        public dynamic InsertRequestValues(string userId, string strLstSeg, string cmbRequest, string strFromDt, string strToDt);
-
-        public dynamic InsertFundRequestValue(string userId, string Amount, string Rq_Note);
+        public dynamic Request_Post_FundRequest(string userId, string Amount, string Rq_Note);
 
         public dynamic GetTradesData(string cm_cd, string FromDate, string ToDate, string SelectedIndex);
 
@@ -145,15 +137,7 @@ namespace TradeWeb.API.Repository
 
         public dynamic GetShortFallMainGridData(string cm_cd, int IntNtxtDays);
 
-        public dynamic GetDdlExchangeList(string cmbProductValue, string cmbDocumentTypeValue);
-
-        public dynamic GetDigitalDocumentData(string userId, string cmbProductValue, string cmbDocumentTypeValue, string cmbExchangeValue, string fromDate, string toDate);
-
-        public dynamic GetDigitalDocumentDownload(string userId, string cmbProductValue, string cmbDocumentTypeValue, string cmbExchangeValue, string fromDate);
-
-        public dynamic DigitalDocument_List(string userId, string cmbProductValue, string fromDate, string toDate);
-
-        public dynamic AddDdlProductListItem();
+        public dynamic DigitalDocument_List(string userId, int intProduct, string fromDate, string toDate);
 
         public dynamic Family_List(string userId);
 
@@ -181,11 +165,9 @@ namespace TradeWeb.API.Repository
 
         public dynamic Family_TransactionDetailJson(string Client, string Type, string FromDate, string ToDate);
 
-        public dynamic DigitalDocument_File(string docType, string date, string srNo);
+        public dynamic DigitalDocument_File(int Product, string date, string srNo);
 
-        public dynamic ProfitLoss_Combined(string userId, string fromDate, string toDate, string exchange, string segment);
-
-        public dynamic Transaction_Trade_MF(string userId, string fromDate, string toDate);
+        public dynamic ProfitLoss_Combined(string userId, string fromDate, string toDate);
     }
 
     public class TradeWebRepository : ITradeWebRepository
@@ -597,11 +579,11 @@ namespace TradeWeb.API.Repository
             return strsql;
         }
 
-        public dynamic Transaction_Trade_MF(string userId, string fromDate, string toDate)
+        private void Transaction_Trade_MF(string userId, string fromDate, string toDate)
         {
             string strSql = "";
 
-            strSql = "select MTd_srno, MTd_dt, MTd_ISIN , MTd_Bqty,MTd_Sqty,MTd_Rate,cast(Mtd_MarketRate as decimal(15,4)) Mtd_MarketRate,MTd_Brokerage,MTd_OrderDt,MTd_OrderTime,MTd_TerminalCd,MTd_Billdt,";
+            strSql = "select MTd_srno,ltrim(rtrim(convert(char,convert(datetime,MTd_dt),103))) MTd_dt, MTd_ISIN , MTd_Bqty,MTd_Sqty,MTd_Rate,cast(Mtd_MarketRate as decimal(15,4)) Mtd_MarketRate,MTd_Brokerage,MTd_OrderDt,MTd_OrderTime,MTd_TerminalCd,MTd_Billdt,";
             strSql += "case When MTd_Exchange = 'B' Then MFS_BSchemeName else MFS_NSchemeName End SchemeName,MTd_OldClientcd,";
             strSql += "case when Mtd_MarketRate=0 then 0 else (mtd_Brokerage*100)/Mtd_MarketRate End Brokper,mtd_broktype,MTd_FolioNumber,MTd_Stlmnt,";
             strSql += "((mtd_bqty+mtd_sqty)*mtd_Brokerage) as Brokerage,cm_name,cm_cd,Mtd_marginyn,cast(((MTd_Sqty-MTd_Bqty) * MTd_Rate) as decimal(15,2)) Value ";
@@ -610,27 +592,8 @@ namespace TradeWeb.API.Repository
             strSql += " and cm_brboffcode = bm_branchcd ";
             strSql += " and cm_groupcd = a.gr_cd and cm_familycd  = fm_cd ";
             strSql += " and MTd_ClientCd = '" + userId + "'";
-            
-
-            strSql = "select MTd_dt as Date,MTd_ISIN as ISIN, SchemeName, MTd_Bqty as BoughtQty, MTd_Sqty as SoldQty, MTd_Rate as Rate, Value as Amount  from (" + strSql +") a";
-            strSql += " order by MTd_dt,SchemeName";
-            try
-            {
-                var ds = CommonRepository.FillDataset(strSql);
-                if (ds != null)
-                {
-                    if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
-                    {
-                        var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
-                        return json;
-                    }
-                }
-                return new List<string>();
-            }
-            catch (Exception ex)
-            {
-                throw ex;
-            }
+            strSql += " order by MTd_dt,MFS_NSchemeName";
+            DataSet dt = new DataSet();
         }
 
         public dynamic Transaction_AGTS(string userId, string seg, string fromDate, string toDate)
@@ -2191,15 +2154,15 @@ namespace TradeWeb.API.Repository
 
         #region profitLoss combine handler method
 
-        public dynamic ProfitLoss_Combined(string userId, string fromDate, string toDate, string exchange, string segment)
+        public dynamic ProfitLoss_Combined(string userId, string fromDate, string toDate)
         {
             ProfitLossCombinedModel result = new ProfitLossCombinedModel();
 
             result.CashSummary = ProfitLoss_Cash_CombineSummary(userId, fromDate, toDate);
 
-            result.FoSummary = ProfitLoss_FO_CombineSummary(userId, exchange, segment, fromDate, toDate);
+            result.FoSummary = ProfitLoss_FO_CombineSummary(userId, "N", "F", fromDate, toDate);
 
-            result.CommoditySummary = ProfitLoss_Commodity_CombineSummary(userId, exchange, fromDate, toDate);
+            result.CommoditySummary = ProfitLoss_Commodity_CombineSummary(userId, "M", fromDate, toDate);
 
             return JsonConvert.SerializeObject(result, Formatting.Indented);
         }
@@ -6070,94 +6033,20 @@ namespace TradeWeb.API.Repository
         }
         #endregion
 
-        #region Margin Handler method
-        // For getting margin data
-        public dynamic GetMarginMainData(string cm_cd, string strCompanyCode)
-        {
-            try
-            {
-                var ds = GetQueryMainData(cm_cd, strCompanyCode);
-                if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
-                {
-                    var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
-                    return json;
-                }
-                return new List<string>();
-            }
-            catch (Exception ex)
-            {
-                throw ex;
-            }
-        }
-
-        // For getting dropdownlist data
-        public dynamic GetDropdownListData(string cm_cd, string strCompanyCode)
-        {
-            var query = GetQueryDropdownData(cm_cd, strCompanyCode);
-            try
-            {
-                var ds = CommonRepository.OpenDataSetTmp(query);
-                if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
-                {
-                    var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
-                    return json;
-                }
-                return new List<string>();
-            }
-            catch (Exception ex)
-            {
-                throw ex;
-            }
-        }
 
         // For getting Margin Pledge data
-        public dynamic GetMarginPledgeData(string cm_cd, string UserId, string strCompanyCode, string CmbDPID_Value)
+        public dynamic Request_Get_PledgeForMargin(string UserId, string dematActNo)
         {
             try
             {
-                var ds = GetQueryMarginPledgeData(cm_cd, UserId, strCompanyCode, CmbDPID_Value);
-                //var ds = CommonRepository.OpenDataSetTmp(query);
-                if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                var ds = Request_Get_PledgeForMargin_Process(UserId, dematActNo);
+                if (ds != null)
                 {
-                    List<PledgeForMarginResponse> pledgeForMargins = new List<PledgeForMarginResponse>();
-
-                    for (int i = 0; i < ds.Tables[0].Rows.Count; i++)
+                    if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
                     {
-                        pledgeForMargins.Add(new PledgeForMarginResponse
-                        {
-                            Securities_Code = ds.Tables[0].Rows[i]["th_scripcd"].ToString(),
-                            Securities_Name = ds.Tables[0].Rows[i]["ss_Name"].ToString(),
-                            Securities_ISIN = ds.Tables[0].Rows[i]["th_ISIN"].ToString(),
-                            Holding_Rate = Convert.ToDouble(ds.Tables[0].Rows[i]["th_rate"]),
-                            Holding_Qty = Convert.ToDouble(ds.Tables[0].Rows[i]["th_qty"]),
-                            Holding_Value = Convert.ToDouble(ds.Tables[0].Rows[i]["th_rate"]) * Convert.ToDouble(ds.Tables[0].Rows[i]["th_qty"]),
-                            HairCut = Convert.ToDouble(ds.Tables[0].Rows[i]["th_HairCut"]),
-                            NetValue = Convert.ToDouble(ds.Tables[0].Rows[i]["th_netValue"]),
-                            Request_Qty = Convert.ToDouble(ds.Tables[0].Rows[i]["Retain"]),
-                            Request_Value = Convert.ToDouble(ds.Tables[0].Rows[i]["Retain"]) * Convert.ToDouble(ds.Tables[0].Rows[i]["th_rate"]),
-                        });
+                        var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
+                        return json;
                     }
-                    return pledgeForMargins;
-                }
-                return new List<string>();
-            }
-            catch (Exception ex)
-            {
-                throw ex;
-            }
-        }
-
-        // For getting current pledge request
-        public dynamic GetCurrentPledgeRequest(string UserId)
-        {
-            try
-            {
-                var ds = GetQueryCurrentPledgeRequest(UserId);
-
-                if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
-                {
-                    var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
-                    return json;
                 }
                 return new List<string>();
             }
@@ -6168,11 +6057,11 @@ namespace TradeWeb.API.Repository
         }
 
         // For insert margin pledge request
-        public dynamic AddPledgeRequest(string UserId, string CmbDPID_Value, string lblScripcd, string txtQty)
+        public dynamic Request_Post_PledgeForMargin(string UserId, string CmbDPID_Value, string lblScripcd, string txtQty)
         {
             try
             {
-                var ds = AddQueryPledgeRequest(UserId, CmbDPID_Value, lblScripcd, txtQty);
+                var ds = Request_Post_PledgeForMargin_Process(UserId, CmbDPID_Value, lblScripcd, txtQty);
                 var json = JsonConvert.SerializeObject(ds);
                 return json;
             }
@@ -6182,325 +6071,6 @@ namespace TradeWeb.API.Repository
             }
         }
 
-        #region Margin usefull method
-
-        // get data for margin main grid
-        private DataSet GetQueryMainData(string cm_cd, string strCompanyCode)
-        {
-            DataSet objdataset = new DataSet();
-            if (_configuration["IsTradeWeb"] == "O")//Live DB {
-            {
-                objdataset = fnGetRptSQL(true, cm_cd, strCompanyCode);
-            }
-            else
-            {
-                strsql = " Select case right(fm_companycode,2) When 'BF' Then 'BSE F&O' When 'NF' Then 'NSE F&O' When 'MF' Then 'MCX F&O' else '' end ExchSeg,";
-                strsql += " fm_clientcd,cast(fm_spanmargin as decimal(15,2)) as fm_spanmargin,cast(fm_exposurevalue as decimal(15,2)) as fm_exposurevalue, cast(fm_buypremmargin as decimal(15,2)) as fm_buypremmargin,";
-                strsql += " cast(fm_initialmargin as decimal(15,2)) as fm_initialmargin,cast(fm_additionalmargin as decimal(15,2)) as fm_additionalmargin, cast(fm_collected as decimal(15,2)) as fm_collected,cast(isnull(fm_spanmargin,0 )+ isnull(fm_exposurevalue,0) as decimal(15,2)) 'margin',";
-                strsql += " cast(case when (fm_initialmargin + fm_exposurevalue- case when fm_collected > 0 then fm_collected else 0 end) >0 then (fm_initialmargin + fm_exposurevalue- case when fm_collected > 0 then fm_collected else 0 end) else 0 end as decimal(15,2)) ShortFall";
-                strsql += " ,convert(char,convert(datetime, fm_dt),103) as DisplayDate from fmargins where right(fm_companycode,1) = 'F' and fm_dt = (select max(fm_Dt) from fmargins Where right(fm_companycode,1) = 'F' ) and fm_clientcd='" + cm_cd + "'";
-                strsql += " union all";
-                strsql += " Select case right(fm_companycode,2) When 'BK' Then 'BSE FX' When 'NK' Then 'NSE FX' When 'MK' Then 'MCX FX' else '' end ExchSeg,";
-                strsql += " fm_clientcd,cast(fm_spanmargin as decimal(15,2)) as fm_spanmargin,cast(fm_exposurevalue as decimal(15,2)) as fm_exposurevalue, cast(fm_buypremmargin as decimal(15,2)) as fm_buypremmargin,";
-                strsql += " cast(fm_initialmargin as decimal(15,2)) as fm_initialmargin,cast(fm_additionalmargin as decimal(15,2)) as fm_additionalmargin, cast(fm_collected as decimal(15,2)) as fm_collected,cast(isnull(fm_spanmargin,0 )+ isnull(fm_exposurevalue,0) as decimal(15,2)) 'margin',";
-                strsql += " cast(case when (fm_initialmargin + fm_exposurevalue- case when fm_collected > 0 then fm_collected else 0 end) >0 then (fm_initialmargin + fm_exposurevalue- case when fm_collected > 0 then fm_collected else 0 end) else 0 end as decimal(15,2)) ShortFall";
-                strsql += " ,convert(char,convert(datetime, fm_dt),103) as DisplayDate from fmargins where right(fm_companycode,1) = 'K' and fm_dt = (select max(fm_Dt) from fmargins Where right(fm_companycode,1) = 'K' ) and fm_clientcd='" + cm_cd + "'";
-                strsql += " union all";
-                strsql += " Select case right(fm_companycode,2) When 'MX' Then 'MCX Commodity' When 'NX' Then 'NCDEX Commodity' else '' end ExchSeg,fm_clientcd,cast(fm_spanmargin as decimal(15,2)) as fm_spanmargin,";
-                strsql += " cast(fm_exposurevalue as decimal(15,2)) as fm_exposurevalue, cast(fm_buypremmargin as decimal(15,2)) as fm_buypremmargin,cast(fm_initialmargin as decimal(15,2)) as fm_initialmargin,cast(fm_additionalmargin as decimal(15,2)) as fm_additionalmargin, cast(fm_collected as decimal(15,2)) as fm_collected,";
-                strsql += " cast(isnull(fm_spanmargin,0 )+ isnull(fm_exposurevalue,0) as decimal(15,2)) 'margin',cast(case when (fm_initialmargin + fm_exposurevalue- case when fm_collected > 0 then fm_collected else 0 end) >0 then (fm_initialmargin + fm_exposurevalue- case when fm_collected > 0 then fm_collected else 0 end) else 0 end as decimal(15,2)) ShortFall,convert(char,convert(datetime, fm_dt),103) as  DisplayDate ";
-                strsql += " from fmargins  where right(fm_companycode,1) = 'X' and fm_dt = (select max(fm_Dt)  from fmargins Where right(fm_companycode,1) = 'X' ) and fm_clientcd='" + cm_cd + "'";
-                objdataset = objUtility.OpenDataSet(strsql);
-
-            }
-            return objdataset;
-        }
-
-        // used for getting margin main data
-        public DataSet fnGetRptSQL(bool blnisLetter, string cm_cd, string strCompanyCode)
-        {
-            string StrConn = _configuration.GetConnectionString("DefaultConnection");
-            string strCase = "";
-            string strFild = "";
-            string strExchSegme = "";
-            string strSegCode = "";
-            DataSet rsExcgSeg;
-
-            string strTotalShortFallX = "";
-            string strTotalCollectedX = "";
-            string strClientWhere = "";
-
-            using (SqlConnection ObjConnectionTmp = new SqlConnection(StrConn))
-            {
-                string StrCommexConn = "";
-                if (objUtility.GetWebParameter("Commex") != null && objUtility.GetWebParameter("Commex") != string.Empty)
-                {
-                    StrCommexConn = objUtility.GetCommexConnection();
-                }
-
-                string strSql = "";
-                ObjConnectionTmp.Open();
-                objUtility.ExecuteSQLTmp("if OBJECT_ID('tempdb..#TmpPeakColl') is not null Drop Table #TmpPeakColl", ObjConnectionTmp);
-                objUtility.ExecuteSQLTmp("Create Table #TmpPeakColl (Tmp_Clientcd VarChaR(8),Tmp_CompanyCode VarChaR(3),Tmp_PeakMargin Money,Tmp_PeakColl Money,Tmp_Shortfall Money, Tmp_exchange char(1), Tmp_segment char(1) , Tmp_Nfiller4 money, Tmp_Nfiller5 money )", ObjConnectionTmp);
-
-                string strdate = "";
-                strdate = objUtility.fnFireQueryTradeWeb("Fmargins", "max(fm_Dt)", "1", "1", true).ToString().Trim();
-                if (Conversion.Val(objUtility.fnFireQueryTradeWeb("Fmargin_PeakMargin", "Count(0)", "fc_companycode='" + strCompanyCode + "' and fc_dt ", "(select max(fc_dt) from Fmargin_PeakMargin)", true).ToString()) > 0)
-                {
-
-                    strSql = " insert into #TmpPeakColl ";
-                    strSql += " select fm_clientcd,'" + strCompanyCode + "'+fm_exchange+fm_Segment ,isNull(fm_NFiller4,0), isNull(fm_NFiller5,0) , 0,  fm_exchange, fm_Segment ,isNull(fm_NFiller4,0), isNull(fm_NFiller5,0) ";
-                    strSql += " from Fmargins, Client_master ";
-                    strSql += " Where fm_clientcd=cm_cd and fm_Companycode ='" + strCompanyCode + "' and fm_dt = (select max(fm_Dt) from fmargins) ";
-                    if (objUtility.GetWebParameter("Commex") != null && objUtility.GetWebParameter("Commex") != string.Empty)
-                    {
-                        strSql += " union ";
-                        strSql += " select fm_clientcd,'" + strCompanyCode + "'+fm_exchange+'X',isNull(fm_PeakMargin,0)+isNull(fm_Filler2,0),isNull(fm_Filler1,0), 0 ,  fm_exchange, 'X' fm_Segment ,isNull(fm_PeakMargin,0)+isNull(fm_Filler2,0),isNull(fm_Filler1,0)";
-                        strSql += " from " + StrCommexConn + ".Fmargins, Client_master ";
-                        strSql += " Where fm_clientcd=cm_cd and fm_Companycode ='" + strCompanyCode + "' and fm_dt = (select max(fm_Dt) from fmargins) and fm_clientcd ='" + cm_cd + "'";
-                    }
-                    objUtility.ExecuteSQLTmp(strSql, ObjConnectionTmp);
-
-                    strSql = " Update #TmpPeakColl set Tmp_PeakMargin = Round(Tmp_PeakMargin * " + objUtility.fnPeakFactor(strdate) + "/100,2) Where Right(Tmp_CompanyCode,2) <> 'MX' ";
-                    objUtility.ExecuteSQLTmp(strSql, ObjConnectionTmp);
-                }
-                else
-                {
-                    strSql = " insert into #TmpPeakColl ";
-                    strSql += " select fm_clientcd,fm_exchange+fm_Segment,isNull(fm_NFiller4,0), 0 , 0 , fm_exchange, fm_Segment ,isNull(fm_NFiller4,0), isNull(fm_NFiller5,0)";
-                    strSql += " from Fmargins, Client_master ";
-                    strSql += " Where fm_clientcd=cm_cd and fm_Companycode ='" + strCompanyCode + "' and fm_dt = (select max(fm_Dt) from fmargins) ";
-                    if (objUtility.GetWebParameter("Commex") != null && objUtility.GetWebParameter("Commex") != string.Empty)
-                    {
-                        strSql += " union ";
-                        strSql += " select fm_clientcd,fm_exchange+'X',isNull(fm_PeakMargin,0)+isNull(fm_Filler2,0), 0 , 0 , fm_exchange, 'X' fm_Segment, isNull(fm_PeakMargin,0)+isNull(fm_Filler2,0),isNull(fm_Filler1,0) ";
-                        strSql += " from " + StrCommexConn + ".Fmargins, Client_master ";
-                        strSql += " Where fm_clientcd=cm_cd and fm_Companycode ='" + strCompanyCode + "' and fm_dt = (select max(fm_Dt) from fmargins) ";
-                    }
-                    objUtility.ExecuteSQLTmp(strSql, ObjConnectionTmp);
-
-                    strSql = " Update #TmpPeakColl set Tmp_PeakMargin = Round(Tmp_PeakMargin * " + objUtility.fnPeakFactor(strdate) + "/100,2) Where Right(Tmp_CompanyCode,2) <> 'MX'";
-                    objUtility.ExecuteSQLTmp(strSql, ObjConnectionTmp);
-
-                    strSql = " Update #TmpPeakColl set Tmp_PeakColl = case When isNull(fc_FillerN9,0) > 0 then isNull(fc_FillerN9,0) else 0 end ";
-                    strSql += " from Fmargin_clients ";
-                    strSql += " Where fc_clientcd=Tmp_clientcd and fc_Companycode ='" + strCompanyCode + "' and fc_Exchange = '' and fc_dt = (select max(fm_Dt) from fmargins) ";
-                    objUtility.ExecuteSQLTmp(strSql, ObjConnectionTmp);
-                }
-                strSql = " Update #TmpPeakColl set Tmp_PeakMargin=0,Tmp_PeakColl=0 Where Tmp_PeakColl>=Tmp_PeakMargin";
-                objUtility.ExecuteSQLTmp(strSql, ObjConnectionTmp);
-
-
-                if (blnisLetter)
-                {
-                    strSql = " Update #TmpPeakColl set Tmp_ShortFall = case When (Tmp_PeakMargin-Tmp_PeakColl) > 0 then (Tmp_PeakMargin-Tmp_PeakColl) else 0 end";
-                    objUtility.ExecuteSQLTmp(strSql, ObjConnectionTmp);
-                }
-
-                strClientWhere += " and cm_cd = '" + cm_cd + "'";
-                strClientWhere += " and cm_type <> 'I'";
-
-
-                strCase = "";
-                strFild = "";
-
-                if (objUtility.GetWebParameter("Commex") != null && objUtility.GetWebParameter("Commex") != string.Empty)
-                {
-                    try
-                    {
-                        strSql = "Drop table #FmarginsRpt";
-                        objUtility.ExecuteSQLTmp(strSql, ObjConnectionTmp);
-                    }
-                    catch (Exception ex)
-                    {
-                    }
-                    finally
-                    {
-                        strSql = " CREATE TABLE [#FmarginsRpt]( ";
-                        strSql += " [fm_companycode] [char](1) NOT NULL,[fm_exchange] [char](1) NOT NULL,[fm_dt] [char](8) NOT NULL, ";
-                        strSql += " [fm_clientcd] [char](8) NOT NULL,[fm_spanmargin] [money] NOT NULL,[fm_buypremmargin] [money] NOT NULL, ";
-                        strSql += " [fm_initialmargin] [money] NOT NULL,[fm_exposurevalue] [money] NOT NULL,[fm_clienttype] [char](1) NOT NULL, ";
-                        strSql += " [fm_additionalmargin] [money] NOT NULL,[fm_collected] [money] NOT NULL,[fm_mainbrcd] [char](8) NOT NULL, ";
-                        strSql += " [mkrid] [char](8) NOT NULL,[mkrdt] [char](8) NOT NULL,[fm_Regmargin] [money] NULL,[fm_Tndmargin] [money] NULL, ";
-                        strSql += " [fm_Dlvmargin] [money] NULL,[fm_SpreadBen] [money] NULL,[fm_SplMargin] [money] NULL,[fm_collectedT2] [money] NOT NULL, ";
-                        strSql += " [fm_InitShort] [money] NOT NULL,[fm_MTMAddShort] [money] NOT NULL,[fm_OthShort] [money] NOT NULL,[fm_ConcMargin] [money] NOT NULL, ";
-                        strSql += " [fm_DelvPMargin] [money] NOT NULL,[fm_MTMLoss] [money] NOT NULL) ";
-                        objUtility.ExecuteSQLTmp(strSql, ObjConnectionTmp);
-                    }
-
-
-                    strSql = " Insert into #FmarginsRpt select fm_companycode,fm_exchange,fm_dt,fm_clientcd,Sum(fm_spanmargin),Sum(fm_buypremmargin),Sum(fm_initialmargin),Sum(fm_exposurevalue),''fm_clienttype,";
-                    strSql += " Sum(fm_additionalmargin),Sum(fm_collected),'' fm_mainbrcd,'' mkrid,'' mkrdt,Sum(fm_Regmargin),Sum(fm_Tndmargin),Sum(fm_Dlvmargin),Sum(fm_SpreadBen),Sum(fm_SplMargin),Sum(fm_collectedT2),Sum(fm_InitShort),";
-                    strSql += " Sum(fm_MTMAddShort),Sum(fm_OthShort),Sum(fm_ConcMargin),Sum(fm_DelvPMargin),Sum(fm_MTMLoss) from ( ";
-                    strSql += " select fm_companycode,fm_exchange,fm_dt,fm_clientcd,fm_spanmargin,fm_buypremmargin,fm_initialmargin,fm_exposurevalue,''fm_clienttype,fm_additionalmargin,fm_collected,";
-                    strSql += " ''fm_mainbrcd,''mkrid,''mkrdt,fm_Regmargin,fm_Tndmargin,fm_Dlvmargin,fm_SpreadBen,fm_SplMargin,fm_collectedT2,fm_InitShort,fm_MTMAddShort,fm_OthShort,fm_ConcMargin,fm_DelvPMargin,0 fm_MTMLoss ";
-                    strSql += " from  " + StrCommexConn + ".Fmargins, " + StrCommexConn + ".Client_master ";
-                    strSql += " Where fm_clientcd = cm_cd and fm_Companycode ='" + strCompanyCode + "' and fm_dt =  (select max(fm_Dt) from fmargins) " + strClientWhere;
-                    strSql += " union all ";
-                    strSql += " select po_companycode,po_exchange,po_dt,po_clientcd,0 fm_spanmargin,0 fm_buypremmargin,0 fm_initialmargin,0 fm_exposurevalue,0 fm_clienttype,0 fm_additionalmargin,";
-                    strSql += " 0 fm_collected,'' fm_mainbrcd,'' mkrid,'' mkrdt,0 fm_Regmargin,0 fm_Tndmargin,0 fm_Dlvmargin,0 fm_SpreadBen,0 fm_SplMargin,0 fm_collectedT2,0 fm_InitShort,";
-                    strSql += " 0 fm_MTMAddShort,0 fm_OthShort,0 fm_ConcMargin,0 fm_DelvPMargin,case When -sum(po_futvalue) > 0 Then -sum(po_futvalue) else 0 end MarginReq ";
-                    strSql += " from  " + StrCommexConn + ".Fpositions,  " + StrCommexConn + ".Client_master";
-                    strSql += " Where po_companycode='" + strCompanyCode + "' and po_clientcd = cm_cd ";
-                    strSql += " and po_dt = (select max(fm_Dt) from fmargins) " + strClientWhere;
-                    strSql += " Group by po_clientcd,po_companycode,po_exchange,po_dt";
-                    strSql += " Having case When -sum(po_futvalue) > 0 Then -sum(po_futvalue) else 0 end > 0 ";
-                    strSql += " ) a Group by fm_companycode,fm_exchange,fm_dt,fm_clientcd ";
-                    objUtility.ExecuteSQLTmp(strSql, ObjConnectionTmp);
-
-                    strSql = " Update #FmarginsRpt set fm_collected = fc_collected , fm_collectedT2  = fc_Collected1 ";
-                    strSql += " From Fmargin_Clients  ";
-                    strSql += " Where fc_companycode = '" + strCompanyCode + "' and fc_exchange = fm_Exchange and fc_Segment = 'X' and fc_dt = (select max(fm_Dt) from fmargins) and fm_clientcd = fc_clientcd ";
-                    strSql += " and not exists ( Select fm_clientcd from " + StrCommexConn + ".Fmargins Where fm_companycode = '" + strCompanyCode + "' and fm_dt = (select max(fm_Dt) from fmargins) and fc_clientcd  = fm_clientcd and fm_Exchange = fc_Exchange ) ";
-                    objUtility.ExecuteSQLTmp(strSql, ObjConnectionTmp);
-
-                }
-
-                strSql = "select  distinct  '0' 'Product' ,(fm_exchange+fm_segment) fm_ExchSeg,fm_segment Seg from Fmargins, Client_master ";
-                strSql += " Where fm_clientcd=cm_cd and fm_Companycode ='" + strCompanyCode + "' and fm_dt = (select max(fm_Dt) from fmargins) ";
-                if (objUtility.GetWebParameter("Commex") != null && objUtility.GetWebParameter("Commex") != string.Empty)
-                {
-                    strSql += " union ";
-                    strSql += " select distinct '1' 'Product' ,(fm_exchange+'X') fm_ExchSeg,'X' Seg from #FmarginsRpt ";
-                    strSql += " Where fm_Companycode ='" + strCompanyCode + "' and fm_dt = (select max(fm_Dt) from fmargins) ";
-                }
-                strSql += " Order by Product,Seg,fm_ExchSeg ";
-                rsExcgSeg = objUtility.OpenDataSetTmp(strSql, ObjConnectionTmp);
-                string strTemp = "";
-                strFild = "";
-                foreach (DataRow objrow in rsExcgSeg.Tables[0].Rows)
-                {
-                    strExchSegme = objrow["fm_ExchSeg"].ToString();
-                    if (Strings.Right(strExchSegme, 1) == "C")
-                    { strSegCode = "Cash"; }
-                    else if (Strings.Right(strExchSegme, 1) == "F")
-                    { strSegCode = "Fo"; }
-                    else if (Strings.Right(strExchSegme, 1) == "K")
-                    { strSegCode = "Fx"; }
-                    else if (Strings.Right(strExchSegme, 1) == "X")
-                    { strSegCode = "Cx"; }
-
-                    strCase = strCase + " case fm_exchange+fm_Segment when '" + strExchSegme + "' then case When (fm_TotalMrgn-(fm_collected+fm_collected1)) > 0 Then (fm_TotalMrgn-(fm_collected+fm_collected1)) else 0 end else 0 end TotalShort" + strSegCode + strExchSegme + ",";
-                    strTotalShortFallX += "sum(TotalShort" + strSegCode + strExchSegme + ")+";
-
-                    strCase = strCase + " case fm_exchange+fm_Segment when '" + strExchSegme + "' then (fm_collected+fm_collected1) else 0 end Collected" + strSegCode + strExchSegme + ",";
-                    strTotalCollectedX += "sum(Collected" + strSegCode + strExchSegme + ")+";
-
-                    strCase = strCase + " case fm_exchange+fm_Segment when '" + strExchSegme + "' then fm_TotalMrgn else 0 end TotalMrgn" + strSegCode + strExchSegme + ",";
-                    strTemp = strTemp + "sum(TotalMrgn" + strSegCode + strExchSegme + ") TotalMrgn" + strSegCode + strExchSegme + ",";
-                }
-
-                if (strCase.Trim() != "")
-                //{ Return "";}
-                {
-                    if (blnisLetter)
-                    {
-                        strCase = Strings.Left(strCase.Trim(), Strings.Len(strCase.Trim()) - 1);
-                        strFild = "";
-                        strFild = " fm_clientcd,fm_exchange,fm_segment,isNull(cm_Name,'Not Found') cm_Name,cm_email,bm_email,cm_brboffcode,bm_branchname,bm_add1 ,cm_add1,bm_add2 ,cm_add2,bm_add3 ,cm_add3,";
-                        strFild += " Tmp_Shortfall PeakShort, Tmp_NFiller4, Tmp_NFiller5 , Tmp_PeakColl , Tmp_PeakMargin ,";
-
-                        if (Strings.Right(strTotalShortFallX.Trim(), 1) == "+")
-                        {
-                            strTotalShortFallX = Strings.Left(strTotalShortFallX, Strings.Len(strTotalShortFallX) - 1) + " TotalShort";
-                            strFild += strTotalShortFallX + ", ";
-                        }
-                        if (Strings.Right(strTotalCollectedX.Trim(), 1) == "+")
-                        {
-                            strTotalCollectedX = Strings.Left(strTotalCollectedX, Strings.Len(strTotalCollectedX) - 1) + " Collected";
-                            strFild += strTotalCollectedX + ", ";
-                        }
-                        strFild += strTemp;
-                        strFild = Strings.Left(strFild.Trim(), Strings.Len(strFild.Trim()) - 1);
-
-
-                        strCase += " , fm_TotalMrgn ";
-                        strFild += " , Sum(fm_TotalMrgn) fm_TotalMrgn ";
-
-                        strSql = " Select case fm_exchange when 'B' then 'BSE-' when 'N' then 'NSE-' when 'M' then 'MCX-' when 'F' then 'NCDEX-' else '' end + case fm_segment when 'C' then 'CASH'  when 'F' then 'FO'  when 'K' then 'FX' when 'M' then 'MF' when 'X' then 'COMM' else '' end ExchSeg,cast(fm_TotalMrgn as decimal(15,2)) fm_TotalMrgn,cast(Collected as decimal(15,2)) Collected,cast(TotalShort as decimal(15,2)) TotalShort,";
-                        strSql += " cast(case when fm_TotalMrgn > 0 then ((TotalShort * 100)/ fm_TotalMrgn) else 0 end as decimal(15,2)) TotalShortPER,cast(Tmp_NFiller4 as decimal(15,2)) Tmp_NFiller4,cast(Tmp_PeakMargin as decimal(15,2)) Tmp_PeakMargin,";
-                        strSql += " cast(Tmp_NFiller5 as decimal(15,2)) Tmp_NFiller5,cast(PeakShort as decimal(15,2)) PeakShort,cast(Case When PeakShort > TotalShort then PeakShort else TotalShort end as decimal(15,2)) 'Tmp_HighestShortFall' ";
-
-                        if (Conversion.Val(objUtility.fnFireQueryTradeWeb("Sysparameter", "Count(0)", "sp_parmcd", "MGPENALTY", true)) > 0)
-                        {
-                            strSql += ",";
-                            strSql += " Convert(Decimal(15,2), Round(( ((Case When PeakShort > TotalShort then PeakShort else TotalShort end)) *  ";
-                            strSql += " (Case When ((Case When PeakShort > TotalShort then PeakShort else TotalShort end)) < 100000  ";
-                            strSql += " and Case When  fm_TotalMrgn = 0 then 0 else ((((Case When PeakShort > TotalShort then PeakShort else TotalShort end))*100) / (fm_TotalMrgn)) end < 10 Then 0.5 Else 1 End/100)),2)  ";
-                            strSql += " ) ShortPenalty ";
-                        }
-                        strSql += "  from ( ";
-                        strSql += "  select " + strFild + " From (";
-                        strSql += " Select fm_clientcd,fm_exchange,fm_segment," + strCase;
-                        strSql += " from ( select fm_clientcd,fm_exchange,fm_Segment,Sum(fm_TotalMrgn) fm_TotalMrgn,Sum(fm_collected) fm_collected,Sum(fm_collected1) fm_collected1 from ( ";
-                        strSql += " select fm_clientcd,fm_exchange,fm_Segment,fm_TotalMrgn,fm_collected,fm_collected1  from Fmargins, Client_master Where cm_cd=fm_clientcd and fm_Companycode ='" + strCompanyCode + "' and fm_dt = (select max(fm_Dt) from fmargins)";
-                        if (objUtility.GetSysParmSt("FMRGCombined", "").Trim() == "F")
-                        {
-                            strSql += " union all ";
-                            strSql += " select fc_Filler1,fc_exchange,fc_Segment,0 fm_TotalMrgn,fc_collected,fc_collected1  from Fmargin_Clients, Client_master Where cm_cd=fc_clientcd and fc_exchange <> '' and fc_Companycode ='" + strCompanyCode + "' and fc_dt = (select max(fm_Dt) from fmargins)";
-                        }
-                        strSql += " ) a Group By fm_clientcd,fm_exchange,fm_Segment ";
-                        strSql += " ) z , Client_master,branch_master ";
-                        strSql += " Where fm_clientcd = cm_cd and cm_brboffcode = bm_branchcd " + strClientWhere;
-                        if (objUtility.GetWebParameter("Commex") != null && objUtility.GetWebParameter("Commex") != string.Empty)
-                        {
-                            strSql += " union all ";
-                            string strTotalMargin = "";
-                            strTotalMargin = " (case fm_exchange When 'M' Then fm_Regmargin + fm_exposurevalue + fm_buypremmargin else fm_initialmargin + fm_exposurevalue end) + case fm_Exchange When 'M' Then fm_additionalmargin + fm_Tndmargin + fm_Dlvmargin - fm_SpreadBen + fm_ConcMargin + fm_DelvPMargin else fm_additionalmargin + fm_SplMargin end + fm_MTMLoss ";
-                            strCase = strCase.Replace("fm_Segment", "'X'");
-                            strCase = strCase.Replace("fm_TotalMrgn", strTotalMargin);
-                            strCase = strCase.Replace("(fm_collected+fm_collected1)", "(fm_collected+fm_collectedt2)");
-                            strSql += " Select fm_clientcd,fm_exchange,'X' fm_Segment," + strCase;
-                            strSql += " from #FmarginsRpt," + StrCommexConn + ".Client_master," + StrCommexConn + ".branch_master Where fm_clientcd = cm_cd and cm_brboffcode = bm_branchcd and fm_Companycode ='" + strCompanyCode + "' and fm_dt = (select max(fm_Dt) from fmargins) ";
-                        }
-                        strSql += " ) a , Client_master,branch_master , #TmpPeakColl p ";
-                        strSql += " Where fm_clientcd = cm_cd and fm_exchange=tmp_exchange and fm_segment=tmp_segment and cm_brboffcode = bm_branchcd and fm_clientcd = Tmp_Clientcd ";
-                        strSql += " Group by fm_clientcd,fm_exchange,fm_Segment,cm_Name,cm_email,bm_email,cm_brboffcode,bm_branchname,bm_add1 ,cm_add1,bm_add2 ,cm_add2,bm_add3 ,cm_add3,Tmp_Shortfall,Tmp_NFiller4, Tmp_Nfiller5, Tmp_PeakColl, Tmp_PeakMargin ";
-                        if (Conversion.Val(objUtility.fnFireQueryTradeWeb("Sysparameter", "Count(0)", "sp_parmcd", "MGPENALTY", true)) > 0)
-                        {
-                            strSql += " Having Sum(fm_TotalMrgn) > 0  ";
-                        }
-                        strSql += " ) b ";
-
-                        //strSql += " Where PeakShort > 0 Or TotalShort > 0 ";
-
-                        strSql += " Order By fm_clientcd ";
-                    }
-                    return objUtility.OpenDataSetTmp(strSql, ObjConnectionTmp);
-
-                }
-                return null;
-
-            }
-        }
-
-        // get data for dropdown
-        public string GetQueryDropdownData(string cm_cd, string strCompanyCode)
-        {
-            DataSet DsReqP = new DataSet();
-            DsReqP = objUtility.OpenDataSet("select * from SysObjects where name= 'PledgeRequest'");
-            if (DsReqP.Tables[0].Rows.Count == 0)
-            {
-                prCreate();
-            }
-            string strServer = "";
-            char[] ArrSeparators = new char[1];
-            ArrSeparators[0] = '/';
-            strsql = "select  case left(da_dpid,2) when 'IN' then  rtrim(da_dpid)+rtrim(da_actno) else da_actno end as BOId,da_name as Name, da_clientcd  from dematact with (nolock) where DA_STATUS = 'A' and da_clientcd = '" + cm_cd + "' ";
-            if (objUtility.GetWebParameter("Cross") != "" && objUtility.GetWebParameter("Cross") != null)
-            {
-                string[] ArrCross = objUtility.GetWebParameter("Cross").Split(ArrSeparators);
-                strServer = "[" + ArrCross[0].Trim() + "].[" + ArrCross[1].Trim() + "].[" + ArrCross[2].Trim() + "].";
-                strsql += " and exists (select cud_boid from " + strServer.Trim() + "Client_UCC_Details where cud_boid=da_actno and cud_UCC = '" + cm_cd + "' and cud_tmid in (" + mfnGetTMID(strCompanyCode) + ") ) ";
-            }
-            if (objUtility.GetWebParameter("Estro") != "" && objUtility.GetWebParameter("Estro") != null)
-            {
-                string[] ArrEstro = objUtility.GetWebParameter("Estro").Split(ArrSeparators);
-                strServer = "[" + ArrEstro[0].Trim() + "]" + "." + "[" + ArrEstro[1].Trim() + "]" + "." + "[" + ArrEstro[2].Trim() + "]" + ".";
-                strsql += " and exists (select cud_clientID from " + strServer.Trim() + "Client_UCC_Details where cud_clientID=da_actno and cud_UCC = '" + cm_cd + "' and cud_tmid in (" + mfnGetTMID(strCompanyCode) + ") ) ";
-            }
-            return strsql;
-        }
 
         // used for dropdown method
         public void prCreate()
@@ -6526,7 +6096,7 @@ namespace TradeWeb.API.Repository
         }
 
         //used for dropdown method
-        private string mfnGetTMID(string srtCompanyCode)
+        private string mfnGetTMID()
         {
             string strValue = "";
             string strExchange = "";
@@ -6543,12 +6113,12 @@ namespace TradeWeb.API.Repository
                         case "BSE":
                             if (strsql != "")
                                 strsql += "Union All ";
-                            strsql += "select 'BSE' Exch, em_bclearingno clearingno  from Entity_master where em_cd = '" + srtCompanyCode + "' ";
+                            strsql += "select 'BSE' Exch, em_bclearingno clearingno  from Entity_master where em_cd = (select min(em_cd) from Entity_master) ";
                             break;
                         case "NSE":
                             if (strsql != "")
                                 strsql += "Union All ";
-                            strsql += "select 'NSE' Exch, em_nclearingno clearingno  from Entity_master where em_cd = '" + srtCompanyCode + "' ";
+                            strsql += "select 'NSE' Exch, em_nclearingno clearingno  from Entity_master where em_cd = (select min(em_cd) from Entity_master) ";
                             break;
                     }
                 }
@@ -6567,7 +6137,7 @@ namespace TradeWeb.API.Repository
         }
 
         // get data for margin pledge
-        public DataSet GetQueryMarginPledgeData(string cm_cd, string UserId, string strCompanyCode, string CmbDPID_Value)
+        public DataSet Request_Get_PledgeForMargin_Process(string userId, string dematActNo)
         {
             string StrConn = _configuration.GetConnectionString("DefaultConnection");
             using (SqlConnection ObjConnectionTmp = new SqlConnection(StrConn))
@@ -6610,7 +6180,7 @@ namespace TradeWeb.API.Repository
                     char[] ArrSeparators = new char[1];
                     ArrSeparators[0] = '/';
 
-                    if (objUtility.GetWebParameter("Cross") != "" && Microsoft.VisualBasic.Strings.Mid(CmbDPID_Value.Trim(), 1, 2) != "IN") // strBoid  LEft 2 <>IN           
+                    if (objUtility.GetWebParameter("Cross") != "" && Microsoft.VisualBasic.Strings.Mid(dematActNo.Trim(), 1, 2) != "IN") // strBoid  LEft 2 <>IN           
                     {
                         string[] ArrCross = objUtility.GetWebParameter("Cross").Split(ArrSeparators);
 
@@ -6620,16 +6190,16 @@ namespace TradeWeb.API.Repository
                         strsql += " from " + strServer.Trim() + "Holding , ";
                         strsql += " " + strServer.Trim() + "Client_master ";
                         strsql += " where cm_cd = hld_ac_code and hld_ac_type = '11' and cm_active = '01'";
-                        strsql += " and exists (select da_actno from Dematact,Client_master Where cm_cd = da_clientcd and da_actno = hld_ac_code and DA_STATUS = 'A' and left(da_dpid,2) <> 'IN' and ltrim(rtrim(cm_cd)) = '" + cm_cd.Trim() + "')";
-                        strsql += " and exists (select cud_boid from " + strServer.Trim() + "Client_UCC_Details where cud_boid=hld_ac_code and cud_UCC = '" + cm_cd.Trim() + "' and cud_tmid in (" + mfnGetTMID(strCompanyCode) + ")) ";
-                        strsql += " and hld_ac_code = '" + CmbDPID_Value.Trim() + "'";
+                        strsql += " and exists (select da_actno from Dematact,Client_master Where cm_cd = da_clientcd and da_actno = hld_ac_code and DA_STATUS = 'A' and left(da_dpid,2) <> 'IN' and ltrim(rtrim(cm_cd)) = '" + userId + "')";
+                        strsql += " and exists (select cud_boid from " + strServer.Trim() + "Client_UCC_Details where cud_boid=hld_ac_code and cud_UCC = '" + userId + "' and cud_tmid in (" + mfnGetTMID() + ")) ";
+                        strsql += " and hld_ac_code = '" + dematActNo.Trim() + "'";
                         objUtility.ExecuteSQLTmp(strsql, ObjConnectionTmp);
 
-                        strsql = "Update #TblHolding set th_cmCd = cud_UCC from " + strServer.Trim() + "Client_UCC_Details where cud_boid=th_DematActNo and cud_tmid in (" + mfnGetTMID(strCompanyCode) + ")";
+                        strsql = "Update #TblHolding set th_cmCd = cud_UCC from " + strServer.Trim() + "Client_UCC_Details where cud_boid=th_DematActNo and cud_tmid in (" + mfnGetTMID() + ")";
                         objUtility.ExecuteSQLTmp(strsql, ObjConnectionTmp);
                     }
 
-                    if (objUtility.GetWebParameter("Estro") != "" && Microsoft.VisualBasic.Strings.Mid(CmbDPID_Value.Trim(), 1, 2) == "IN")
+                    if (objUtility.GetWebParameter("Estro") != "" && Microsoft.VisualBasic.Strings.Mid(dematActNo.Trim(), 1, 2) == "IN")
                     {
                         string[] ArrEstro = objUtility.GetWebParameter("Estro").Split(ArrSeparators);
 
@@ -6644,7 +6214,7 @@ namespace TradeWeb.API.Repository
                         strsql += " from " + strServer.Trim() + "Holding , " + strServer.Trim() + "Client_master ";
                         strsql += " where cm_cd = hld_ac_code and hld_ac_type = '22' and cm_active = '01'";
                         strsql += " and ltrim(rtrim(cm_blsavingcd)) <> '' ";
-                        strsql += " and '" + strDpid + "'+hld_ac_code in (select da_dpid+da_actno from Dematact,Client_master Where cm_cd=da_clientcd and DA_STATUS = 'A' and left(da_dpid,2) = 'IN' and ltrim(rtrim(cm_cd)) = '" + cm_cd.Trim() + "'";
+                        strsql += " and '" + strDpid + "'+hld_ac_code in (select da_dpid+da_actno from Dematact,Client_master Where cm_cd=da_clientcd and DA_STATUS = 'A' and left(da_dpid,2) = 'IN' and ltrim(rtrim(cm_cd)) = '" + userId + "'";
                         strsql += " ) ";
                         objUtility.ExecuteSQLTmp(strsql, ObjConnectionTmp);
 
@@ -6748,18 +6318,12 @@ namespace TradeWeb.API.Repository
                     strsql = "update #TblHolding set th_Value = Round(th_Qty*th_rate,2) ";
                     objUtility.ExecuteSQLTmp(strsql, ObjConnectionTmp);
 
-                    DataSet dsOpen = new DataSet();
-                    strsql = " select * from PledgeRequest where rq_clientcd='" + UserId + "' and Rq_Status1='P' ";
-                    dsOpen = objUtility.OpenDataSet(strsql);
-                    if (dsOpen.Tables[0].Rows.Count > 0)
-                    {
-                        strsql = "update #TblHolding set th_retain = isNull((select sum(Rq_Qty) From PledgeRequest Where Rq_Clientcd = '" + UserId + "' and Rq_Scripcd=th_scripcd and Rq_Status1 = 'P'),0) ";
-                        objUtility.ExecuteSQLTmp(strsql, ObjConnectionTmp);
-                    }
-                    strsql = "select th_cmcd,cm_Name,th_MrgShortFall,";
-                    strsql += " th_scripcd,ss_Name,cast(th_qty as decimal(15,0)) as th_qty,cast(th_rate as decimal(15,2)) th_rate,cast(th_HairCut as decimal(15,2)) th_HairCut,th_ISIN,";
-                    strsql += " cast(th_netValue as decimal(15,2)) th_netValue,cast(th_retain as decimal(15,0)) Retain,th_DematActNo,th_ISIN,cast(th_Value as decimal(15,2)) th_Value,th_NetRate,";
-                    strsql += " cast(((th_netValue/th_qty)* th_qty ) as decimal(15,2)) th_ReqValue from #TblHolding,Securities,Client_master ";
+                    strsql = "update #TblHolding set th_retain = isNull((select sum(Rq_Qty) From PledgeRequest Where Rq_Clientcd = '" + userId + "' and Rq_Scripcd=th_scripcd and Rq_Status1 = 'P'),0) ";
+                    objUtility.ExecuteSQLTmp(strsql, ObjConnectionTmp);
+
+                    strsql = "select th_scripcd ScripCode,ss_Name ScripName,th_ISIN ISIN,cast(th_qty as decimal(15,0)) as Holding_Qty,cast(th_rate as decimal(15,2)) Holding_Rate,";
+                    strsql += " cast(th_Value as decimal(15,2)) Holding_Value,cast(th_HairCut as decimal(15,2)) HairCut,cast(th_netValue as decimal(15,2)) Holding_NetValue,";
+                    strsql += " cast(th_retain as decimal(15,2)) Request_Qty , cast(((th_netValue/th_qty)* th_retain ) as decimal(15,2)) Request_Value from #TblHolding,Securities,Client_master ";
                     strsql += " where th_scripcd = ss_cd and th_cmcd = cm_cd ";
                     strsql += " order by th_retain desc,th_netValue desc,ss_Name";
 
@@ -6770,27 +6334,8 @@ namespace TradeWeb.API.Repository
             return null;
         }
 
-        //get current pledge request
-        public DataSet GetQueryCurrentPledgeRequest(string UserId)
-        {
-            strsql = "delete from PledgeRequest where Rq_Clientcd='" + UserId + "' and Rq_Status1='P'";
-            objUtility.ExecuteSQL(strsql);
-
-            DataSet Dstemp = new DataSet();
-            Dstemp = objUtility.OpenDataSet("SELECT isnull (IDENT_CURRENT('PledgeRequest'),0)");
-
-            if (Convert.ToInt64(Dstemp.Tables[0].Rows[0][0]) > 0)
-            {
-                DataSet DsReqId = new DataSet();
-                DsReqId = objUtility.OpenDataSet("SELECT IDENT_CURRENT('PledgeRequest')");
-                return DsReqId;
-            }
-
-            return Dstemp;
-        }
-
         // insert margin pledge request
-        public string AddQueryPledgeRequest(string UserId, string CmbDPID_Value, string lblScripcd, string txtQty)
+        public string Request_Post_PledgeForMargin_Process(string UserId, string CmbDPID_Value, string lblScripcd, string txtQty)
         {
             string gstrToday = DateTime.Today.ToString("yyyyMMdd");
             string strHostAdd = Dns.GetHostName();
@@ -6806,7 +6351,6 @@ namespace TradeWeb.API.Repository
             return "Success";
         }
 
-        #endregion
         #endregion
 
         #region Family Handler method
@@ -7967,6 +7511,215 @@ namespace TradeWeb.API.Repository
                 return ex;
             }
         }
+        public dynamic GeTINVPLNationalDetail(string userId, string strDate, string reportFor, string ignore112A, string scripCd)
+        {
+            try
+            {
+
+                DataSet ObjDataSetDetail = new DataSet();
+                string strwhere = "";
+                //ObjInvpl.Timeout = 300000;
+                string strurl = objUtility.GetWebParameter("TNetInvplUrl");
+
+                if (strurl == "" || strurl == null)
+                {
+                    if (objUtility.WebRequestTest(strurl) == false)
+                    {
+                        return "Service not available at the moment try after some time.";
+                    }
+                }
+
+                //ObjInvpl.Url = strurl;
+                string jsondata = string.Empty;
+
+                strwhere += "'" + reportFor[0] + "'";
+                if (reportFor == "BS")
+                {
+                    jsondata = nVPLSoapClient.NotionalDetailAsync(userId, strDate, scripCd, ignore112A).Result;
+                }
+
+                jsondata = jsondata.Replace("{\"Data\" : ", "");
+                string strdecimalcol = "Tmp_Qty,Tmp_BRate,Avgrate,Trading,LongTerm,ShortTerm,StockAtCost,StockAtMkt,UnRealGainShort,UnRealGainLong,Rate,STT,Tmp_112ARate";
+                if (!jsondata.Contains("No Record Found") && jsondata != "")
+                {
+                    ObjDataSetDetail = objUtility.ConvertJsonToDatatable(jsondata, strdecimalcol);
+                    int i = 0;
+                    if (ObjDataSetDetail.Tables[0].Rows.Count > 0)
+                    {
+                        for (i = 0; i < ObjDataSetDetail.Tables[0].Rows.Count; i++)
+                        {
+                            if (ObjDataSetDetail.Tables[0].Rows[i]["Tmp_LTCG"].ToString().Trim() == "*")
+                            {
+                                if (reportFor == "BS")
+                                    ObjDataSetDetail.Tables[0].Rows[i]["Avgrate"] = Convert.ToString(ObjDataSetDetail.Tables[0].Rows[i]["Avgrate"]) + Convert.ToString(ObjDataSetDetail.Tables[0].Rows[i]["Tmp_LTCG"]);
+                                else
+                                    ObjDataSetDetail.Tables[0].Rows[i]["Tmp_BRate"] = Convert.ToString(ObjDataSetDetail.Tables[0].Rows[i]["Tmp_BRate"]) + Convert.ToString(ObjDataSetDetail.Tables[0].Rows[i]["Tmp_LTCG"]);
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    //lbl.Text = "No Records Found";
+                    return "No Records Found";
+                }
+                if (ObjDataSetDetail?.Tables?.Count > 0 && ObjDataSetDetail?.Tables[0]?.Rows?.Count > 0)
+                {
+                    List<GainLossNationalDetailResponse> gainLossNationalDetails = new List<GainLossNationalDetailResponse>();
+
+                    for (int i = 0; i < ObjDataSetDetail.Tables[0].Rows.Count; i++)
+                    {
+                        gainLossNationalDetails.Add(new GainLossNationalDetailResponse
+                        {
+                            ScripCode = ObjDataSetDetail.Tables[0].Rows[i]["TMp_Scripcd"].ToString(),
+                            ScripName = ObjDataSetDetail.Tables[0].Rows[i]["ss_lname"].ToString(),
+                            ISIN = ObjDataSetDetail.Tables[0].Rows[i]["Tmp_ISIN"].ToString(),
+                            SellDate = objUtility.dtos(ObjDataSetDetail.Tables[0].Rows[i]["Tmp_SDt"].ToString().Trim()),
+                            SellRate = Convert.ToDouble(ObjDataSetDetail.Tables[0].Rows[i]["Tmp_SRate"]),
+                            Qty = Convert.ToDouble(ObjDataSetDetail.Tables[0].Rows[i]["Tmp_Qty"]),
+                            BuyDate = objUtility.dtos(ObjDataSetDetail.Tables[0].Rows[i]["Tmp_BDt"].ToString().Trim()),
+                            BuyRate = Convert.ToDouble(ObjDataSetDetail.Tables[0].Rows[i]["Tmp_BRate"]),
+                            StockAtCost = Convert.ToDouble(ObjDataSetDetail.Tables[0].Rows[i]["StockAtCost"]),
+                            StockAtMkt = Convert.ToDouble(ObjDataSetDetail.Tables[0].Rows[i]["StockAtMkt"]),
+                            AverageRate = Convert.ToDouble(ObjDataSetDetail.Tables[0].Rows[i]["Avgrate"]),
+                            Trading = Convert.ToDouble(ObjDataSetDetail.Tables[0].Rows[i]["Trading"]),
+                            LongTerm = Convert.ToDouble(ObjDataSetDetail.Tables[0].Rows[i]["LongTerm"]),
+                            ShortTerm = Convert.ToDouble(ObjDataSetDetail.Tables[0].Rows[i]["ShortTerm"]),
+                            UnRealGainShort = Convert.ToDouble(ObjDataSetDetail.Tables[0].Rows[i]["UnRealGainShort"]),
+                            UnRealGainLong = Convert.ToDouble(ObjDataSetDetail.Tables[0].Rows[i]["UnRealGainLong"]),
+                            Type = ObjDataSetDetail.Tables[0].Rows[i]["Type"].ToString(),
+                            Days = Convert.ToDouble(ObjDataSetDetail.Tables[0].Rows[i]["days"]),
+                            Rate = Convert.ToDouble(ObjDataSetDetail.Tables[0].Rows[i]["Rate"]),
+                            TrxDate = objUtility.dtos(ObjDataSetDetail.Tables[0].Rows[i]["TrxDate"].ToString().Trim()),
+                            //QtrSlab = ObjDataSetDetail.Tables[0].Rows[i]["QtrSlab"].ToString(),
+                            STT = Convert.ToDouble(ObjDataSetDetail.Tables[0].Rows[i]["STT"]),
+                            LTCG = ObjDataSetDetail.Tables[0].Rows[i]["Tmp_LTCG"].ToString(),
+                            Rate112A = ObjDataSetDetail.Tables[0].Rows[i]["Tmp_112ARate"].ToString(),
+                        });
+                    }
+
+                    return gainLossNationalDetails;
+                }
+                return new List<string>();
+            }
+            catch (Exception e)
+            {
+                throw e;
+            }
+        }
+
+        public dynamic GetINVPLNationalSummary(string userId, string strDate, Boolean chkIgnoreSection, string TrxType)
+        {
+            try
+            {
+                DataSet ds = new DataSet();
+                string strwhere = "";
+                string jsondata = string.Empty;
+                //ObjInvpl.Timeout = 300000;
+                string strurl = objUtility.GetWebParameter("TNetInvplUrl");
+                bool blnIncSttDel;
+                bool blnIncSttTrd;
+                blnIncSttDel = (objUtility.fnFireQueryTradeWeb("Sysparameter", "sp_sysvalue", "sp_parmcd", "GAINLOSSTTDL", true) == "Y");
+                blnIncSttTrd = (objUtility.fnFireQueryTradeWeb("Sysparameter", "sp_sysvalue", "sp_parmcd", "GAINLOSSTTTR", true) == "Y");
+
+                if (strurl != "" || strurl != null)
+                {
+                    if (objUtility.WebRequestTest(strurl) == false)
+                    {
+                        return "Service not available at the moment try after some time.";
+                    }
+                }
+                //ObjInvpl.Url = strurl;
+                try
+                { string strtemp = nVPLSoapClient.ITACT112AAsync().Result; }
+                catch
+                {
+                    return "Using older version of Tradenet";
+                }
+
+                string strdecimalcol = "SQty,SAmount,BQty,BAmount,HoldingRate,Trading,ShortTerm,LongTerm,UnRealGainShort,UnRealGainLong,UnRealGain,NetQty,StockAtCost,MarketRate,StockAtMkt,STT";
+                bool blnISIN = false;
+                //if (TrxType == "B")
+                //{
+                //    if (chkjobing == true && chkdelivery == true)
+                //    {
+                //        jsondata = nVPLSoapClient.ActualPLSummaryAsync(userId, FromDate, ToDate, "B", chkIgnoreSection == true ? "Y" : "N").Result;
+                //        blnISIN = GetISINColumn(jsondata, ds, strdecimalcol);
+
+                //        strwhere = " Tmp_Flag in ('T','X') and Tmp_SDt between '" + FromDate + "' and '" + ToDate + "'";
+                //    }
+                //    else if (chkjobing == true)
+                //    {
+                //        jsondata = nVPLSoapClient.ActualPLSummaryAsync(userId, FromDate, ToDate, "T", chkIgnoreSection == true ? "Y" : "N").Result;
+                //        blnISIN = GetISINColumn(jsondata, ds, strdecimalcol);
+
+                //        strwhere = " Tmp_Flag in ('T') and Tmp_SDt between '" + FromDate + "' and '" + ToDate + "' ";
+                //    }
+                //    else if (chkdelivery == true)
+                //    {
+                //        jsondata = nVPLSoapClient.ActualPLSummaryAsync(userId, FromDate, ToDate, "D", chkIgnoreSection == true ? "Y" : "N").Result;
+                //        blnISIN = GetISINColumn(jsondata, ds, strdecimalcol);
+
+                //        strwhere = " Tmp_Flag in ('X') and Tmp_SDt between '" + FromDate + "' and '" + ToDate + "' ";
+                //    }
+                //}
+                if(chkIgnoreSection==true)
+                {
+                    strDate = objUtility.dtos(DateTime.Today.ToString("dd/MM/yyyy"));
+                    jsondata = nVPLSoapClient.NotionalSummaryAsync(userId, strDate, chkIgnoreSection == true ? "Y" : "N").Result;
+                    blnISIN = GetISINColumn(jsondata, ds, strdecimalcol);
+
+                    strwhere = " Tmp_Flag in ('B','S')";
+                }
+
+                if (!jsondata.Contains("No Record Found") && jsondata != "")
+                {
+                    ds = objUtility.ConvertJsonToDatatable(jsondata, strdecimalcol);
+                }
+                else
+                {
+                    return "No Records Found";
+                }
+
+                if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                {
+                    List<GainLossNationalSummaryResponse> gainLossNationalSummaries = new List<GainLossNationalSummaryResponse>();
+
+                    for (int i = 0; i < ds.Tables[0].Rows.Count; i++)
+                    {
+                        gainLossNationalSummaries.Add(new GainLossNationalSummaryResponse
+                        {
+                            ScripCode = ds.Tables[0].Rows[i]["Tmp_Scripcd"].ToString(),
+                            Tmp_Flag=ds.Tables[0].Rows[i]["Tmp_Flag"].ToString(),
+                           ScripName = ds.Tables[0].Rows[i]["ss_lname"].ToString(),
+                            ISIN = ds.Tables[0].Rows[i]["Tmp_ISIN"].ToString(),
+                            BQty = Convert.ToDouble(ds.Tables[0].Rows[i]["BQty"]),
+                            BAmount = Convert.ToDouble(ds.Tables[0].Rows[i]["BAmount"]),
+                            SQty = Convert.ToDouble(ds.Tables[0].Rows[i]["SQty"]),
+                            SAmount = Convert.ToDouble(ds.Tables[0].Rows[i]["SAmount"]),
+                            NetQty = Convert.ToDouble(ds.Tables[0].Rows[i]["NetQty"]),
+                            StockAtCost = Convert.ToDouble(ds.Tables[0].Rows[i]["StockAtCost"]),
+                            HoldingRate=Convert.ToDouble(ds.Tables[0].Rows[i]["HoldingRate"]),
+                            Trading = Convert.ToDouble(ds.Tables[0].Rows[i]["Trading"]),
+                            ShortTerm = Convert.ToDouble(ds.Tables[0].Rows[i]["ShortTerm"]),
+                            LongTerm = Convert.ToDouble(ds.Tables[0].Rows[i]["LongTerm"]),
+                            MarketRate = Convert.ToDouble(ds.Tables[0].Rows[i]["MarketRate"]),
+                            StockAtMkt = Convert.ToDouble(ds.Tables[0].Rows[i]["StockAtMkt"]),
+                            UnRealGainShort = Convert.ToDouble(ds.Tables[0].Rows[i]["UnRealGainShort"]),
+                            UnRealGainLong = Convert.ToDouble(ds.Tables[0].Rows[i]["UnRealGainLong"]),
+                            STT = Convert.ToDouble(ds.Tables[0].Rows[i]["STT"]),
+                        });
+                    }
+
+                    return gainLossNationalSummaries;
+                }
+                return new List<string>();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
         #region NVPL Usefull method
 
         private bool GetISINColumn(string jsondata, DataSet ds, string strdecimalcol)
@@ -8003,44 +7756,19 @@ namespace TradeWeb.API.Repository
 
         #region Request Handler method
 
-        //// update fund request or share requrest
-        public dynamic UpdateFundAndSharesRequest(bool isPostBack)
-        {
-            try
-            {
-                UpdateFundAndSharesRequestQuery(isPostBack);
-                var json = JsonConvert.SerializeObject("success");
-                return json;
-            }
-            catch (Exception ex)
-            {
-                throw ex;
-            }
-        }
-
         //// Radio button shares checked
-        public dynamic Request_Get_ShareRequest(string cm_cd)
+        public dynamic Request_Get_ShareRequest(string userId)
         {
             try
             {
-                var ds = RdButtonSharesCheckedQuery(cm_cd);
-                if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                var ds = Request_Get_ShareRequest_Query(userId);
+                if (ds != null)
                 {
-                    List<ShareResponse> shareResponses = new List<ShareResponse>();
-                    for (int i = 0; i < ds.Tables[0].Rows.Count; i++)
+                    if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
                     {
-                        shareResponses.Add(new ShareResponse
-                        {
-                            Scrip_Code = ds.Tables[0].Rows[i]["bh_scripcd"].ToString(),
-                            Scrip_Name = ds.Tables[0].Rows[i]["bh_Scripname"].ToString(),
-                            ISIN = ds.Tables[0].Rows[i]["bh_isin"].ToString(),
-                            Holding_Quantity = Convert.ToDouble(ds.Tables[0].Rows[i]["bh_qty"]),
-                            Holding_Value = Convert.ToDouble(ds.Tables[0].Rows[i]["bh_valuation"]),
-                            Request_Quantity = Convert.ToDouble(ds.Tables[0].Rows[i]["ReqQty"]),
-                            Request_Value = Convert.ToDouble(ds.Tables[0].Rows[i]["Rate"]),
-                        });
+                        var json = JsonConvert.SerializeObject(ds.Tables[0], Formatting.Indented);
+                        return json;
                     }
-                    return shareResponses;
                 }
                 return new List<string>();
             }
@@ -8056,44 +7784,20 @@ namespace TradeWeb.API.Repository
         {
             try
             {
-                var ds = InsertSharesRequestValue(userId, scripCode, quantity);
-                if (ds != null)
-                {
-                    return ds;
-                }
-                return new List<string>();
-            }
-            catch (Exception ex)
-            {
-                throw ex;
-            }
-        }
+                string gstrToday = DateTime.Today.ToString("yyyyMMdd");
+                string strHostAdd = Dns.GetHostName();
 
-        //// Get rms request
-        public dynamic GetRmsRequest(string cm_cd)
-        {
-            try
-            {
-                var ds = GetRmsRequestQuery(cm_cd);
-                if (ds != null)
-                {
-                    return ds;
-                }
-                return new List<string>();
-            }
-            catch (Exception ex)
-            {
-                throw ex;
-            }
-        }
+                objUtility.ExecuteSQL("delete from SharesRequest where Rq_Clientcd='" + userId + "' and Rq_Satus1='P'");
 
-        //// Execute page request report page load query
-        public dynamic ExecuteRequestReportPageLoad(bool isPostBack)
-        {
-            try
-            {
-                ExecuteRequestReportPageLoadQuery(isPostBack);
-                var json = JsonConvert.SerializeObject("success");
+                strsql = "insert into SharesRequest values ( ";
+
+                strsql += " '" + userId + "','" + scripCode + "','" + Conversion.Val(quantity) + "','" + strHostAdd + "',";
+                strsql += " '" + gstrToday + "',";
+                strsql += " convert(char(8),getdate(),108),";
+                strsql += " 'P','P','P','" + objUtility.Encrypt((gstrToday).ToString().Trim()) + "','')";
+                objUtility.ExecuteSQL(strsql);
+
+                var json = JsonConvert.SerializeObject("Success");
                 return json;
             }
             catch (Exception ex)
@@ -8102,12 +7806,30 @@ namespace TradeWeb.API.Repository
             }
         }
 
-        //// Insert Request value after button click
-        public dynamic InsertRequestValues(string userId, string strLstSeg, string cmbRequest, string strFromDt, string strToDt)
+        //// Get rms request
+        public dynamic Request_Get_FundRequest(string userId)
         {
             try
             {
-                var result = InsertRequestValuesQuery(userId, strLstSeg, cmbRequest, strFromDt, strToDt);
+                var ds = Request_Get_FundRequest_Query(userId);
+                if (ds != null)
+                {
+                    return ds;
+                }
+                return new List<string>();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        //// Insert Request value after button click
+        public dynamic Request_Post_Report(string userId, string exchSeg, string Report, string strFromDt, string strToDt)
+        {
+            try
+            {
+                var result = Request_Post_Process_Report(userId, exchSeg, Report, strFromDt, strToDt);
                 var json = JsonConvert.SerializeObject(result);
                 return json;
             }
@@ -8118,12 +7840,25 @@ namespace TradeWeb.API.Repository
         }
 
         //// Insert Fund Request value after button click
-        public dynamic InsertFundRequestValue(string userId, string Amount, string Rq_Note)
+        public dynamic Request_Post_FundRequest(string userId, string Amount, string Rq_Note)
         {
             try
             {
-                var result = InsertFundRequestValueQuery(userId, Amount, Rq_Note);
-                var json = JsonConvert.SerializeObject(result);
+
+                string gstrToday = DateTime.Today.ToString("yyyyMMdd");
+                string strHostAdd = Dns.GetHostName();
+
+                objUtility.ExecuteSQL("delete  from FundsRequest  where rq_clientcd='" + userId + "' and  Rq_Satus1 = 'P'");
+
+                strsql = "insert into FundsRequest values ( ";
+
+                strsql += " '" + userId + "','A'," + Conversion.Val(Amount) + ",'" + strHostAdd + "',";
+                strsql += " '" + gstrToday + "',";
+                strsql += " convert(char(8),getdate(),108),";
+                strsql += " 'P','P','P','" + objUtility.Encrypt(gstrToday).ToString().Trim() + "','" + Rq_Note + "')";
+                objUtility.ExecuteSQL(strsql);
+
+                var json = JsonConvert.SerializeObject("Success");
                 return json;
             }
             catch (Exception ex)
@@ -8134,178 +7869,63 @@ namespace TradeWeb.API.Repository
 
         #region Request usefull method
 
-        //// create table for fund request or share requrest.
-        private void CreateTableForRequest()
-        {
-            DataSet DsReqF = new DataSet();
-            DsReqF = objUtility.OpenDataSet("select * from SysObjects where name= 'FundsRequest'");
-            if (DsReqF.Tables[0].Rows.Count == 0)
-            {
-                prCreateRequestTable();
-            }
-            DataSet DsReqS = new DataSet();
-            DsReqS = objUtility.OpenDataSet("select * from SysObjects where name= 'SharesRequest'");
-            if (DsReqS.Tables[0].Rows.Count == 0)
-            {
-                prCreateRequest();
-            }
-        }
-
-        private void prCreateRequest()
-        {
-            strsql = "Create table SharesRequest  ( ";
-            strsql += " Rq_SrNo Numeric Identity(1,1) not null,";
-            strsql += " Rq_Clientcd varchar(8) not null,";
-            strsql += " Rq_Scripcd varchar(6) not null,";
-            strsql += " Rq_Qty numeric not null,";
-            strsql += " Rq_IpAddress varchar(50) not null,";
-            strsql += " Rq_Date char(8) not null,";
-            strsql += " Rq_Time char(8) not null,";
-            strsql += " Rq_Satus1 char(1) not null,";
-            strsql += " Rq_Satus2 char(1) not null,";
-            strsql += " Rq_Satus3 char(1) not null,";
-            strsql += " Rq_Satus4 char(1) not null,";
-            strsql += " Rq_Note varchar(50) not null)";
-            objUtility.ExecuteSQL(strsql);
-
-        }
-        private void prCreateRequestTable()
-        {
-            strsql = "Create table FundsRequest  ( ";
-            strsql += " Rq_SrNo Numeric Identity(1,1) not null,";
-            strsql += " Rq_Clientcd varchar(8) not null,";
-            strsql += " Rq_Type Char(1) not null,";
-            strsql += " Rq_Amount Money not null,";
-            strsql += " Rq_IpAddress varchar(50) not null,";
-            strsql += " Rq_Date char(8) not null,";
-            strsql += " Rq_Time char(8) not null,";
-            strsql += " Rq_Satus1 char(1) not null,";
-            strsql += " Rq_Satus2 char(1) not null,";
-            strsql += " Rq_Satus3 char(1) not null,";
-            strsql += " Rq_Satus4 char(1) not null,";
-            strsql += " Rq_Note varchar(50) not null)";
-            objUtility.ExecuteSQL(strsql);
-        }
-
-        //// update fund request or share requrest
-        private void UpdateFundAndSharesRequestQuery(bool isPostBack)
-        {
-            if (isPostBack == false)
-            {
-                CreateTableForRequest();
-            }
-
-            if (Convert.ToInt32(objUtility.fnFireQueryTradeWeb("sysobjects a , syscolumns b", " b.length ", "a.id = b.id  and a.name = 'FundsRequest' and b.name", "Rq_Satus4", true)) < 8)
-            {
-                strsql = "alter table FundsRequest alter column Rq_Satus4 Varchar(8) not null";
-                objUtility.ExecuteSQL(strsql);
-
-                DataSet dsStatus = objUtility.OpenDataSet("Select * from FundsRequest where Rq_Satus1 = 'P'");
-                for (int i = 0; i <= dsStatus.Tables[0].Rows.Count - 1; i++)
-                {
-                    strsql = "update FundsRequest Set Rq_Satus4 = '" + objUtility.Encrypt(dsStatus.Tables[0].Rows[i]["Rq_Date"].ToString()) + "' where rq_srno = " + dsStatus.Tables[0].Rows[i]["rq_srno"] + "";
-                    objUtility.ExecuteSQL(strsql);
-                }
-            }
-
-            if (Convert.ToInt32(objUtility.fnFireQueryTradeWeb("sysobjects a , syscolumns b", " b.length ", "a.id = b.id  and a.name = 'SharesRequest' and b.name", "Rq_Satus4", true)) < 8)
-            {
-                strsql = "alter table SharesRequest alter column Rq_Satus4 Varchar(8) not null";
-                objUtility.ExecuteSQL(strsql);
-
-                DataSet dsStatus = objUtility.OpenDataSet("Select * from SharesRequest where Rq_Satus1 = 'P'");
-                for (int i = 0; i <= dsStatus.Tables[0].Rows.Count - 1; i++)
-                {
-                    strsql = "update SharesRequest Set Rq_Satus4 = '" + objUtility.Encrypt(dsStatus.Tables[0].Rows[i]["Rq_Date"].ToString()) + "' where rq_srno = " + dsStatus.Tables[0].Rows[i]["rq_srno"] + "";
-                    objUtility.ExecuteSQL(strsql);
-                }
-            }
-        }
 
         //// Radio button shares checked
-        private DataSet RdButtonSharesCheckedQuery(string cm_cd)
+        private DataSet Request_Get_ShareRequest_Query(string cm_cd)
         {
-            if (_configuration["IsTradeWeb"] == "O")//live
-            {
-                strsql = "select dm_scripcd bh_scripcd,isNull(IM_ISIN,'') bh_isin,ss_Name bh_Scripname,sum(-dm_qty) bh_qty,";
-                strsql += "  CAST(sum(-dm_qty *(case when ss_bseratedt > ss_nseratedt then ss_bserate else ss_nserate end)) as decimal(15,2)) bh_valuation,";
-                strsql += " isNull((select sum(Rq_Qty) From SharesRequest Where Rq_Clientcd = '" + cm_cd + "' and Rq_Scripcd=dm_scripcd and Rq_Satus1 = 'P'),0) ReqQty, ";
-                strsql += " (case when ss_bseratedt > ss_nseratedt then ss_bserate else ss_nserate end) Rate";
-                strsql += " From Demat left outer join ISIN on dm_scripcd = im_scripcd  ,settlements,ourdps,SECURITIES";
-                strsql += " Where dm_type = 'BC' and dm_locked = 'N' and dm_transfered = 'N'and dm_stlmnt = se_stlmnt and dm_ourdp = od_cd and dm_Scripcd = ss_cd";
-                strsql += " and dm_clientcd = '" + cm_cd + "' and im_active = 'Y' ";
-                strsql += " and im_priority =(select min(im_priority) from ISIN  Where im_active = 'Y'  and im_scripcd = dm_Scripcd)";
-                strsql += " and od_acttype  in ('B','M') and se_shpayoutdt <= CONVERT(CHAR,getdaTE(),112)Group by dm_scripcd ,ss_Name,IM_ISIN,ss_bseratedt,ss_nseratedt,ss_bserate,ss_nserate  having (sum(-dm_qty)) >0order by ss_Name ";
-            }
-            else
-            {
-                strsql = " select bh_scripcd,bh_isin,bh_Scripname,(bh_qty*-1)bh_qty, cast((bh_valuation*-1 )as decimal(15,0))bh_valuation ,";
-                strsql += " isNull((select sum(Rq_Qty) From SharesRequest Where Rq_Clientcd = bh_clientcd and Rq_Scripcd=bh_scripcd and Rq_Satus1 = 'P'),0) ReqQty, 0 Rate ";
-                strsql += " from benholding where bh_clientcd='" + cm_cd + "' and bh_Type not in ('UNDEL')";
-            }
+
+            strsql = "select dm_scripcd ScripCode,isNull(IM_ISIN,'') ISIN,ss_Name ScripName,sum(-dm_qty) Quantity ,";
+            strsql += "  CAST(sum(-dm_qty *(case when ss_bseratedt > ss_nseratedt then ss_bserate else ss_nserate end)) as decimal(15,2)) Value,";
+            strsql += " isNull((select sum(Rq_Qty) From SharesRequest Where Rq_Clientcd = '" + cm_cd + "' and Rq_Scripcd=dm_scripcd and Rq_Satus1 = 'P'),0) Request, ";
+            strsql += " (case when ss_bseratedt > ss_nseratedt then ss_bserate else ss_nserate end) Rate";
+            strsql += " From Demat left outer join ISIN on dm_scripcd = im_scripcd  ,settlements,ourdps,SECURITIES";
+            strsql += " Where dm_type = 'BC' and dm_locked = 'N' and dm_transfered = 'N'and dm_stlmnt = se_stlmnt and dm_ourdp = od_cd and dm_Scripcd = ss_cd";
+            strsql += " and dm_clientcd = '" + cm_cd + "' and im_active = 'Y' ";
+            strsql += " and im_priority =(select min(im_priority) from ISIN  Where im_active = 'Y'  and im_scripcd = dm_Scripcd)";
+            strsql += " and od_acttype  in ('B','M') and se_shpayoutdt <= CONVERT(CHAR,getdaTE(),112)Group by dm_scripcd ,ss_Name,IM_ISIN,ss_bseratedt,ss_nseratedt,ss_bserate,ss_nserate  having (sum(-dm_qty)) >0order by ss_Name ";
 
             return objUtility.OpenDataSet(strsql);
         }
 
-        private string InsertSharesRequestValue(string userId, string scripCode, string Quantity)
-        {
-            string gstrToday = DateTime.Today.ToString("yyyyMMdd");
-            string strHostAdd = Dns.GetHostName();
-
-            objUtility.ExecuteSQL("delete from SharesRequest where Rq_Clientcd='" + userId + "' and Rq_Satus1='P'");
-
-            strsql = "insert into SharesRequest values ( ";
-
-            strsql += " '" + userId + "','" + scripCode + "','" + Conversion.Val(Quantity) + "','" + strHostAdd + "',";
-            strsql += " '" + gstrToday + "',";
-            strsql += " convert(char(8),getdate(),108),";
-            strsql += " 'P','P','P','" + objUtility.Encrypt((gstrToday).ToString().Trim()) + "','')";
-            objUtility.ExecuteSQL(strsql);
-
-            return "Success";
-        }
-
         //// Get rms request
-        private PayOutRequest GetRmsRequestQuery(string cm_cd)
+        private PayOut_FundRequest Request_Get_FundRequest_Query(string userId)
         {
             DataSet Dstemp = new DataSet();
             StringBuilder strsql = new StringBuilder();
             strsql.Append("select  (ltrim(rtrim(ces_exchange)) + '/' + ltrim(rtrim(ces_segment)))Exch ,cm_cd ,cm_name,ld_dpid,  cast((-1*sum(ld_amount)) as decimal(15,2)) amt, ");
             strsql.Append(" isNull((select CAST(Sum(Rq_Amount) as decimal(15,2)) from FundsRequest Where rq_clientcd = ld_clientcd and Rq_Note = ld_dpid and Rq_Satus1 = 'P' ),0) rq_amt ");
             strsql.Append(" from  Client_Master, companyexchangesegments, Ledger ");
-            strsql.Append(" where ld_clientcd = cm_cd and CES_Cd=ld_dpid  and ld_clientcd = '" + cm_cd + "'  ");
+            strsql.Append(" where ld_clientcd = cm_cd and CES_Cd=ld_dpid  and ld_clientcd = '" + userId + "'  ");
             strsql.Append("group by  ld_clientcd ,cm_brkggroup,cm_cd,cm_name,ld_dpid,ltrim(rtrim(ces_exchange)) + '/' + ltrim(rtrim(ces_segment)),ld_dpid,ld_clientcd having abs(sum(ld_amount)) > 0");
 
             Dstemp = objUtility.OpenDataSet(strsql.ToString());
 
             if (Dstemp.Tables[0].Rows.Count > 0)
             {
-                PayOutRequest payOutRequest = new PayOutRequest();
+                PayOut_FundRequest payOutRequest = new PayOut_FundRequest();
                 double rmsAmount = 0;
-                double branchRequestAmount = 0;
-                payOutRequest.Data = new List<RmsRequest>();
+                double BranchRequest = 0;
+                payOutRequest.Data = new List<FundRquest>();
 
                 for (int i = 0; i < Dstemp.Tables[0].Rows.Count; i++)
                 {
-                    payOutRequest.Data.Add(new RmsRequest
+                    payOutRequest.Data.Add(new FundRquest
                     {
-                        CompanyExchangeSegment = Dstemp.Tables[0].Rows[i]["Exch"].ToString(),
-                        dpId = Dstemp.Tables[0].Rows[i]["ld_dpid"].ToString(),
+                        ExchSeg = Dstemp.Tables[0].Rows[i]["Exch"].ToString(),
+                        CESCd = Dstemp.Tables[0].Rows[i]["ld_dpid"].ToString(),
                         PayOut = Convert.ToDouble(Dstemp.Tables[0].Rows[i]["amt"]),
                     });
                 }
 
-                if (_configuration["IsTradeWeb"] == "O")//live
+                if (Convert.ToInt16(objUtility.fnFireQueryTradeWeb("Sysparameter", "count(0)", "sp_parmcd Like 'RMSHEAD%' and sp_sysvalue", "FUNDPAYOUT", true)) > 0)
                 {
-                    if (Convert.ToInt16(objUtility.fnFireQueryTradeWeb("Sysparameter", "count(0)", "sp_parmcd Like 'RMSHEAD%' and sp_sysvalue", "FUNDPAYOUT", true)) > 0)
-                    {
-                        rmsAmount = Convert.ToDouble(objUtility.fnFireQueryTradeWeb("Rms_summary", "isnull(CAST((-1 * sum(rs_fundpayout)) as decimal(15,2)),0) Rmsamt", " rs_Dt = (select MAX(rs_Dt) From RMS_Summary)  and  rs_clientcd", cm_cd, true));
-                    }
-
-                    branchRequestAmount = Microsoft.VisualBasic.Conversion.Val(objUtility.fnFireQueryTradeWeb("PayOut_release", "isnull(cast(sum(rq_amt) as decimal(15,2)),0) rq_amt", "rq_relflag='N' and rq_clientcd", cm_cd, true));
+                    rmsAmount = Convert.ToDouble(objUtility.fnFireQueryTradeWeb("Rms_summary", "isnull(CAST((-1 * sum(rs_fundpayout)) as decimal(15,2)),0) Rmsamt", " rs_Dt = (select MAX(rs_Dt) From RMS_Summary)  and  rs_clientcd", userId, true));
                 }
+
+                BranchRequest = Microsoft.VisualBasic.Conversion.Val(objUtility.fnFireQueryTradeWeb("PayOut_release", "isnull(cast(sum(rq_amt) as decimal(15,2)),0) rq_amt", "rq_relflag='N' and rq_clientcd", userId, true));
+
                 payOutRequest.RmsAmount = rmsAmount;
-                payOutRequest.BranchRequestAmount = branchRequestAmount;
+                payOutRequest.BranchRequest = BranchRequest;
 
                 return payOutRequest;
             }
@@ -8317,79 +7937,7 @@ namespace TradeWeb.API.Repository
 
         #region Request Report module
 
-        //// Execute page request report page load query.
-        private void ExecuteRequestReportPageLoadQuery(bool isPostBack)
-        {
-            if (isPostBack == false)
-            {
-                CreateTableRequestReport();
-            }
-            SqlCommand ObjCommand = new SqlCommand();
-            SqlConnection ObjConnection;
-            using (var db = new DataContext())
-            {
-                ObjConnection = new SqlConnection((db.Database.GetDbConnection()).ConnectionString);
-                ObjConnection.Open();
-                if (Convert.ToInt32(objUtility.fnFireQueryTradeWeb("sysobjects a , syscolumns b", " b.length ", "a.id = b.id  and a.name = 'requests' and b.name", "Rq_Satus4", true)) < 8)
-                {
-                    strsql = "alter table Requests alter column Rq_Satus4 Varchar(8) not null";
-                    ObjCommand.CommandText = strsql;
-                    ObjCommand.Connection = ObjConnection;
-                    ObjCommand.ExecuteNonQuery();
-
-                    DataSet dsStatus = objUtility.OpenDataSet("Select * from Requests where Rq_Satus1 = 'P'");
-                    for (int i = 0; i <= dsStatus.Tables[0].Rows.Count - 1; i++)
-                    {
-                        strsql = "update Requests Set Rq_Satus4 = '" + objUtility.Encrypt(dsStatus.Tables[0].Rows[i]["Rq_Date"].ToString()) + "' where rq_srno = " + dsStatus.Tables[0].Rows[i]["rq_srno"] + "";
-                        ObjCommand.CommandText = strsql;
-                        ObjCommand.Connection = ObjConnection;
-                        ObjCommand.ExecuteNonQuery();
-                    }
-                }
-            }
-        }
-
-        //// Create table for Request report.
-        private void CreateTableRequestReport()
-        {
-            DataSet DsReq = new DataSet();
-            DsReq = objUtility.OpenDataSet("select * from SysObjects where name= 'Requests'");
-            if (DsReq.Tables[0].Rows.Count == 0)
-            {
-                strsql = "Create table Requests  (";
-                strsql += " Rq_SrNo Numeric Identity(1,1) not null,";
-                strsql += " Rq_Clientcd varchar(8) not null,";
-                strsql += " Rq_Type varchar(35) not null,";
-                strsql += " Rq_DateFrom char(8) not null,";
-                strsql += " Rq_DateTo char(9) not null,";
-                strsql += " Rq_IpAddress varchar(50) not null,";
-                strsql += " Rq_Date char(8) not null,";
-                strsql += " Rq_Time char(8) not null,";
-                strsql += " Rq_Satus1 char(1) not null,";
-                strsql += " Rq_Satus2 char(1) not null,";
-                strsql += " Rq_Satus3 char(1) not null,";
-                strsql += " Rq_Satus4 char(1) not null,";
-                strsql += " Rq_Note varchar(50) not null)";
-                objUtility.ExecuteSQL(strsql);
-            }
-
-            DsReq = new DataSet();
-            DsReq = objUtility.OpenDataSet("select b.Name from sysobjects a, syscolumns b with (nolock) where a.id=b.id and a.name='Requests' and b.name = 'Rq_Segment'");
-            if (DsReq.Tables[0].Rows.Count == 0)
-            {
-                strsql = "Alter table Requests add Rq_Segment Char(10)";
-                objUtility.ExecuteSQL(strsql);
-
-                strsql = "Update Requests set Rq_Segment= ''";
-                objUtility.ExecuteSQL(strsql);
-
-                strsql = "Alter table Requests alter Column Rq_Segment Char(10) not null";
-                objUtility.ExecuteSQL(strsql);
-            }
-        }
-
-        //// Insert Request value after button click
-        private string InsertRequestValuesQuery(string userId, string strLstSeg, string cmbRequest, string strFromDt, string strToDt)
+        private string Request_Post_Process_Report(string userId, string strLstSeg, string cmbRequest, string strFromDt, string strToDt)
         {
             string gstrToday = DateTime.Today.ToString("yyyyMMdd");
             string strHostAdd = Dns.GetHostName();
@@ -8427,55 +7975,20 @@ namespace TradeWeb.API.Repository
             return intcnt.ToString();
         }
 
-        private string InsertFundRequestValueQuery(string userId, string Amount, string Rq_Note)
-        {
-            string gstrToday = DateTime.Today.ToString("yyyyMMdd");
-            string strHostAdd = Dns.GetHostName();
-
-            objUtility.ExecuteSQL("delete  from FundsRequest  where rq_clientcd='" + userId + "' and  Rq_Satus1 = 'P'");
-
-            strsql = "insert into FundsRequest values ( ";
-
-            strsql += " '" + userId + "','A'," + Conversion.Val(Amount) + ",'" + strHostAdd + "',";
-            strsql += " '" + gstrToday + "',";
-            strsql += " convert(char(8),getdate(),108),";
-            strsql += " 'P','P','P','" + objUtility.Encrypt(gstrToday).ToString().Trim() + "','" + Rq_Note + "')";
-            objUtility.ExecuteSQL(strsql);
-
-            return "Success";
-        }
 
         #endregion
         #endregion
         #endregion
 
         #region Digital Document Handler Method
-        // get dropdown Exchange list
-        public dynamic GetDdlExchangeList(string cmbProductValue, string cmbDocumentTypeValue)
-        {
-            try
-            {
-                var ds = GetQueryDdlExchangeList(cmbProductValue, cmbDocumentTypeValue);
-
-                if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
-                {
-                    var json = JsonConvert.SerializeObject(ds, Formatting.Indented);
-                    return json;
-                }
-                return new List<string>();
-            }
-            catch (Exception ex)
-            {
-                throw ex;
-            }
-        }
 
         // get digital document main data
-        public dynamic GetDigitalDocumentData(string userId, string cmbProductValue, string cmbDocumentTypeValue, string cmbExchangeValue, string fromDate, string toDate)
+        public dynamic DigitalDocument_List(string userId, int Product, string fromDate, string toDate)
         {
+
             try
             {
-                var ds = GetQueryDigitalDocumentData(userId, cmbProductValue, cmbDocumentTypeValue, cmbExchangeValue, fromDate, toDate);
+                var ds = DigitalDocumentList_Query(userId, Product, fromDate, toDate);
                 if (ds != null)
                 {
                     if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
@@ -8492,88 +8005,62 @@ namespace TradeWeb.API.Repository
             }
         }
 
-        // Add new item comodity in dropdown product list
-        public dynamic AddDdlProductListItem()
+        public dynamic DigitalDocument_File(int Product, string date, string srNo)
         {
             try
             {
-                var ds = AddQueryDdlProductListItem();
-                if (ds != null && ds != "")
+                Boolean IsCommex = false;
+                strsql = "select dd_filename from ";
+                if (Product == 0)
                 {
-                    var json = JsonConvert.SerializeObject(ds);
-                    return json;
+                    strsql += " digital_details ";
                 }
-                return new List<string>();
-            }
-            catch (Exception ex)
-            {
-                throw ex;
-            }
-        }
-
-        // get digital document main data
-        public dynamic GetDigitalDocumentDownload(string userId, string cmbProductValue, string cmbDocumentTypeValue, string cmbExchangeValue, string fromDate)
-        {
-            try
-            {
-                var ds = GetQueryDigitalDocumentDownload(userId, cmbProductValue, cmbDocumentTypeValue, cmbExchangeValue, fromDate);
-                if (ds != null)
+                else if (Product == 1)
                 {
-                    if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                    IsCommex = true;
+                    char[] ArrSeparators = new char[1];
+                    ArrSeparators[0] = '/';
+                    string[] ArrCommex = _configuration["CommexES"].Split(ArrSeparators);
+                    strsql = strsql + ArrCommex[0].Trim() + "." + ArrCommex[1].Trim() + "." + ArrCommex[2].Trim() + ".digital_details";
+                }
+                strsql += " where dd_srno = '" + srNo + "'";
+                DataSet DataSet = new DataSet();
+                SqlConnection ObjConnection = new SqlConnection(objUtility.EsignConnectionString(IsCommex, date.Trim()));
+                SqlCommand cmd1 = new SqlCommand(strsql, ObjConnection);
+                SqlDataAdapter adp = new SqlDataAdapter();
+                adp.SelectCommand = cmd1;
+                adp.Fill(DataSet);
+                if (DataSet.Tables[0].Rows.Count > 0)
+                {
+                    strsql = "select dd_document from ";
+                    if (Product == 0)
                     {
-                        var response = DownloadDocument(ds.Tables[0].Rows[0]["doctype"].ToString().Trim(), fromDate, ds.Tables[0].Rows[0]["dd_srno"].ToString().Trim());
-                        return response;
+                        strsql += " digital_details ";
                     }
-                }
-                return new List<string>();
-            }
-            catch (Exception ex)
-            {
-                throw ex;
-            }
-        }
-
-        // get digital document main data
-        public dynamic DigitalDocument_List(string userId, string cmbProductValue, string fromDate, string toDate)
-        {
-            try
-            {
-                var ds = DigitalDocument_ListQuery(userId, cmbProductValue, fromDate, toDate);
-                if (ds != null)
-                {
-                    if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
+                    else if (Product == 1)
                     {
-                        List<DigitalDocumentResponse> digitalDocuments = new List<DigitalDocumentResponse>();
-
-                        for (int i = 0; i < ds.Tables[0].Rows.Count; i++)
-                        {
-                            digitalDocuments.Add(new DigitalDocumentResponse
-                            {
-                                SrNo = ds.Tables[0].Rows[i]["dd_srno"].ToString(),
-                                DocumentType = ds.Tables[0].Rows[i]["doctype"].ToString(),
-                                Date = ds.Tables[0].Rows[i]["DT"].ToString(),
-                            });
-                        }
-
-                        return digitalDocuments;
+                        char[] ArrSeparators = new char[1];
+                        ArrSeparators[0] = '/';
+                        string[] ArrCommex = _configuration["CommexES"].Split(ArrSeparators);
+                        strsql = strsql + ArrCommex[0].Trim() + "." + ArrCommex[1].Trim() + "." + ArrCommex[2].Trim() + ".digital_details";
                     }
-                }
-                return new List<string>();
-            }
-            catch (Exception ex)
-            {
-                throw ex;
-            }
-        }
+                    strsql += " where dd_srno = '" + srNo + "'";
+                    if (ObjConnection.State == ConnectionState.Closed)
+                    {
+                        ObjConnection.Open();
+                    }
+                    SqlCommand cmd = new SqlCommand(strsql, ObjConnection);
 
-        public dynamic DigitalDocument_File(string docType, string date, string srNo)
-        {
-            try
-            {
-                var Document = DigitalDocument_FileQuery(docType, date, srNo);
-                if (Document != null)
-                {
-                    return Document;
+                    SqlDataReader ObjReader = cmd.ExecuteReader(CommandBehavior.CloseConnection);
+                    if (ObjReader.HasRows == true)
+                    {
+                        ObjReader.Read();
+                        var bytes = (byte[])ObjReader["dd_document"];
+                        var result = Convert.ToBase64String(bytes, 0, bytes.Length);
+
+                        return result;
+                    }
+                    ObjReader.Close();
                 }
                 return new List<string>();
             }
@@ -8585,238 +8072,17 @@ namespace TradeWeb.API.Repository
 
         #region DigitalDocument usefull method
 
-        public DataSet GetQueryDdlExchangeList(string cmbProductValue, string cmbDocumentTypeValue)
-        {
-            string strsql = "";
-            DataSet CommonDataSet = new DataSet();
-            if (cmbProductValue == "X")
-            {
-                strsql = "select rtrim(ltrim(CES_Exchange)) exch ";
-                strsql += "from " + objUtility.GetCommexConnection() + ".CompanyExchangeSegments where left(ces_cd,1) = (select min(em_cd) from Entity_master Where Len(Ltrim(Rtrim(em_cd))) = 1) ";
-            }
-            else
-            {
-                strsql = "select rtrim(ltrim(CES_Exchange)) +  case substring(rtrim(ltrim(ces_cd)),3,1) when 'F' then 'DERV' when 'K' then rtrim(ltrim(CES_Segment)) else + ' ' + rtrim(ltrim(CES_Segment))  end exch ";
-                strsql += "from CompanyExchangeSegments where RIGHT(ces_cd,1) <> 'X'  and left(ces_cd,1) = (select min(em_cd) from Entity_master Where Len(Ltrim(Rtrim(em_cd))) = 1) ";
-            }
 
-            CommonDataSet.Tables.Add(objUtility.OpenNewDataTable(strsql));
-
-            if (cmbDocumentTypeValue == "Combine Contract" || cmbDocumentTypeValue == "Combine Margin Statement")
-            {
-                if (cmbProductValue == "X")
-                {
-                    strsql = "select rtrim(ltrim(CES_Exchange)) + case when substring(rtrim(ltrim(ces_cd)),2,1) in ('B','N') then + ' ' + rtrim(ltrim(CES_Segment)) else '' end exch ";
-                    strsql += "from CompanyExchangeSegments where RIGHT(ces_cd,1) = 'X' and left(ces_cd,1) = (select min(em_cd) from Entity_master Where Len(Ltrim(Rtrim(em_cd))) = 1) ";
-
-                    CommonDataSet.Tables.Add(objUtility.OpenNewDataTable(strsql));
-                }
-            }
-            return CommonDataSet;
-        }
-
-
-        public DataSet GetQueryDigitalDocumentData(string userId, string cmbProductValue, string cmbDocumentTypeValue, string cmbExchangeValue, string fromDate, string toDate)
+        public DataSet DigitalDocumentList_Query(string userId, int Product, string fromDate, string toDate)
         {
             Boolean IsCommexES = false;
             string strsql = "";
-            if (cmbProductValue == "X")
+            if (Product == 1)
             {
                 if (_configuration["CommexES"] != null && _configuration["CommexES"] != string.Empty)
                 {
                     IsCommexES = true;
-                    strsql = "select 'Commex' doctype,'DownLoad'as download,dd_srno,do_desc,ltrim(rtrim(convert(char,convert(datetime,dd_dt),103))) as dd_dt,dd_stlmnt,dd_contractno,'' DT ";
-                    char[] ArrSeparators = new char[1];
-                    ArrSeparators[0] = '/';
-                    string[] ArrCommex = _configuration["CommexES"].Split(ArrSeparators);
-                    strsql = strsql + " from   " + ArrCommex[0].Trim() + "." + ArrCommex[1].Trim() + "." + ArrCommex[2].Trim() + ".digital_details,";
-                    strsql = strsql + ArrCommex[0].Trim() + "." + ArrCommex[1].Trim() + "." + ArrCommex[2].Trim() + ".DocumentType_master";
-                    strsql = strsql + " where dd_clientcd = '" + userId + "'";
-                    if (cmbDocumentTypeValue == "Combine Contract" || cmbDocumentTypeValue == "Periodic Settlement")
-                    {
-                        strsql = strsql + " and dd_dt between '" + fromDate + "' and '" + toDate + "'"; ;
-                    }
-                    else
-                    {
-                        strsql = strsql + " and dd_dt='" + fromDate + "'";
-                    }
-                    strsql = strsql + "and dd_filetype = do_cd ";
-                    strsql = strsql + " and dd_filetype='" + getdoc(cmbDocumentTypeValue, cmbExchangeValue) + "' ";
-                    strsql = strsql + " order by dd_dt desc ";
-                }
-            }
-            else
-            {
-                strsql = "select 'Tplus' doctype,'Download'as download,dd_srno,do_desc,ltrim(rtrim(convert(char,convert(datetime,dd_dt),103))) as dd_dt,dd_stlmnt,dd_contractno,'" + fromDate + "' DT ";
-                strsql = strsql + "from digital_details ,DocumentType_master ";
-                strsql = strsql + "where dd_clientcd = '" + userId + "'";
-                if (cmbDocumentTypeValue == "Combine Contract" || cmbDocumentTypeValue == "Periodic Settlement" || cmbDocumentTypeValue == "Combine Margin Statement")
-                {
-                    strsql = strsql + " and dd_dt between '" + fromDate + "' and '" + toDate + "'"; ;
-                }
-                else
-                {
-                    strsql = strsql + " and dd_dt='" + fromDate + "'";
-                }
-                strsql = strsql + " and dd_filetype = do_cd ";
-                strsql = strsql + " and dd_filetype='" + getdoc(cmbDocumentTypeValue, cmbExchangeValue) + "' ";
-                strsql = strsql + " order by dd_dt desc ";
-            }
-
-            DataSet ObjDataSet1 = new DataSet();
-            if (strsql != null && strsql != "")
-            {
-                SqlConnection ObjConnection = new SqlConnection(objUtility.EsignConnectionString(IsCommexES, fromDate));
-                if (ObjConnection.State == ConnectionState.Closed)
-                { ObjConnection.Open(); }
-
-                SqlDataAdapter ObjAdpater = new SqlDataAdapter();
-                SqlCommand sqlCommand = new SqlCommand(strsql, ObjConnection);
-                ObjAdpater.SelectCommand = sqlCommand;
-                ObjAdpater.Fill(ObjDataSet1);
-                ObjAdpater.Dispose();
-            }
-            return ObjDataSet1;
-        }
-
-        public DataSet GetQueryDigitalDocumentDownload(string userId, string cmbProductValue, string cmbDocumentTypeValue, string cmbExchangeValue, string fromDate)
-        {
-            Boolean IsCommexES = false;
-            string strsql = "";
-            if (cmbProductValue == "X")
-            {
-                if (_configuration["CommexES"] != null && _configuration["CommexES"] != string.Empty)
-                {
-                    IsCommexES = true;
-                    strsql = "select 'Commex' doctype,'DownLoad'as download,dd_srno,do_desc,ltrim(rtrim(convert(char,convert(datetime,dd_dt),103))) as dd_dt,dd_stlmnt,dd_contractno,'' DT ";
-                    char[] ArrSeparators = new char[1];
-                    ArrSeparators[0] = '/';
-                    string[] ArrCommex = _configuration["CommexES"].Split(ArrSeparators);
-                    strsql = strsql + " from   " + ArrCommex[0].Trim() + "." + ArrCommex[1].Trim() + "." + ArrCommex[2].Trim() + ".digital_details,";
-                    strsql = strsql + ArrCommex[0].Trim() + "." + ArrCommex[1].Trim() + "." + ArrCommex[2].Trim() + ".DocumentType_master";
-                    strsql = strsql + " where dd_clientcd = '" + userId + "'";
-                    if (cmbDocumentTypeValue == "Combine Contract" || cmbDocumentTypeValue == "Periodic Settlement")
-                    {
-                        strsql = strsql + " and dd_dt between '" + fromDate + "' and '" + fromDate + "'"; ;
-                    }
-                    else
-                    {
-                        strsql = strsql + " and dd_dt='" + fromDate + "'";
-                    }
-                    strsql = strsql + "and dd_filetype = do_cd ";
-                    strsql = strsql + " and dd_filetype='" + getdoc(cmbDocumentTypeValue, cmbExchangeValue) + "' ";
-                    strsql = strsql + " order by dd_dt desc ";
-                }
-            }
-            else
-            {
-                strsql = "select 'Tplus' doctype,'Download'as download,dd_srno,do_desc,ltrim(rtrim(convert(char,convert(datetime,dd_dt),103))) as dd_dt,dd_stlmnt,dd_contractno,'" + fromDate + "' DT ";
-                strsql = strsql + "from digital_details ,DocumentType_master ";
-                strsql = strsql + "where dd_clientcd = '" + userId + "'";
-                if (cmbDocumentTypeValue == "Combine Contract" || cmbDocumentTypeValue == "Periodic Settlement" || cmbDocumentTypeValue == "Combine Margin Statement")
-                {
-                    strsql = strsql + " and dd_dt between '" + fromDate + "' and '" + fromDate + "'"; ;
-                }
-                else
-                {
-                    strsql = strsql + " and dd_dt='" + fromDate + "'";
-                }
-                strsql = strsql + " and dd_filetype = do_cd ";
-                strsql = strsql + " and dd_filetype='" + getdoc(cmbDocumentTypeValue, cmbExchangeValue) + "' ";
-                strsql = strsql + " order by dd_dt desc ";
-            }
-
-            DataSet ObjDataSet1 = new DataSet();
-            if (strsql != null && strsql != "")
-            {
-                SqlConnection ObjConnection = new SqlConnection(objUtility.EsignConnectionString(IsCommexES, fromDate));
-                if (ObjConnection.State == ConnectionState.Closed)
-                { ObjConnection.Open(); }
-
-                SqlDataAdapter ObjAdpater = new SqlDataAdapter();
-                SqlCommand sqlCommand = new SqlCommand(strsql, ObjConnection);
-                ObjAdpater.SelectCommand = sqlCommand;
-                ObjAdpater.Fill(ObjDataSet1);
-                ObjAdpater.Dispose();
-            }
-
-            return ObjDataSet1;
-
-            //if (ObjDataSet1?.Tables?.Count > 0 && ObjDataSet1?.Tables[0]?.Rows?.Count > 0)
-            //{
-            //    var json = JsonConvert.SerializeObject(ObjDataSet1.Tables[0], Formatting.Indented);
-            //    return json;
-            //}
-        }
-
-        public DigitalDocumentModel DownloadDocument(string docType, string date, string srNo)
-        {
-            Boolean IsCommex = false;
-            strsql = "select dd_filename from ";
-            if (docType == "Tplus")
-            {
-                strsql += " digital_details ";
-            }
-            else if (docType == "Commex")
-            {
-                IsCommex = true;
-                char[] ArrSeparators = new char[1];
-                ArrSeparators[0] = '/';
-                string[] ArrCommex = _configuration["CommexES"].Split(ArrSeparators);
-                strsql = strsql + ArrCommex[0].Trim() + "." + ArrCommex[1].Trim() + "." + ArrCommex[2].Trim() + ".digital_details";
-            }
-            strsql += " where dd_srno = '" + srNo + "'";
-            DataSet DataSet = new DataSet();
-            SqlConnection ObjConnection = new SqlConnection(objUtility.EsignConnectionString(IsCommex, date.Trim()));
-            SqlCommand cmd1 = new SqlCommand(strsql, ObjConnection);
-            SqlDataAdapter adp = new SqlDataAdapter();
-            adp.SelectCommand = cmd1;
-            adp.Fill(DataSet);
-            if (DataSet.Tables[0].Rows.Count > 0)
-            {
-                strsql = "select dd_document from ";
-                if (docType == "Tplus")
-                {
-                    strsql += " digital_details ";
-                }
-                else if (docType == "Commex")
-                {
-                    char[] ArrSeparators = new char[1];
-                    ArrSeparators[0] = '/';
-                    string[] ArrCommex = _configuration["CommexES"].Split(ArrSeparators);
-                    strsql = strsql + ArrCommex[0].Trim() + "." + ArrCommex[1].Trim() + "." + ArrCommex[2].Trim() + ".digital_details";
-                }
-                strsql += " where dd_srno = '" + srNo + "'";
-                if (ObjConnection.State == ConnectionState.Closed)
-                {
-                    ObjConnection.Open();
-                }
-                SqlCommand cmd = new SqlCommand(strsql, ObjConnection);
-
-                SqlDataReader ObjReader = cmd.ExecuteReader(CommandBehavior.CloseConnection);
-                if (ObjReader.HasRows == true)
-                {
-                    ObjReader.Read();
-                    var bytes = (byte[])ObjReader["dd_document"];
-                    var result = Convert.ToBase64String(bytes, 0, bytes.Length);
-
-                    return new DigitalDocumentModel { FileName = DataSet.Tables[0].Rows[0]["dd_filename"].ToString().Trim(), FileData = result };
-                }
-                ObjReader.Close();
-            }
-            return null;
-        }
-
-        public DataSet DigitalDocument_ListQuery(string userId, string cmbProductValue, string fromDate, string toDate)
-        {
-            Boolean IsCommexES = false;
-            string strsql = "";
-            if (cmbProductValue == "X")
-            {
-                if (_configuration["CommexES"] != null && _configuration["CommexES"] != string.Empty)
-                {
-                    IsCommexES = true;
-                    strsql = "select 'Commex' doctype,'DownLoad'as download,dd_srno,do_desc,ltrim(rtrim(convert(char,convert(datetime,dd_dt),103))) as dd_dt,dd_stlmnt,dd_contractno,'' DT ";
+                    strsql = "select 1 Product,dd_srno DocSrNo,do_desc DocName,dd_dt DocDate ";
                     char[] ArrSeparators = new char[1];
                     ArrSeparators[0] = '/';
                     string[] ArrCommex = _configuration["CommexES"].Split(ArrSeparators);
@@ -8831,7 +8097,7 @@ namespace TradeWeb.API.Repository
             }
             else
             {
-                strsql = "select 'Tplus' doctype,'Download'as download,dd_srno,do_desc,ltrim(rtrim(convert(char,convert(datetime,dd_dt),103))) as dd_dt,dd_stlmnt,dd_contractno,'" + fromDate + "' DT ";
+                strsql = "select 0 Product,dd_srno DocSrNo,do_desc DocName,dd_dt DocDate ";
                 strsql = strsql + "from digital_details ,DocumentType_master ";
                 strsql = strsql + "where dd_clientcd = '" + userId + "'";
 
@@ -8857,317 +8123,7 @@ namespace TradeWeb.API.Repository
             return ObjDataSet1;
         }
 
-        public string DigitalDocument_FileQuery(string docType, string date, string srNo)
-        {
-            Boolean IsCommex = false;
-            strsql = "select dd_filename from ";
-            if (docType == "Tplus")
-            {
-                strsql += " digital_details ";
-            }
-            else if (docType == "Commex")
-            {
-                IsCommex = true;
-                char[] ArrSeparators = new char[1];
-                ArrSeparators[0] = '/';
-                string[] ArrCommex = _configuration["CommexES"].Split(ArrSeparators);
-                strsql = strsql + ArrCommex[0].Trim() + "." + ArrCommex[1].Trim() + "." + ArrCommex[2].Trim() + ".digital_details";
-            }
-            strsql += " where dd_srno = '" + srNo + "'";
-            DataSet DataSet = new DataSet();
-            SqlConnection ObjConnection = new SqlConnection(objUtility.EsignConnectionString(IsCommex, date.Trim()));
-            SqlCommand cmd1 = new SqlCommand(strsql, ObjConnection);
-            SqlDataAdapter adp = new SqlDataAdapter();
-            adp.SelectCommand = cmd1;
-            adp.Fill(DataSet);
-            if (DataSet.Tables[0].Rows.Count > 0)
-            {
-                strsql = "select dd_document from ";
-                if (docType == "Tplus")
-                {
-                    strsql += " digital_details ";
-                }
-                else if (docType == "Commex")
-                {
-                    char[] ArrSeparators = new char[1];
-                    ArrSeparators[0] = '/';
-                    string[] ArrCommex = _configuration["CommexES"].Split(ArrSeparators);
-                    strsql = strsql + ArrCommex[0].Trim() + "." + ArrCommex[1].Trim() + "." + ArrCommex[2].Trim() + ".digital_details";
-                }
-                strsql += " where dd_srno = '" + srNo + "'";
-                if (ObjConnection.State == ConnectionState.Closed)
-                {
-                    ObjConnection.Open();
-                }
-                SqlCommand cmd = new SqlCommand(strsql, ObjConnection);
 
-                SqlDataReader ObjReader = cmd.ExecuteReader(CommandBehavior.CloseConnection);
-                if (ObjReader.HasRows == true)
-                {
-                    ObjReader.Read();
-                    var bytes = (byte[])ObjReader["dd_document"];
-                    var result = Convert.ToBase64String(bytes, 0, bytes.Length);
-
-                    return result;
-                }
-                ObjReader.Close();
-            }
-            return null;
-        }
-
-        // Add new item comodity in dropdown product list
-        public string AddQueryDdlProductListItem()
-        {
-            var result = (Convert.ToInt16(objUtility.fnFireQueryTradeWeb(objUtility.GetCommexConnection() + ".CompanyExchangeSegments ", "count(0)", "left(ces_cd,1) = (select min(em_cd) from Entity_master Where Len(Ltrim(Rtrim(em_cd))) = 1) and 1", "1", true)) > 0) && _configuration["Commex"] != null && _configuration["Commex"] != string.Empty;
-
-            return result.ToString();
-        }
-
-        public string getdoc(string cmbDocumentTypeValue, string cmbExchangeValue)
-        {
-            string getdoctype = string.Empty;
-            if (cmbDocumentTypeValue == "Digital Ledger")
-            {
-                getdoctype = "LGR";
-            }
-            else if (cmbDocumentTypeValue == "Digital Security Ledger")
-            {
-                getdoctype = "SECLED";
-            }
-            else if (cmbDocumentTypeValue == "Digital Collateral Ledger")
-            {
-                getdoctype = "COLLED";
-            }
-            else if (cmbDocumentTypeValue == "Combine Contract")
-            {
-                getdoctype = cmbExchangeValue == "MCX" ? "CNOTE" : "CNOTE" + objUtility.GetCommExch(cmbExchangeValue);
-                if (_configuration["IsTradeWeb"] == "O")
-                {
-                    if (cmbExchangeValue == "NCDEX")
-                    {
-                        getdoctype = (objUtility.GetSysParmStComm("CHGNCDEXCD", "") == "Y" ? "CNOTEF" : "CNOTEN");
-                    }
-                }
-                if (cmbExchangeValue == "BSE/NSE Comm" || cmbExchangeValue == "BSE Comm" || cmbExchangeValue == "NSE Comm")
-                {
-                    getdoctype = "XNOTE";
-                }
-            }
-            else if (cmbDocumentTypeValue == "Periodic Settlement")
-            {
-                getdoctype = "QTR";
-            }
-            else if (cmbDocumentTypeValue == "Combine Margin Statement")
-            {
-                getdoctype = "CMRG";
-            }
-            else
-            {
-                if (cmbExchangeValue == "BSE Cash")
-                {
-                    if (cmbDocumentTypeValue == "Contract")
-                    {
-                        getdoctype = "CBSE";
-                    }
-                    else if (cmbDocumentTypeValue == "Margin")
-                    {
-                        getdoctype = "MBC";
-                    }
-                    else if (cmbDocumentTypeValue == "STT")
-                    {
-                        getdoctype = "SCB";
-                    }
-                }
-                else if (cmbExchangeValue == "NSE Cash")
-                {
-                    if (cmbDocumentTypeValue == "Contract")
-                    {
-                        getdoctype = "CNSE";
-                    }
-                    else if (cmbDocumentTypeValue == "Margin")
-                    {
-                        getdoctype = "MNC";
-                    }
-                    else if (cmbDocumentTypeValue == "STT")
-                    {
-                        getdoctype = "SCN";
-                    }
-                }
-                else if (cmbExchangeValue == "MCX Cash")
-                {
-                    if (cmbDocumentTypeValue == "Contract")
-                    {
-                        getdoctype = "CMCX";
-                    }
-                    else if (cmbDocumentTypeValue == "Margin")
-                    {
-                        getdoctype = "MMC";
-                    }
-                }
-                else if (cmbExchangeValue == "NSEDERV")
-                {
-                    if (cmbDocumentTypeValue == "Contract")
-                    {
-                        getdoctype = "FNSE";
-                    }
-                    else if (cmbDocumentTypeValue == "Margin")
-                    {
-                        getdoctype = "MNF";
-                    }
-                    else if (cmbDocumentTypeValue == "STT")
-                    {
-                        getdoctype = "SFN";
-                    }
-                    else if (cmbDocumentTypeValue == "Bill")
-                    {
-                        getdoctype = "FNSEB";
-                    }
-                }
-                else if (cmbExchangeValue == "BSEDERV")
-                {
-                    if (cmbDocumentTypeValue == "Contract")
-                    {
-                        getdoctype = "FBSE";
-                    }
-                    else if (cmbDocumentTypeValue == "Margin")
-                    {
-                        getdoctype = "MBF";
-                    }
-                    else if (cmbDocumentTypeValue == "STT")
-                    {
-                        getdoctype = "SFB";
-                    }
-                    else if (cmbDocumentTypeValue == "Bill")
-                    {
-                        getdoctype = "FBSEB";
-                    }
-                }
-                else if (cmbExchangeValue == "MCXDERV")
-                {
-                    if (cmbDocumentTypeValue == "Contract")
-                    {
-                        getdoctype = "FMCX";
-                    }
-                    else if (cmbDocumentTypeValue == "Margin")
-                    {
-                        getdoctype = "MMF";
-                    }
-                    else if (cmbDocumentTypeValue == "Bill")
-                    {
-                        getdoctype = "FMCXB";
-                    }
-                }
-                else if (cmbExchangeValue == "BSEFX")
-                {
-                    if (cmbDocumentTypeValue == "Contract")
-                    {
-                        getdoctype = "BSEFX";
-                    }
-                    else if (cmbDocumentTypeValue == "Margin")
-                    {
-                        getdoctype = "MBFX";
-                    }
-                    else if (cmbDocumentTypeValue == "Bill")
-                    {
-                        getdoctype = "BSEFXB";
-                    }
-                }
-                else if (cmbExchangeValue == "NSEFX")
-                {
-                    if (cmbDocumentTypeValue == "Contract")
-                    {
-                        getdoctype = "NSEFX";
-                    }
-                    else if (cmbDocumentTypeValue == "Margin")
-                    {
-                        getdoctype = "MNFX";
-                    }
-                    else if (cmbDocumentTypeValue == "STT")
-                    {
-                        getdoctype = "SFN";
-                    }
-                    else if (cmbDocumentTypeValue == "Bill")
-                    {
-                        getdoctype = "NSEFXB";
-                    }
-                }
-                else if (cmbExchangeValue == "MCXFX")
-                {
-                    if (cmbDocumentTypeValue == "Contract")
-                    {
-                        getdoctype = "MCXFX";
-                    }
-                    else if (cmbDocumentTypeValue == "Margin")
-                    {
-                        getdoctype = "MMFX";
-                    }
-                    else if (cmbDocumentTypeValue == "STT")
-                    {
-                        getdoctype = "SFN";
-                    }
-                    else if (cmbDocumentTypeValue == "Bill")
-                    {
-                        getdoctype = "MCXFXB";
-                    }
-                }
-                else if (cmbExchangeValue == "MCX")
-                {
-                    if (cmbDocumentTypeValue == "Contract")
-                    {
-                        getdoctype = "MCX";
-                    }
-                    else if (cmbDocumentTypeValue == "Margin")
-                    {
-                        getdoctype = "MARMCX";
-                    }
-                }
-                else if (cmbExchangeValue == "NCDEX")
-                {
-                    if (cmbDocumentTypeValue == "Contract")
-                    {
-                        getdoctype = "NCDEX";
-                    }
-                    else if (cmbDocumentTypeValue == "Margin")
-                    {
-                        getdoctype = "MARNCX";
-                    }
-                }
-                else if (cmbExchangeValue == "ICEX")
-                {
-                    if (cmbDocumentTypeValue == "Contract")
-                    {
-                        getdoctype = "MCX";
-                    }
-                    else if (cmbDocumentTypeValue == "Margin")
-                    {
-                        getdoctype = "MARMCX";
-                    }
-                }
-                else if (cmbExchangeValue == "NCME")
-                {
-                    if (cmbDocumentTypeValue == "Contract")
-                    {
-                        getdoctype = "MCX";
-                    }
-                    else if (cmbDocumentTypeValue == "Margin")
-                    {
-                        getdoctype = "MARMCX";
-                    }
-                }
-                else if (cmbExchangeValue == "NSEL")
-                {
-                    if (cmbDocumentTypeValue == "Contract")
-                    {
-                        getdoctype = "NSEL";
-                    }
-                    else if (cmbDocumentTypeValue == "Margin")
-                    {
-                        getdoctype = "MARNSEL";
-                    }
-                }
-            }
-            return getdoctype;
-        }
 
         #endregion
 
@@ -9628,8 +8584,6 @@ namespace TradeWeb.API.Repository
             }
         }
         #endregion
-        #endregion
-
         #endregion
 
         #region new family handler
@@ -10965,11 +9919,11 @@ namespace TradeWeb.API.Repository
         #region new margin handler
 
         // For getting margin data
-        public dynamic MarginMainData(string cm_cd, string strCompanyCode, string date)
+        public dynamic Margin(string cm_cd, string date)
         {
             try
             {
-                var ds = GetQueryMarginMainData(cm_cd, strCompanyCode, date);
+                var ds = Margin_Process(cm_cd, date);
                 if (ds?.Tables?.Count > 0 && ds?.Tables[0]?.Rows?.Count > 0)
                 {
                     List<MarginResponse> marginResponse = new List<MarginResponse>();
@@ -11001,40 +9955,9 @@ namespace TradeWeb.API.Repository
         }
 
         // get data for margin main grid
-        private DataSet GetQueryMarginMainData(string cm_cd, string strCompanyCode, string date)
+        private DataSet Margin_Process(string cm_cd, string date)
         {
-            DataSet objdataset = new DataSet();
-            if (_configuration["IsTradeWeb"] == "O")//Live DB {
-            {
-                objdataset = fnNewGetRptSQL(true, cm_cd, strCompanyCode, date);
-            }
-            else
-            {
-                strsql = " Select case right(fm_companycode,2) When 'BF' Then 'BSE F&O' When 'NF' Then 'NSE F&O' When 'MF' Then 'MCX F&O' else '' end ExchSeg,";
-                strsql += " fm_clientcd,cast(fm_spanmargin as decimal(15,2)) as fm_spanmargin,cast(fm_exposurevalue as decimal(15,2)) as fm_exposurevalue, cast(fm_buypremmargin as decimal(15,2)) as fm_buypremmargin,";
-                strsql += " cast(fm_initialmargin as decimal(15,2)) as fm_initialmargin,cast(fm_additionalmargin as decimal(15,2)) as fm_additionalmargin, cast(fm_collected as decimal(15,2)) as fm_collected,cast(isnull(fm_spanmargin,0 )+ isnull(fm_exposurevalue,0) as decimal(15,2)) 'margin',";
-                strsql += " cast(case when (fm_initialmargin + fm_exposurevalue- case when fm_collected > 0 then fm_collected else 0 end) >0 then (fm_initialmargin + fm_exposurevalue- case when fm_collected > 0 then fm_collected else 0 end) else 0 end as decimal(15,2)) ShortFall";
-                strsql += " ,convert(char,convert(datetime, fm_dt),103) as DisplayDate from fmargins where right(fm_companycode,1) = 'F' and fm_dt = (select max(fm_Dt) from fmargins Where right(fm_companycode,1) = 'F' ) and fm_clientcd='" + cm_cd + "'";
-                strsql += " union all";
-                strsql += " Select case right(fm_companycode,2) When 'BK' Then 'BSE FX' When 'NK' Then 'NSE FX' When 'MK' Then 'MCX FX' else '' end ExchSeg,";
-                strsql += " fm_clientcd,cast(fm_spanmargin as decimal(15,2)) as fm_spanmargin,cast(fm_exposurevalue as decimal(15,2)) as fm_exposurevalue, cast(fm_buypremmargin as decimal(15,2)) as fm_buypremmargin,";
-                strsql += " cast(fm_initialmargin as decimal(15,2)) as fm_initialmargin,cast(fm_additionalmargin as decimal(15,2)) as fm_additionalmargin, cast(fm_collected as decimal(15,2)) as fm_collected,cast(isnull(fm_spanmargin,0 )+ isnull(fm_exposurevalue,0) as decimal(15,2)) 'margin',";
-                strsql += " cast(case when (fm_initialmargin + fm_exposurevalue- case when fm_collected > 0 then fm_collected else 0 end) >0 then (fm_initialmargin + fm_exposurevalue- case when fm_collected > 0 then fm_collected else 0 end) else 0 end as decimal(15,2)) ShortFall";
-                strsql += " ,convert(char,convert(datetime, fm_dt),103) as DisplayDate from fmargins where right(fm_companycode,1) = 'K' and fm_dt = (select max(fm_Dt) from fmargins Where right(fm_companycode,1) = 'K' ) and fm_clientcd='" + cm_cd + "'";
-                strsql += " union all";
-                strsql += " Select case right(fm_companycode,2) When 'MX' Then 'MCX Commodity' When 'NX' Then 'NCDEX Commodity' else '' end ExchSeg,fm_clientcd,cast(fm_spanmargin as decimal(15,2)) as fm_spanmargin,";
-                strsql += " cast(fm_exposurevalue as decimal(15,2)) as fm_exposurevalue, cast(fm_buypremmargin as decimal(15,2)) as fm_buypremmargin,cast(fm_initialmargin as decimal(15,2)) as fm_initialmargin,cast(fm_additionalmargin as decimal(15,2)) as fm_additionalmargin, cast(fm_collected as decimal(15,2)) as fm_collected,";
-                strsql += " cast(isnull(fm_spanmargin,0 )+ isnull(fm_exposurevalue,0) as decimal(15,2)) 'margin',cast(case when (fm_initialmargin + fm_exposurevalue- case when fm_collected > 0 then fm_collected else 0 end) >0 then (fm_initialmargin + fm_exposurevalue- case when fm_collected > 0 then fm_collected else 0 end) else 0 end as decimal(15,2)) ShortFall,convert(char,convert(datetime, fm_dt),103) as  DisplayDate ";
-                strsql += " from fmargins  where right(fm_companycode,1) = 'X' and fm_dt = (select max(fm_Dt)  from fmargins Where right(fm_companycode,1) = 'X' ) and fm_clientcd='" + cm_cd + "'";
-                objdataset = objUtility.OpenDataSet(strsql);
 
-            }
-            return objdataset;
-        }
-
-        // used for getting margin main data
-        public DataSet fnNewGetRptSQL(bool blnisLetter, string cm_cd, string strCompanyCode, string date)
-        {
             string StrConn = _configuration.GetConnectionString("DefaultConnection");
             string strCase = "";
             string strFild = "";
@@ -11048,6 +9971,8 @@ namespace TradeWeb.API.Repository
 
             using (SqlConnection ObjConnectionTmp = new SqlConnection(StrConn))
             {
+                string strCompanyCode = objUtility.OpenDataTable("select min(em_cd) from Entity_master").Rows[0][0].ToString();
+
                 string StrCommexConn = "";
                 if (objUtility.GetWebParameter("Commex") != null && objUtility.GetWebParameter("Commex") != string.Empty)
                 {
@@ -11059,8 +9984,6 @@ namespace TradeWeb.API.Repository
                 objUtility.ExecuteSQLTmp("if OBJECT_ID('tempdb..#TmpPeakColl') is not null Drop Table #TmpPeakColl", ObjConnectionTmp);
                 objUtility.ExecuteSQLTmp("Create Table #TmpPeakColl (Tmp_Clientcd VarChaR(8),Tmp_CompanyCode VarChaR(3),Tmp_PeakMargin Money,Tmp_PeakColl Money,Tmp_Shortfall Money, Tmp_exchange char(1), Tmp_segment char(1) , Tmp_Nfiller4 money, Tmp_Nfiller5 money )", ObjConnectionTmp);
 
-                string strdate = "";
-                strdate = objUtility.fnFireQueryTradeWeb("Fmargins", "max(fm_Dt)", "1", "1", true).ToString().Trim();
                 if (Conversion.Val(objUtility.fnFireQueryTradeWeb("Fmargin_PeakMargin", "Count(0)", "fc_companycode='" + strCompanyCode + "' and fc_dt ", "(select max(fc_dt) from Fmargin_PeakMargin)", true).ToString()) > 0)
                 {
 
@@ -11077,7 +10000,7 @@ namespace TradeWeb.API.Repository
                     }
                     objUtility.ExecuteSQLTmp(strSql, ObjConnectionTmp);
 
-                    strSql = " Update #TmpPeakColl set Tmp_PeakMargin = Round(Tmp_PeakMargin * " + objUtility.fnPeakFactor(strdate) + "/100,2) Where Right(Tmp_CompanyCode,2) <> 'MX' ";
+                    strSql = " Update #TmpPeakColl set Tmp_PeakMargin = Round(Tmp_PeakMargin * " + objUtility.fnPeakFactor(date) + "/100,2) Where Right(Tmp_CompanyCode,2) <> 'MX' ";
                     objUtility.ExecuteSQLTmp(strSql, ObjConnectionTmp);
                 }
                 else
@@ -11095,7 +10018,7 @@ namespace TradeWeb.API.Repository
                     }
                     objUtility.ExecuteSQLTmp(strSql, ObjConnectionTmp);
 
-                    strSql = " Update #TmpPeakColl set Tmp_PeakMargin = Round(Tmp_PeakMargin * " + objUtility.fnPeakFactor(strdate) + "/100,2) Where Right(Tmp_CompanyCode,2) <> 'MX'";
+                    strSql = " Update #TmpPeakColl set Tmp_PeakMargin = Round(Tmp_PeakMargin * " + objUtility.fnPeakFactor(date) + "/100,2) Where Right(Tmp_CompanyCode,2) <> 'MX'";
                     objUtility.ExecuteSQLTmp(strSql, ObjConnectionTmp);
 
                     strSql = " Update #TmpPeakColl set Tmp_PeakColl = case When isNull(fc_FillerN9,0) > 0 then isNull(fc_FillerN9,0) else 0 end ";
@@ -11107,11 +10030,8 @@ namespace TradeWeb.API.Repository
                 objUtility.ExecuteSQLTmp(strSql, ObjConnectionTmp);
 
 
-                if (blnisLetter)
-                {
-                    strSql = " Update #TmpPeakColl set Tmp_ShortFall = case When (Tmp_PeakMargin-Tmp_PeakColl) > 0 then (Tmp_PeakMargin-Tmp_PeakColl) else 0 end";
-                    objUtility.ExecuteSQLTmp(strSql, ObjConnectionTmp);
-                }
+                strSql = " Update #TmpPeakColl set Tmp_ShortFall = case When (Tmp_PeakMargin-Tmp_PeakColl) > 0 then (Tmp_PeakMargin-Tmp_PeakColl) else 0 end";
+                objUtility.ExecuteSQLTmp(strSql, ObjConnectionTmp);
 
                 strClientWhere += " and cm_cd = '" + cm_cd + "'";
                 strClientWhere += " and cm_type <> 'I'";
@@ -11209,83 +10129,84 @@ namespace TradeWeb.API.Repository
                 if (strCase.Trim() != "")
                 //{ Return "";}
                 {
-                    if (blnisLetter)
+
+                    strCase = Strings.Left(strCase.Trim(), Strings.Len(strCase.Trim()) - 1);
+                    strFild = "";
+                    strFild = " fm_clientcd,fm_exchange,fm_segment,isNull(cm_Name,'Not Found') cm_Name,cm_email,bm_email,cm_brboffcode,bm_branchname,bm_add1 ,cm_add1,bm_add2 ,cm_add2,bm_add3 ,cm_add3,";
+                    strFild += " Tmp_Shortfall PeakShort, Tmp_NFiller4, Tmp_NFiller5 , Tmp_PeakColl , Tmp_PeakMargin ,";
+
+                    if (Strings.Right(strTotalShortFallX.Trim(), 1) == "+")
                     {
-                        strCase = Strings.Left(strCase.Trim(), Strings.Len(strCase.Trim()) - 1);
-                        strFild = "";
-                        strFild = " fm_clientcd,fm_exchange,fm_segment,isNull(cm_Name,'Not Found') cm_Name,cm_email,bm_email,cm_brboffcode,bm_branchname,bm_add1 ,cm_add1,bm_add2 ,cm_add2,bm_add3 ,cm_add3,";
-                        strFild += " Tmp_Shortfall PeakShort, Tmp_NFiller4, Tmp_NFiller5 , Tmp_PeakColl , Tmp_PeakMargin ,";
-
-                        if (Strings.Right(strTotalShortFallX.Trim(), 1) == "+")
-                        {
-                            strTotalShortFallX = Strings.Left(strTotalShortFallX, Strings.Len(strTotalShortFallX) - 1) + " TotalShort";
-                            strFild += strTotalShortFallX + ", ";
-                        }
-                        if (Strings.Right(strTotalCollectedX.Trim(), 1) == "+")
-                        {
-                            strTotalCollectedX = Strings.Left(strTotalCollectedX, Strings.Len(strTotalCollectedX) - 1) + " Collected";
-                            strFild += strTotalCollectedX + ", ";
-                        }
-                        strFild += strTemp;
-                        strFild = Strings.Left(strFild.Trim(), Strings.Len(strFild.Trim()) - 1);
-
-                        strCase += " , fm_TotalMrgn ";
-                        strFild += " , Sum(fm_TotalMrgn) fm_TotalMrgn ";
-
-                        strSql = " Select case fm_exchange when 'B' then 'BSE-' when 'N' then 'NSE-' when 'M' then 'MCX-' when 'F' then 'NCDEX-' else '' end + case fm_segment when 'C' then 'CASH'  when 'F' then 'FO'  when 'K' then 'FX' when 'M' then 'MF' when 'X' then 'COMM' else '' end ExchSeg,cast(fm_TotalMrgn as decimal(15,2)) fm_TotalMrgn,cast(Collected as decimal(15,2)) Collected,cast(TotalShort as decimal(15,2)) TotalShort,";
-                        strSql += " cast(case when fm_TotalMrgn > 0 then ((TotalShort * 100)/ fm_TotalMrgn) else 0 end as decimal(15,2)) TotalShortPER,cast(Tmp_NFiller4 as decimal(15,2)) Tmp_NFiller4,cast(Tmp_PeakMargin as decimal(15,2)) Tmp_PeakMargin,";
-                        strSql += " cast(Tmp_NFiller5 as decimal(15,2)) Tmp_NFiller5,cast(PeakShort as decimal(15,2)) PeakShort,cast(Case When PeakShort > TotalShort then PeakShort else TotalShort end as decimal(15,2)) 'Tmp_HighestShortFall' ";
-
-                        if (Conversion.Val(objUtility.fnFireQueryTradeWeb("Sysparameter", "Count(0)", "sp_parmcd", "MGPENALTY", true)) > 0)
-                        {
-                            strSql += ",";
-                            strSql += " Convert(Decimal(15,2), Round(( ((Case When PeakShort > TotalShort then PeakShort else TotalShort end)) *  ";
-                            strSql += " (Case When ((Case When PeakShort > TotalShort then PeakShort else TotalShort end)) < 100000  ";
-                            strSql += " and Case When  fm_TotalMrgn = 0 then 0 else ((((Case When PeakShort > TotalShort then PeakShort else TotalShort end))*100) / (fm_TotalMrgn)) end < 10 Then 0.5 Else 1 End/100)),2)  ";
-                            strSql += " ) ShortPenalty ";
-                        }
-                        strSql += "  from ( ";
-                        strSql += "  select " + strFild + " From (";
-                        strSql += " Select fm_clientcd,fm_exchange,fm_segment," + strCase;
-                        strSql += " from ( select fm_clientcd,fm_exchange,fm_Segment,Sum(fm_TotalMrgn) fm_TotalMrgn,Sum(fm_collected) fm_collected,Sum(fm_collected1) fm_collected1 from ( ";
-                        strSql += " select fm_clientcd,fm_exchange,fm_Segment,fm_TotalMrgn,fm_collected,fm_collected1  from Fmargins, Client_master Where cm_cd=fm_clientcd and fm_Companycode ='" + strCompanyCode + "' and fm_dt = '" + date + "'";
-                        if (objUtility.GetSysParmSt("FMRGCombined", "").Trim() == "F")
-                        {
-                            strSql += " union all ";
-                            strSql += " select fc_Filler1,fc_exchange,fc_Segment,0 fm_TotalMrgn,fc_collected,fc_collected1  from Fmargin_Clients, Client_master Where cm_cd=fc_clientcd and fc_exchange <> '' and fc_Companycode ='" + strCompanyCode + "' and fc_dt = '" + date + "'";
-                        }
-                        strSql += " ) a Group By fm_clientcd,fm_exchange,fm_Segment ";
-                        strSql += " ) z , Client_master,branch_master ";
-                        strSql += " Where fm_clientcd = cm_cd and cm_brboffcode = bm_branchcd " + strClientWhere;
-                        if (objUtility.GetWebParameter("Commex") != null && objUtility.GetWebParameter("Commex") != string.Empty)
-                        {
-                            strSql += " union all ";
-                            string strTotalMargin = "";
-                            strTotalMargin = " (case fm_exchange When 'M' Then fm_Regmargin + fm_exposurevalue + fm_buypremmargin else fm_initialmargin + fm_exposurevalue end) + case fm_Exchange When 'M' Then fm_additionalmargin + fm_Tndmargin + fm_Dlvmargin - fm_SpreadBen + fm_ConcMargin + fm_DelvPMargin else fm_additionalmargin + fm_SplMargin end + fm_MTMLoss ";
-                            strCase = strCase.Replace("fm_Segment", "'X'");
-                            strCase = strCase.Replace("fm_TotalMrgn", strTotalMargin);
-                            strCase = strCase.Replace("(fm_collected+fm_collected1)", "(fm_collected+fm_collectedt2)");
-                            strSql += " Select fm_clientcd,fm_exchange,'X' fm_Segment," + strCase;
-                            strSql += " from #FmarginsRpt," + StrCommexConn + ".Client_master," + StrCommexConn + ".branch_master Where fm_clientcd = cm_cd and cm_brboffcode = bm_branchcd and fm_Companycode ='" + strCompanyCode + "' and fm_dt = '" + date + "'";
-                        }
-                        strSql += " ) a , Client_master,branch_master , #TmpPeakColl p ";
-                        strSql += " Where fm_clientcd = cm_cd and fm_exchange=tmp_exchange and fm_segment=tmp_segment and cm_brboffcode = bm_branchcd and fm_clientcd = Tmp_Clientcd ";
-                        strSql += " Group by fm_clientcd,fm_exchange,fm_Segment,cm_Name,cm_email,bm_email,cm_brboffcode,bm_branchname,bm_add1 ,cm_add1,bm_add2 ,cm_add2,bm_add3 ,cm_add3,Tmp_Shortfall,Tmp_NFiller4, Tmp_Nfiller5, Tmp_PeakColl, Tmp_PeakMargin ";
-                        if (Conversion.Val(objUtility.fnFireQueryTradeWeb("Sysparameter", "Count(0)", "sp_parmcd", "MGPENALTY", true)) > 0)
-                        {
-                            strSql += " Having Sum(fm_TotalMrgn) > 0  ";
-                        }
-                        strSql += " ) b ";
-
-                        //strSql += " Where PeakShort > 0 Or TotalShort > 0 ";
-
-                        strSql += " Order By fm_clientcd ";
+                        strTotalShortFallX = Strings.Left(strTotalShortFallX, Strings.Len(strTotalShortFallX) - 1) + " TotalShort";
+                        strFild += strTotalShortFallX + ", ";
                     }
+                    if (Strings.Right(strTotalCollectedX.Trim(), 1) == "+")
+                    {
+                        strTotalCollectedX = Strings.Left(strTotalCollectedX, Strings.Len(strTotalCollectedX) - 1) + " Collected";
+                        strFild += strTotalCollectedX + ", ";
+                    }
+                    strFild += strTemp;
+                    strFild = Strings.Left(strFild.Trim(), Strings.Len(strFild.Trim()) - 1);
+
+                    strCase += " , fm_TotalMrgn ";
+                    strFild += " , Sum(fm_TotalMrgn) fm_TotalMrgn ";
+
+                    strSql = " Select case fm_exchange when 'B' then 'BSE-' when 'N' then 'NSE-' when 'M' then 'MCX-' when 'F' then 'NCDEX-' else '' end + case fm_segment when 'C' then 'CASH'  when 'F' then 'FO'  when 'K' then 'FX' when 'M' then 'MF' when 'X' then 'COMM' else '' end ExchSeg,cast(fm_TotalMrgn as decimal(15,2)) fm_TotalMrgn,cast(Collected as decimal(15,2)) Collected,cast(TotalShort as decimal(15,2)) TotalShort,";
+                    strSql += " cast(case when fm_TotalMrgn > 0 then ((TotalShort * 100)/ fm_TotalMrgn) else 0 end as decimal(15,2)) TotalShortPER,cast(Tmp_NFiller4 as decimal(15,2)) Tmp_NFiller4,cast(Tmp_PeakMargin as decimal(15,2)) Tmp_PeakMargin,";
+                    strSql += " cast(Tmp_NFiller5 as decimal(15,2)) Tmp_NFiller5,cast(PeakShort as decimal(15,2)) PeakShort,cast(Case When PeakShort > TotalShort then PeakShort else TotalShort end as decimal(15,2)) 'Tmp_HighestShortFall' ";
+
+                    if (Conversion.Val(objUtility.fnFireQueryTradeWeb("Sysparameter", "Count(0)", "sp_parmcd", "MGPENALTY", true)) > 0)
+                    {
+                        strSql += ",";
+                        strSql += " Convert(Decimal(15,2), Round(( ((Case When PeakShort > TotalShort then PeakShort else TotalShort end)) *  ";
+                        strSql += " (Case When ((Case When PeakShort > TotalShort then PeakShort else TotalShort end)) < 100000  ";
+                        strSql += " and Case When  fm_TotalMrgn = 0 then 0 else ((((Case When PeakShort > TotalShort then PeakShort else TotalShort end))*100) / (fm_TotalMrgn)) end < 10 Then 0.5 Else 1 End/100)),2)  ";
+                        strSql += " ) ShortPenalty ";
+                    }
+                    strSql += "  from ( ";
+                    strSql += "  select " + strFild + " From (";
+                    strSql += " Select fm_clientcd,fm_exchange,fm_segment," + strCase;
+                    strSql += " from ( select fm_clientcd,fm_exchange,fm_Segment,Sum(fm_TotalMrgn) fm_TotalMrgn,Sum(fm_collected) fm_collected,Sum(fm_collected1) fm_collected1 from ( ";
+                    strSql += " select fm_clientcd,fm_exchange,fm_Segment,fm_TotalMrgn,fm_collected,fm_collected1  from Fmargins, Client_master Where cm_cd=fm_clientcd and fm_Companycode ='" + strCompanyCode + "' and fm_dt = '" + date + "'";
+                    if (objUtility.GetSysParmSt("FMRGCombined", "").Trim() == "F")
+                    {
+                        strSql += " union all ";
+                        strSql += " select fc_Filler1,fc_exchange,fc_Segment,0 fm_TotalMrgn,fc_collected,fc_collected1  from Fmargin_Clients, Client_master Where cm_cd=fc_clientcd and fc_exchange <> '' and fc_Companycode ='" + strCompanyCode + "' and fc_dt = '" + date + "'";
+                    }
+                    strSql += " ) a Group By fm_clientcd,fm_exchange,fm_Segment ";
+                    strSql += " ) z , Client_master,branch_master ";
+                    strSql += " Where fm_clientcd = cm_cd and cm_brboffcode = bm_branchcd " + strClientWhere;
+                    if (objUtility.GetWebParameter("Commex") != null && objUtility.GetWebParameter("Commex") != string.Empty)
+                    {
+                        strSql += " union all ";
+                        string strTotalMargin = "";
+                        strTotalMargin = " (case fm_exchange When 'M' Then fm_Regmargin + fm_exposurevalue + fm_buypremmargin else fm_initialmargin + fm_exposurevalue end) + case fm_Exchange When 'M' Then fm_additionalmargin + fm_Tndmargin + fm_Dlvmargin - fm_SpreadBen + fm_ConcMargin + fm_DelvPMargin else fm_additionalmargin + fm_SplMargin end + fm_MTMLoss ";
+                        strCase = strCase.Replace("fm_Segment", "'X'");
+                        strCase = strCase.Replace("fm_TotalMrgn", strTotalMargin);
+                        strCase = strCase.Replace("(fm_collected+fm_collected1)", "(fm_collected+fm_collectedt2)");
+                        strSql += " Select fm_clientcd,fm_exchange,'X' fm_Segment," + strCase;
+                        strSql += " from #FmarginsRpt," + StrCommexConn + ".Client_master," + StrCommexConn + ".branch_master Where fm_clientcd = cm_cd and cm_brboffcode = bm_branchcd and fm_Companycode ='" + strCompanyCode + "' and fm_dt = '" + date + "'";
+                    }
+                    strSql += " ) a , Client_master,branch_master , #TmpPeakColl p ";
+                    strSql += " Where fm_clientcd = cm_cd and fm_exchange=tmp_exchange and fm_segment=tmp_segment and cm_brboffcode = bm_branchcd and fm_clientcd = Tmp_Clientcd ";
+                    strSql += " Group by fm_clientcd,fm_exchange,fm_Segment,cm_Name,cm_email,bm_email,cm_brboffcode,bm_branchname,bm_add1 ,cm_add1,bm_add2 ,cm_add2,bm_add3 ,cm_add3,Tmp_Shortfall,Tmp_NFiller4, Tmp_Nfiller5, Tmp_PeakColl, Tmp_PeakMargin ";
+                    if (Conversion.Val(objUtility.fnFireQueryTradeWeb("Sysparameter", "Count(0)", "sp_parmcd", "MGPENALTY", true)) > 0)
+                    {
+                        strSql += " Having Sum(fm_TotalMrgn) > 0  ";
+                    }
+                    strSql += " ) b ";
+
+                    //strSql += " Where PeakShort > 0 Or TotalShort > 0 ";
+
+                    strSql += " Order By fm_clientcd ";
+
                     return objUtility.OpenDataSetTmp(strSql, ObjConnectionTmp);
                 }
                 return null;
             }
+
         }
+
 
         #endregion
     }

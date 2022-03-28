@@ -15,11 +15,11 @@ namespace TradeWeb.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class TradeWeb_FamilyController : ControllerBase
+    public class FamilyController : ControllerBase
     {
         private readonly ITradeWebRepository _tradeWebRepository;
 
-        public TradeWeb_FamilyController(ITradeWebRepository tradeWebRepository)
+        public FamilyController(ITradeWebRepository tradeWebRepository)
         {
             _tradeWebRepository = tradeWebRepository;
         }

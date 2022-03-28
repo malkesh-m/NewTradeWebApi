@@ -400,3 +400,4 @@ Thumbs.db
 *.wmv
 
 /TradeWeb.API/.config/dotnet-tools.json
+/.config/dotnet-tools.json

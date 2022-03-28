@@ -843,7 +843,11 @@ namespace TradeWeb.API.Repository
         }
         public string dtos(string dDate)
         {    //for converting date to string format
-            string dtos = dDate.Substring(6, 4) + dDate.Substring(3, 2) + dDate.Substring(0, 2);
+            string dtos;
+            if (dDate == null || dDate == "")
+                return dDate;
+            else
+            dtos = dDate.Substring(6, 4) + dDate.Substring(3, 2) + dDate.Substring(0, 2);
             return dtos;
         }
         public DateTime stod(string Date)
