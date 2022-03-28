@@ -11,4 +11,10 @@ namespace TradeWeb.API.Models
         public dynamic FoSummary { get; set; }
         public dynamic CommoditySummary { get; set; }
     }
+
+    public class ProfitLossCombinedInputModel
+    {
+        public string FromDate { get; set; }
+        public string ToDate { get; set; }
+    }
 }
