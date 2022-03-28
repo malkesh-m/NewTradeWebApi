@@ -167,7 +167,7 @@ namespace TradeWeb.API.Repository
 
         public dynamic DigitalDocument_File(int Product, string date, string srNo);
 
-        public dynamic ProfitLoss_Combined(string userId, string fromDate, string toDate);
+        public dynamic ProfitLoss_Combined(string userId, List<ProfitLossCombinedInputModel> model);
     }
 
     public class TradeWebRepository : ITradeWebRepository
@@ -2154,17 +2154,24 @@ namespace TradeWeb.API.Repository
 
         #region profitLoss combine handler method
 
-        public dynamic ProfitLoss_Combined(string userId, string fromDate, string toDate)
+        public dynamic ProfitLoss_Combined(string userId, List<ProfitLossCombinedInputModel> model)
         {
-            ProfitLossCombinedModel result = new ProfitLossCombinedModel();
+            List<ProfitLossCombinedModel> profitLossCombinedList = new List<ProfitLossCombinedModel>();
 
-            result.CashSummary = ProfitLoss_Cash_CombineSummary(userId, fromDate, toDate);
+            foreach(var profitLossCombined in model)
+            {
+                ProfitLossCombinedModel result = new ProfitLossCombinedModel();
 
-            result.FoSummary = ProfitLoss_FO_CombineSummary(userId, "N", "F", fromDate, toDate);
+                result.CashSummary = ProfitLoss_Cash_CombineSummary(userId, profitLossCombined.FromDate, profitLossCombined.ToDate);
 
-            result.CommoditySummary = ProfitLoss_Commodity_CombineSummary(userId, "M", fromDate, toDate);
+                result.FoSummary = ProfitLoss_FO_CombineSummary(userId, profitLossCombined.Exchange, profitLossCombined.Segment, profitLossCombined.FromDate, profitLossCombined.ToDate);
 
-            return JsonConvert.SerializeObject(result, Formatting.Indented);
+                result.CommoditySummary = ProfitLoss_Commodity_CombineSummary(userId, profitLossCombined.Exchange, profitLossCombined.FromDate, profitLossCombined.ToDate);
+
+                profitLossCombinedList.Add(result);
+            }
+
+            return JsonConvert.SerializeObject(profitLossCombinedList, Formatting.Indented);
         }
 
         public dynamic ProfitLoss_Cash_CombineSummary(string userId, string fromDate, string toDate)

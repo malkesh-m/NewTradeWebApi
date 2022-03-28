@@ -153,7 +153,7 @@ namespace TradeWeb.API.Controllers
 
         [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpPost("ProfitLoss_Combined", Name = "ProfitLoss_Combined")]
-        public IActionResult ProfitLoss_Combined(ProfitLossCombinedInputModel model)
+        public IActionResult ProfitLoss_Combined(List<ProfitLossCombinedInputModel> model)
         {
             if (ModelState.IsValid)
             {
@@ -163,7 +163,7 @@ namespace TradeWeb.API.Controllers
                     var companyCode = tokenS.Claims.First(claim => claim.Type == "companyCode").Value;
                     var userId = tokenS.Claims.First(claim => claim.Type == "username").Value;
 
-                    var getData = _tradeWebRepository.ProfitLoss_Combined(userId, model.FromDate, model.ToDate);
+                    var getData = _tradeWebRepository.ProfitLoss_Combined(userId, model);
                     if (getData != null)
                     {
                         return Ok(getData);

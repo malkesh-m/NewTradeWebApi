@@ -14,6 +14,8 @@ namespace TradeWeb.API.Models
 
     public class ProfitLossCombinedInputModel
     {
+        public string Exchange { get; set; }
+        public string Segment { get; set; }
         public string FromDate { get; set; }
         public string ToDate { get; set; }
     }
